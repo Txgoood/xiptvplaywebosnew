@@ -53,7 +53,7 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <button id="tv-show-diagnostics" type="button">Tanılama</button>
 </section>
 <div id="tv-diagnostics" style="display:none">
-<p>Video oynatma tanılama sürümü <b>v1.0.16</b></p>
+<p>Video oynatma tanılama sürümü <b>v1.0.17</b></p>
 <button id="system">Sistem Kontrolü</button>
 <button id="local">Yerel Video</button>
 <button id="remote">İnternet Video</button>
@@ -69,7 +69,7 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <button id="iptv-open" type="button">Canlı TV (Xtream)</button>
 </div>
 <section id="iptv-panel" style="display:none;background:#1c2b38;padding:20px;margin:16px 0;border:2px solid #497082">
-<div id="tv-favorites-panel" style="display:none"><h2>Favoriler</h2><button id="tv-fav-live" type="button">Canlı TV</button><button id="tv-fav-movie" type="button">Filmler</button><button id="tv-fav-series" type="button">Diziler</button></div><div id="tv-settings-panel" style="display:none"><h2>Ayarlar</h2><button id="tv-settings-close" type="button">Kapat</button><p id="tv-settings-version">XIPTV Play LG webOS v1.0.16</p><button id="tv-settings-player" type="button">Oynatıcı Ayarları</button><button id="tv-settings-profiles" type="button">Profiller</button><button id="tv-settings-connection" type="button">Bağlantı Ayarları</button><button id="tv-settings-diagnostics" type="button">Geliştirici Araçları</button><label><input id="tv-settings-tr" type="checkbox"> TR kategorileri</label><label><input id="tv-settings-adult" type="checkbox"> Yetişkin kategorilerini gizle</label></div><button id="iptv-hide" type="button" style="display:none">TV Menüsünü Kapat</button>
+<div id="tv-favorites-panel" style="display:none"><h2>Favoriler</h2><button id="tv-fav-live" type="button">Canlı TV</button><button id="tv-fav-movie" type="button">Filmler</button><button id="tv-fav-series" type="button">Diziler</button></div><div id="tv-settings-panel" style="display:none"><h2>Ayarlar</h2><button id="tv-settings-close" type="button">Kapat</button><p id="tv-settings-version">XIPTV Play LG webOS v1.0.17</p><button id="tv-settings-player" type="button">Oynatıcı Ayarları</button><button id="tv-settings-profiles" type="button">Profiller</button><button id="tv-settings-connection" type="button">Bağlantı Ayarları</button><button id="tv-settings-diagnostics" type="button">Geliştirici Araçları</button><label><input id="tv-settings-tr" type="checkbox"> TR kategorileri</label><label><input id="tv-settings-adult" type="checkbox"> Yetişkin kategorilerini gizle</label></div><button id="iptv-hide" type="button" style="display:none">TV Menüsünü Kapat</button>
 <div id="iptv-login">
 <p>Xtream Codes bağlantısı — giriş bilgileriniz hatırlanabilir. Bağlantı başarısız olursa bu ekran açılır.</p>
 <p><label>Sunucu adresi <input id="iptv-server" type="url" placeholder="http://sunucu:port" autocomplete="off" style="font-size:22px;padding:10px;width:55%" /> <button id="iptv-server-keyboard" type="button">Klavye Aç</button></label></p>
@@ -93,7 +93,8 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <label>Altyazı <select id="tv-subtitles"><option value="off">Kapalı</option></select></label>
 <label>Ses <select id="tv-audio"><option value="auto">Yayın varsayılanı (otomatik seçim yok)</option></select></label>
 <p id="tv-track-notice" style="font-size:16px;color:#f4db9e;line-height:1.4"></p>
-<button id="tv-track-scan" type="button">TV medya kanallarını tara</button><button id="tv-lg-media-scan" type="button">Tüm ses/altyazı akışlarını analiz et</button><button id="tv-lg-native-return" type="button" style="display:none">Önceki çalışan oynatıcıya dön</button><div id="tv-lg-media-status" role="status"></div><div id="tv-track-scan-results" role="status" aria-live="polite"></div><label>Hız <select id="tv-speed"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option><option value="4">4x</option><option value="8">8x</option><option value="16">16x</option></select></label>
+<div id="tv-mkv-status" role="status" aria-live="polite" style="font-size:16px;color:#9ef4c2;line-height:1.4"></div>
+<button id="tv-mkv-scan" type="button">MKV ses/altyazı listesini yeniden oku</button><button id="tv-track-scan" type="button">TV medya kanallarını tara</button><button id="tv-lg-media-scan" type="button">Tüm ses/altyazı akışlarını analiz et</button><button id="tv-lg-native-return" type="button" style="display:none">Önceki çalışan oynatıcıya dön</button><div id="tv-lg-media-status" role="status"></div><div id="tv-track-scan-results" role="status" aria-live="polite"></div><label>Hız <select id="tv-speed"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="1.5">1.5x</option><option value="2">2x</option><option value="4">4x</option><option value="8">8x</option><option value="16">16x</option></select></label>
 <button id="tv-seek-back" type="button">-10 sn</button><button id="tv-seek-forward" type="button">+10 sn</button>
 </div>
 <div id="tv-mode-tabs"><button id="tv-tab-live" type="button">Canlı TV</button><button id="tv-tab-movie" type="button">Filmler</button><button id="tv-tab-series" type="button">Diziler</button></div>
@@ -181,4 +182,4 @@ video.addEventListener('error',function(){var code=video.error?video.error.code:
 video.addEventListener('ended',function(){message('Video başarıyla sona erdi.');update();},false);
 focus(0);system();update();
 })();
-</script><script src="./tv-features.js"></script><script src="./tv-iptv.js"></script><script src="./tv-profiles.js"></script><script src="./tv-keyboard.js"></script><script src="./lg-media-config.js"></script><script src="./tv-lg-media.js"></script><script src="./tv-posters.js"></script><script src="./tv-home.js"></script><script src="./tv-alt-player.js"></script></body></html>
+</script><script src="./tv-features.js"></script><script src="./tv-iptv.js"></script><script src="./tv-profiles.js"></script><script src="./tv-keyboard.js"></script><script src="./tv-mkv-tracks.js"></script><script src="./lg-media-config.js"></script><script src="./tv-lg-media.js"></script><script src="./tv-posters.js"></script><script src="./tv-home.js"></script><script src="./tv-alt-player.js"></script></body></html>

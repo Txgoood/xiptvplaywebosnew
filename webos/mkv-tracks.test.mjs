@@ -1,0 +1,97 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+
+// Load the ES5 browser module into a minimal sandbox.
+const code=fs.readFileSync(new URL('./tv-mkv-tracks.js',import.meta.url),'utf8');
+const sandbox={document:{getElementById(){return null;}},XMLHttpRequest:function(){},setTimeout,clearTimeout};
+sandbox.window=sandbox;
+vm.createContext(sandbox);
+new vm.Script(code,{filename:'tv-mkv-tracks.js'}).runInContext(sandbox);
+const mkv=sandbox.XIPTVMkv;
+assert.equal(typeof mkv.parseHead,'function');
+
+// ---- tiny Matroska writer ----
+function size(n){
+  if(n<127)return Buffer.from([0x80|n]);
+  const b=Buffer.alloc(4);b.writeUInt32BE(n);b[0]|=0x10;return b;
+}
+function el(idHex,payload){
+  const id=Buffer.from(idHex,'hex'),body=Buffer.isBuffer(payload)?payload:Buffer.from(payload);
+  return Buffer.concat([id,size(body.length),body]);
+}
+const uint=(idHex,n)=>el(idHex,Buffer.from([n]));
+const str=(idHex,s)=>el(idHex,Buffer.from(s,'utf8'));
+function entry(opts){
+  const parts=[uint('D7',opts.number),uint('83',opts.type)];
+  if(opts.lang)parts.push(str('22B59C',opts.lang));
+  if(opts.name)parts.push(str('536E',opts.name));
+  parts.push(str('86',opts.codec));
+  if(opts.def!==undefined)parts.push(uint('88',opts.def));
+  if(opts.forced)parts.push(uint('55AA',1));
+  if(opts.channels)parts.push(el('E1',uint('9F',opts.channels)));
+  return el('AE',Buffer.concat(parts));
+}
+const tracksEl=el('1654AE6B',Buffer.concat([
+  entry({number:1,type:1,codec:'V_MPEG4/ISO/AVC'}),
+  entry({number:2,type:2,lang:'tur',name:'Dublaj',codec:'A_AC3',channels:6,def:1}),
+  entry({number:3,type:2,lang:'eng',codec:'A_EAC3',channels:2,def:0}),
+  entry({number:4,type:0x11,lang:'tur',name:'Türkçe Altyazı',codec:'S_TEXT/UTF8',def:0}),
+  entry({number:5,type:0x11,lang:'eng',codec:'S_HDMV/PGS',forced:true}),
+]));
+const ebmlHeader=el('1A45DFA3',str('4282','matroska'));
+const cluster=el('1F43B675',Buffer.alloc(300,7));
+const unknownSegment=body=>Buffer.concat([Buffer.from('18538067','hex'),Buffer.from([0x01,0xff,0xff,0xff,0xff,0xff,0xff,0xff]),body]);
+
+// 1) Tracks directly after SeekHead/Info inside an unknown-size Segment.
+{
+  const seekHead=el('114D9B74',el('4DBB',Buffer.concat([el('53AB',Buffer.from('1654AE6B','hex')),el('53AC',Buffer.from([0x40]))])));
+  const info=el('1549A966',str('4D80','xiptv-test'));
+  const file=Buffer.concat([ebmlHeader,unknownSegment(Buffer.concat([seekHead,el('EC',Buffer.alloc(40)),info,tracksEl,cluster]))]);
+  const result=mkv.parseHead(file);
+  assert.ok(result.tracks,'tracks must be returned from the first buffer');
+  assert.equal(result.tracks.length,4);
+  const audio=result.tracks.filter(t=>t.kind==='audio'),subs=result.tracks.filter(t=>t.kind==='subtitle');
+  assert.equal(audio.length,2);assert.equal(subs.length,2);
+  assert.equal(audio[0].lang,'tur');assert.equal(audio[0].name,'Dublaj');assert.equal(audio[0].codec,'A_AC3');
+  assert.equal(audio[0].channels,6);assert.equal(audio[0].def,true);assert.equal(audio[0].typeIndex,0);
+  assert.equal(audio[1].lang,'eng');assert.equal(audio[1].typeIndex,1);assert.equal(audio[1].def,false);
+  assert.equal(subs[0].name,'Türkçe Altyazı','UTF-8 track names must be decoded');
+  assert.equal(subs[0].typeIndex,0);assert.equal(subs[1].typeIndex,1);assert.equal(subs[1].forced,true);
+  // The same bytes as a binary string (what the x-user-defined XHR returns) must parse identically.
+  const asString=file.toString('latin1');
+  assert.equal(mkv.parseHead(asString).tracks.length,4);
+  // x-user-defined maps bytes >= 0x80 to U+F780..U+F7FF; the reader masks with 255.
+  const mapped=Array.from(file).map(b=>String.fromCharCode(b>=0x80?0xF700+b:b)).join('');
+  assert.equal(mkv.parseHead(mapped).tracks.length,4);
+}
+
+// 2) Tracks beyond the first buffer: SeekHead points to it, second fetch parses at offset 0.
+{
+  const void1=el('EC',Buffer.alloc(3000));
+  const placeholderSeek=pos=>el('114D9B74',el('4DBB',Buffer.concat([el('53AB',Buffer.from('1654AE6B','hex')),el('53AC',Buffer.from([pos>>8,pos&255]))])));
+  // Segment data starts right after EBML header + segment id/size; seek position is relative to it.
+  const seekLen=placeholderSeek(0).length;
+  const seekHead=placeholderSeek(seekLen+void1.length);
+  const body=Buffer.concat([seekHead,void1,tracksEl,cluster]);
+  const file=Buffer.concat([ebmlHeader,unknownSegment(body)]);
+  const truncated=file.subarray(0,800);                       // does not contain Tracks
+  const first=mkv.parseHead(truncated);
+  assert.equal(first.tracks,undefined);
+  const segData=file.length-body.length;
+  assert.equal(first.need,segData+seekLen+void1.length,'must point at the Tracks element');
+  const second=mkv.parseTracksAt(file.subarray(first.need,first.need+4096));
+  assert.equal(second.tracks.length,4);
+  assert.equal(mkv.parseTracksAt(file.subarray(first.need,first.need+20)).error,'tracks-too-large');
+}
+
+// 3) Not a Matroska file / no tracks.
+assert.equal(mkv.parseHead(Buffer.from('this is an mp4 or mpeg-ts stream, not mkv')).error,'not-mkv');
+assert.equal(mkv.parseHead('').error,'not-mkv');
+{
+  const onlyCluster=Buffer.concat([ebmlHeader,unknownSegment(cluster)]);
+  const none=mkv.parseHead(onlyCluster);
+  assert.ok(Array.isArray(none.tracks)&&none.tracks.length===0);
+}
+
+console.log('PASS: MKV header reader (unknown-size segment, seekhead jump, UTF-8 names, x-user-defined strings, non-mkv)');

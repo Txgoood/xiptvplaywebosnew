@@ -6,9 +6,9 @@
  var playerOverlay=document.getElementById('tv-lg-subtitle-overlay'),cues=[],lastCue=-1,sourceKey='';
  var scanButton=document.getElementById('tv-lg-media-scan'),summary=document.getElementById('tv-lg-media-status'),returnButton=document.getElementById('tv-lg-native-return');
  function say(s){summary.textContent=String(s||'');}
- function request(method,path,data,cb){
+ function request(method,path,data,cb,timeoutMs){
   var x=new XMLHttpRequest();
-  try{x.open(method,url+path,true);x.timeout=28000;
+  try{x.open(method,url+path,true);x.timeout=timeoutMs||28000;
     if(data)x.setRequestHeader('Content-Type','application/json');
     x.onreadystatechange=function(){if(x.readyState!==4)return;var result=null;try{result=JSON.parse(x.responseText);}catch(e){}
       if(x.status<200||x.status>=300){cb(new Error(result&&result.error||'HTTP '+x.status));return;}
@@ -19,7 +19,24 @@
   }catch(e){cb(e);}
  }
  function isTr(track){var v=String(track.language||'').toLowerCase()+' '+String(track.title||'').toLowerCase();return /(^|[^a-z])(tr|tur|turkish|türkçe)([^a-z]|$)/i.test(v);}
- function addOption(sel,label,value){var o=document.createElement('option');o.value=value;o.textContent=label;sel.appendChild(o);}
+ function addOption(sel,label,value){
+  for(var n=0;n<sel.options.length;n++)if(sel.options[n].value===value)return;
+  var o=document.createElement('option');o.value=value;o.textContent=label;sel.appendChild(o);
+ }
+ /* Render free instances sleep and need up to ~60 s to wake; one short attempt used to fail silently. */
+ function wake(cb){
+  var tries=0,max=9;
+  function attempt(){
+   request('GET','/health',null,function(err,res){
+    if(!err&&res&&res.ok){cb(null);return;}
+    tries++;
+    if(tries>=max){cb(err||new Error('LG medya servisi uyanmadı.'));return;}
+    say('LG medya servisi uyandırılıyor… ('+tries+'/'+(max-1)+')');
+    setTimeout(attempt,3000);
+   },12000);
+  }
+  attempt();
+ }
  function extendMenus(sub,aud){
   if(!session)return;
   for(var i=0;i<session.tracks.length;i++){
@@ -158,15 +175,25 @@
   if(busy||!ctx)return;
   if(!url){say('LG alternatif medya hizmeti henüz Render üzerinde yapılandırılmadı. Mevcut TV oynatıcı kullanılmaya devam ediyor.');return;}
   scanNativeTracks();scanHlsManifest();
-  busy=true;scanButton.disabled=true;var thisScan=++scanSequence;say('MKV/MP4 ses ve altyazı parçaları analiz ediliyor…');
-  request('POST','/tracks',{serverUrl:ctx.serverUrl,username:ctx.username,password:ctx.password,kind:ctx.kind,id:ctx.id,extension:ctx.extension},function(err,data){
+  busy=true;scanButton.disabled=true;var thisScan=++scanSequence;say('LG medya servisi kontrol ediliyor…');
+  var retried=false;
+  function analyse(){
+   say('MKV/MP4 ses ve altyazı parçaları analiz ediliyor…');
+   request('POST','/tracks',{serverUrl:ctx.serverUrl,username:ctx.username,password:ctx.password,kind:ctx.kind,id:ctx.id,extension:ctx.extension},function(err,data){
+    if(thisScan!==scanSequence)return;
+    if(err&&!retried&&/analiz işlemi sürüyor/i.test(String(err.message))){retried=true;setTimeout(function(){if(thisScan===scanSequence)analyse();},4000);return;}
+    busy=false;scanButton.disabled=false;
+    if(err){say('LG medya servisi: '+url+' — '+err.message+'. MKV içi parçalar için üstteki “MKV:” girdileri doğrudan dosya başlığından okunur.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
+    if(!data||!data.tracks){say('Parça listesi alınamadı.');return;}
+    session=data;say(data.tracks.length+' parça bulundu: '+data.tracks.filter(function(t){return t.type==='audio';}).length+' ses, '+data.tracks.filter(function(t){return t.type==='subtitle';}).length+' altyazı. Desteklenmeyen altyazılar yalnızca bilgi amaçlıdır.');
+    if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();
+    // Never silently replace a working stream. User chooses a track explicitly.
+   },70000);
+  }
+  wake(function(werr){
    if(thisScan!==scanSequence)return;
-   busy=false;scanButton.disabled=false;
-   if(err){var fallback=scanNativeTracks();say('LG medya servisi: '+url+' — '+err.message+'. TV yerel taraması: '+fallback.audio+' ses, '+fallback.subtitle+' altyazı. MKV içi parçalar için servis bağlantısı gerekli.');return;}
-   if(!data||!data.tracks){say('Parça listesi alınamadı.');return;}
-   session=data;say(data.tracks.length+' parça bulundu: '+data.tracks.filter(function(t){return t.type==='audio';}).length+' ses, '+data.tracks.filter(function(t){return t.type==='subtitle';}).length+' altyazı. Desteklenmeyen altyazılar yalnızca bilgi amaçlıdır.');
-   if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();
-   // Never silently replace a working stream. User chooses a track explicitly.
+   if(werr){busy=false;scanButton.disabled=false;say('LG medya servisine ulaşılamadı ('+werr.message+'). MKV parçaları doğrudan dosya başlığından okunuyor.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
+   analyse();
   });
  }
  scanButton.onclick=function(){manual=false;scan();};

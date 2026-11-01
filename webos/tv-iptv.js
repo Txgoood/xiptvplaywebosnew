@@ -160,6 +160,7 @@
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
     window.XIPTVTV.beforePlay(kind,id,url,name);
     if(window.XIPTVLGMedia&&window.XIPTVLGMedia.setSource)window.XIPTVLGMedia.setSource(kind==='live'?null:{serverUrl:server,username:username,password:password,kind:kind,id:id,extension:suffix,originalUrl:url});
+    if(window.XIPTVMkv&&window.XIPTVMkv.setSource)window.XIPTVMkv.setSource(kind==='live'?null:{url:url,extension:suffix,kind:kind});
     if(window.XIPTVAltPlayer&&window.XIPTVAltPlayer.beforeSourceChange)window.XIPTVAltPlayer.beforeSourceChange();
     try{
       video.pause();video.removeAttribute('src');

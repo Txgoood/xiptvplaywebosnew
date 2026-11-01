@@ -63,8 +63,10 @@ function tracksMenu(){
    audio.appendChild(opt);if(audios[i].enabled){audio.value=String(i);enabled=true;}
  }
  if(window.XIPTVLGMedia&&window.XIPTVLGMedia.extendMenus)window.XIPTVLGMedia.extendMenus(sub,audio);
+ if(window.XIPTVMkv&&window.XIPTVMkv.extendMenus)window.XIPTVMkv.extendMenus(sub,audio,texts.length,audios.length);
  var help=document.getElementById('tv-track-notice');
- if(help)help.textContent=(!audios.length||!texts.length)?
+ var mkvInfo=(window.XIPTVMkv&&window.XIPTVMkv.notice)?window.XIPTVMkv.notice():'';
+ if(help)help.textContent=mkvInfo?mkvInfo:(!audios.length||!texts.length)?
    'TV oynatıcısı '+(!audios.length?'gömülü ses kanallarını': 'ses kanallarını')+
    (!audios.length&&!texts.length?' ve ':'')+
    (!texts.length?'altyazı kanallarını':'')+
@@ -144,14 +146,14 @@ document.getElementById('tv-controls-toggle').onclick=function(){
 document.getElementById('tv-subtitles').onchange=function(){
  manualTrackChoice=true;
  var n=this.value,tracks=trackList('textTracks');
- if(n.indexOf('lg:s:')===0||n.indexOf('shaka:s:')===0)return;
+ if(n.indexOf('lg:s:')===0||n.indexOf('shaka:s:')===0||n.indexOf('mkv:s:')===0||n.indexOf('native:s:')===0||n.indexOf('hls:info:')===0)return;
  for(var i=0;i<tracks.length;i++)try{tracks[i].mode=String(i)===n?'showing':'disabled';}catch(e){}
  tracksMenu();
 };
 document.getElementById('tv-audio').onchange=function(){
  manualTrackChoice=true;
  var n=this.value,tracks=trackList('audioTracks');
- if(n.indexOf('lg:a:')===0||n.indexOf('shaka:a:')===0)return;
+ if(n.indexOf('lg:a:')===0||n.indexOf('shaka:a:')===0||n.indexOf('mkv:a:')===0||n.indexOf('native:a:')===0||n.indexOf('hls:info:')===0)return;
  if(n==='auto'){tracksMenu();return;}
  for(var i=0;i<tracks.length;i++)try{tracks[i].enabled=String(i)===n;}catch(e){}
  tracksMenu();

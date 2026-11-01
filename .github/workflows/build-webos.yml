@@ -1,5 +1,5 @@
 name: Build LG webOS IPK
-run-name: XIPTV Play LG webOS v1.0.16 • ${{ github.event_name }} • ${{ github.sha }}
+run-name: XIPTV Play LG webOS v1.0.17 •${{ github.event_name }} • ${{ github.sha }}
 
 on:
   workflow_dispatch:
@@ -32,6 +32,8 @@ jobs:
         run: |
           node --check lg-media-service/server.mjs
           node --test lg-media-service/test.mjs
+          node --check webos/tv-mkv-tracks.js
+          node webos/mkv-tracks.test.mjs
           node --check webos/tv-lg-media.js
           node --check webos/tv-alt-player.js
           node --check webos/tv-posters.js
@@ -75,6 +77,7 @@ jobs:
           test -s webos-package/tv-features.js
           test -s webos-package/tv-profiles.js
           test -s webos-package/tv-alt-player.js
+          test -s webos-package/tv-mkv-tracks.js
           test -s webos-package/tv-posters.js
           test -s webos-package/tv-home.js
           test -s webos-package/tv-keyboard.js
@@ -90,7 +93,7 @@ jobs:
             echo "Unsupported modern JavaScript module found in webOS 2 package"
             exit 1
           fi
-          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.16'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true) process.exit(1)"
+          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.17'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true) process.exit(1)"
 
       - name: Run remote-control and playback UI smoke tests
         run: node webos/legacy-smoke-test.mjs
