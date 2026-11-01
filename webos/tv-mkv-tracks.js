@@ -3,16 +3,20 @@
    video.audioTracks nor video.textTracks, and the optional remote FFprobe service may be
    asleep, blocked or unreachable. This module reads the Matroska header directly on the TV
    (one small HTTP Range request) so the audio/subtitle list is always shown.
+   IMPORTANT: many IPTV accounts allow a single connection. The header is therefore read
+   BEFORE playback starts (setSource(data,onDone) calls onDone when playback may begin), so
+   it never competes with the player's own connection.
    Selecting a track is delegated to the TV media pipeline (luna selectTrack) and is verified;
    on failure the previous track is restored. Playback is never replaced by this module. */
 (function(){
 var win=window,doc=win.document;
-var HEAD_BYTES=786432,TRACKS_BYTES=196608,START_DELAY=900;
+var HEAD_BYTES=786432,TRACKS_BYTES=196608,START_DELAY=900,PREFETCH_TIMEOUT=5000,GUARD_MS=7000,RELEASE_MS=350;
 var ID_EBML=0x1A45DFA3,ID_SEGMENT=0x18538067,ID_SEEKHEAD=0x114D9B74,ID_TRACKS=0x1654AE6B,ID_CLUSTER=0x1F43B675;
-var state={url:'',tracks:[],audio:[],subs:[],status:'',gen:0,xhr:null,timer:null,audioSel:-1,subSel:-1};
+var state={url:'',tracks:[],audio:[],subs:[],status:'',gen:0,xhr:null,timer:null,guard:null,done:null,audioSel:-1,subSel:-1};
 
 function $(id){return doc&&doc.getElementById?doc.getElementById(id):null;}
 function say(text){state.status=String(text||'');var el=$('tv-mkv-status');if(el)el.textContent=state.status;}
+function hostOf(u){var m=String(u||'').match(/^[a-z]+:\/\/([^\/:?#]+)/i);return m?m[1].toLowerCase():'';}
 
 var LANG={tur:'Türkçe',tr:'Türkçe',eng:'İngilizce',en:'İngilizce',ger:'Almanca',deu:'Almanca',de:'Almanca',fre:'Fransızca',fra:'Fransızca',fr:'Fransızca',spa:'İspanyolca',es:'İspanyolca',ita:'İtalyanca',it:'İtalyanca',rus:'Rusça',ru:'Rusça',ara:'Arapça',ar:'Arapça',por:'Portekizce',pt:'Portekizce',jpn:'Japonca',ja:'Japonca',kor:'Korece',ko:'Korece',chi:'Çince',zho:'Çince',zh:'Çince',pol:'Lehçe',pl:'Lehçe',dut:'Felemenkçe',nld:'Felemenkçe',swe:'İsveççe',und:'Bilinmeyen dil'};
 function languageName(code){
@@ -145,25 +149,32 @@ function parseTracksAt(src){
 /* ---- Range request (works even if the server ignores Range: aborts after enough bytes) ---- */
 function abortActive(){
  if(state.timer){clearTimeout(state.timer);state.timer=null;}
+ if(state.guard){clearTimeout(state.guard);state.guard=null;}
  if(state.xhr){try{state.xhr.abort();}catch(e){}state.xhr=null;}
 }
-function fetchRange(url,start,length,cb){
+function fetchRange(url,start,length,timeout,cb){
  var x=new XMLHttpRequest(),done=false;
  function finish(err,text){if(done)return;done=true;if(state.xhr===x)state.xhr=null;cb(err,text);}
+ function httpError(){
+  var e=new Error('HTTP '+x.status);
+  e.status=x.status;e.host=hostOf(x.responseURL);
+  try{e.body=String(x.responseText||'').replace(/<[^>]*>/g,' ').replace(/[^\x20-\x7e]/g,'').replace(/\s+/g,' ').substr(0,70);}catch(z){e.body='';}
+  return e;
+ }
  try{
   x.open('GET',url,true);
   x.overrideMimeType('text/plain; charset=x-user-defined');
   x.setRequestHeader('Range','bytes='+start+'-'+(start+length-1));
-  x.timeout=25000;
+  x.timeout=timeout;
   x.onprogress=function(){
    if(done)return;
    if(start>0&&x.status===200){try{x.abort();}catch(e){}finish(new Error('range-unsupported'));return;}
    var text=x.responseText;
-   if(text&&text.length>=length){var piece=text.substr(0,length);try{x.abort();}catch(e){}finish(null,piece);}
+   if(x.status>=200&&x.status<300&&text&&text.length>=length){var piece=text.substr(0,length);try{x.abort();}catch(e){}finish(null,piece);}
   };
   x.onload=function(){
    if(x.status===200&&start>0){finish(new Error('range-unsupported'));return;}
-   if(x.status!==200&&x.status!==206){finish(new Error('HTTP '+x.status));return;}
+   if(x.status!==200&&x.status!==206){finish(httpError());return;}
    finish(null,String(x.responseText||'').substr(0,length));
   };
   x.onerror=function(){finish(new Error('network'));};
@@ -175,12 +186,16 @@ function fetchRange(url,start,length,cb){
 
 /* ---- state, menus ---- */
 function reason(err){
- var m=String(err&&err.message||err||'');
+ var m=String(err&&err.message||err||''),extra='';
  if(m==='not-mkv')return 'Dosya Matroska (MKV) başlığı içermiyor.';
  if(m==='range-unsupported')return 'IPTV sunucusu Range isteğini desteklemiyor.';
- if(m==='timeout')return 'IPTV sunucusu zaman aşımına uğradı.';
- if(m==='network')return 'IPTV sunucusuna ikinci bağlantı kurulamadı (sağlayıcı tek bağlantıya izin veriyor olabilir).';
- if(m.indexOf('HTTP ')===0)return 'IPTV sunucusu '+m+' döndürdü.';
+ if(m==='timeout')return 'IPTV sunucusu MKV başlığı için zamanında yanıt vermedi.';
+ if(m==='network')return 'IPTV sunucusuna MKV başlığı için bağlanılamadı.';
+ if(m.indexOf('HTTP ')===0){
+  if(err.host&&err.host!==hostOf(state.url))extra+=' • yönlendirme: '+err.host;
+  if(err.body)extra+=' • yanıt: “'+err.body+'”';
+  return 'IPTV sunucusu '+m+' döndürdü ('+hostOf(state.url)+extra+'). MKV parça listesi dosya başlığından okunamadı.';
+ }
  return 'MKV başlığı çözümlenemedi ('+m+').';
 }
 function refresh(){if(win.XIPTVTV&&win.XIPTVTV.refreshTracks)win.XIPTVTV.refreshTracks();}
@@ -196,37 +211,59 @@ function apply(tracks,gen){
  else say('MKV başlığından '+state.audio.length+' ses, '+state.subs.length+' altyazı parçası okundu.');
  refresh();
 }
-function load(gen){
- if(gen!==state.gen||!state.url)return;
+/* Read finished (success or failure): let playback start, after a short pause so the provider
+   releases the connection that the header read used. */
+function end(gen){
+ if(gen!==state.gen)return;
+ if(state.guard){clearTimeout(state.guard);state.guard=null;}
+ var f=state.done;state.done=null;
+ if(f)setTimeout(function(){if(gen===state.gen)f();},RELEASE_MS);
+}
+function load(gen,timeout){
+ if(gen!==state.gen||!state.url){end(gen);return;}
  say('MKV başlığından ses/altyazı listesi okunuyor…');
- fetchRange(state.url,0,HEAD_BYTES,function(err,text){
+ fetchRange(state.url,0,HEAD_BYTES,timeout,function(err,text){
   if(gen!==state.gen)return;
-  if(err){say(reason(err));return;}
+  if(err){say(reason(err));end(gen);return;}
   var first=parseHead(text);
-  if(first.error){say(reason(new Error(first.error)));return;}
-  if(first.tracks){apply(first.tracks,gen);return;}
-  fetchRange(state.url,first.need,TRACKS_BYTES,function(err2,text2){
+  if(first.error){say(reason(new Error(first.error)));end(gen);return;}
+  if(first.tracks){apply(first.tracks,gen);end(gen);return;}
+  fetchRange(state.url,first.need,TRACKS_BYTES,timeout,function(err2,text2){
    if(gen!==state.gen)return;
-   if(err2){say(reason(err2));return;}
+   if(err2){say(reason(err2));end(gen);return;}
    var second=parseTracksAt(text2);
-   if(second.error){say(reason(new Error(second.error)));return;}
-   apply(second.tracks,gen);
+   if(second.error){say(reason(new Error(second.error)));end(gen);return;}
+   apply(second.tracks,gen);end(gen);
   });
  });
 }
-function setSource(data){
- state.gen++;abortActive();
+/* Returns true when onDone will be called later (MKV: header is read first); false otherwise,
+   in which case the caller must start playback itself. */
+function setSource(data,onDone){
+ state.gen++;abortActive();state.done=null;
  state.url='';state.tracks=[];state.audio=[];state.subs=[];state.audioSel=-1;state.subSel=-1;say('');
- if(!data||!data.url)return;
- var ext=String(data.extension||'').toLowerCase();
- if(ext!=='mkv'&&ext!=='webm'&&ext!=='mka')return;
+ var ext=data&&data.url?String(data.extension||'').toLowerCase():'';
+ if(!data||!data.url||(ext!=='mkv'&&ext!=='webm'&&ext!=='mka'))return false;
  state.url=String(data.url);
  var gen=state.gen;
- state.timer=setTimeout(function(){state.timer=null;load(gen);},START_DELAY);
+ if(typeof onDone==='function'){
+  state.done=onDone;
+  state.guard=setTimeout(function(){
+   state.guard=null;
+   if(gen!==state.gen)return;
+   if(state.xhr){try{state.xhr.abort();}catch(e){}state.xhr=null;}
+   say('MKV başlığı zamanında okunamadı; oynatma başlatılıyor.');
+   var f=state.done;state.done=null;if(f)f();
+  },GUARD_MS);
+  load(gen,PREFETCH_TIMEOUT);
+  return true;
+ }
+ state.timer=setTimeout(function(){state.timer=null;load(gen,25000);},START_DELAY);
+ return false;
 }
 function rescan(){
  if(!state.url){say('Bu içerik MKV değil veya henüz bir film/dizi açılmadı.');return;}
- state.gen++;abortActive();load(state.gen);
+ state.gen++;abortActive();state.done=null;load(state.gen,25000);
 }
 function trackLabel(t){
  var parts=[languageName(t.lang)];
@@ -249,8 +286,9 @@ function extendMenus(sub,aud,nativeTextCount,nativeAudioCount){
   for(i=0;i<state.subs.length;i++){t=state.subs[i];addOption(sub,'MKV: '+trackLabel(t),'mkv:s:'+t.typeIndex);}
  if(state.audioSel>=0)try{aud.value='mkv:a:'+state.audioSel;}catch(e){}
 }
+/* The status line (tv-mkv-status) already explains failures; the notice only describes success. */
 function notice(){
- if(!state.tracks.length)return state.status&&state.status.indexOf('okundu')<0?state.status:'';
+ if(!state.tracks.length)return '';
  return 'MKV başlığından '+state.audio.length+' ses, '+state.subs.length+' altyazı okundu. Seçim TV medya motoruna iletilir; görüntü tabanlı (PGS/VobSub) altyazılar TV tarafından çizilir.';
 }
 

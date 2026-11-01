@@ -160,14 +160,22 @@
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
     window.XIPTVTV.beforePlay(kind,id,url,name);
     if(window.XIPTVLGMedia&&window.XIPTVLGMedia.setSource)window.XIPTVLGMedia.setSource(kind==='live'?null:{serverUrl:server,username:username,password:password,kind:kind,id:id,extension:suffix,originalUrl:url});
-    if(window.XIPTVMkv&&window.XIPTVMkv.setSource)window.XIPTVMkv.setSource(kind==='live'?null:{url:url,extension:suffix,kind:kind});
     if(window.XIPTVAltPlayer&&window.XIPTVAltPlayer.beforeSourceChange)window.XIPTVAltPlayer.beforeSourceChange();
-    try{
-      video.pause();video.removeAttribute('src');
-      while(video.firstChild)video.removeChild(video.firstChild);
-      video.load();video.src=url;video.load();video.play();
-      say('Oynatılıyor: '+String(name||'Video')+' | '+suffix.toUpperCase()+' • Görüntü/ses desteği yayına bağlıdır.');
-    }catch(e){say('Oynatma hatası: '+e.message);}
+    // Release the previous stream first: many IPTV accounts allow only one connection.
+    try{video.pause();video.removeAttribute('src');while(video.firstChild)video.removeChild(video.firstChild);video.load();}catch(e){}
+    var started=false;
+    function startPlayback(){
+      if(started)return;started=true;
+      try{
+        video.src=url;video.load();video.play();
+        say('Oynatılıyor: '+String(name||'Video')+' | '+suffix.toUpperCase()+' • Görüntü/ses desteği yayına bağlıdır.');
+      }catch(e){say('Oynatma hatası: '+e.message);}
+    }
+    // MKV: read the track list BEFORE playback so no second connection competes with the player.
+    var deferred=false;
+    try{deferred=!!(window.XIPTVMkv&&window.XIPTVMkv.setSource&&window.XIPTVMkv.setSource(kind==='live'?null:{url:url,extension:suffix,kind:kind},startPlayback));}catch(e){deferred=false;}
+    if(deferred)say('MKV ses/altyazı listesi okunuyor: '+String(name||'Video')+' …');
+    else startPlayback();
   }
   function renderChannels(){
     focusCache=null;

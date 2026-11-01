@@ -94,4 +94,63 @@ assert.equal(mkv.parseHead('').error,'not-mkv');
   assert.ok(Array.isArray(none.tracks)&&none.tracks.length===0);
 }
 
-console.log('PASS: MKV header reader (unknown-size segment, seekhead jump, UTF-8 names, x-user-defined strings, non-mkv)');
+// 4) Header is read BEFORE playback (single-connection IPTV accounts), and playback always starts.
+function fakeXhr(responder){
+  return function FakeXHR(){
+    const self=this;self.headers={};
+    self.open=(m,u)=>{self.url=u;};
+    self.overrideMimeType=()=>{};
+    self.setRequestHeader=(k,v)=>{self.headers[k]=v;};
+    self.abort=()=>{self.aborted=true;};
+    self.send=()=>setImmediate(()=>{const r=responder(self);self.status=r.status;self.responseText=r.text;if(self.onload)self.onload();});
+  };
+}
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+const statusEl={textContent:''};let refreshed=0;
+sandbox.document.getElementById=id=>id==='tv-mkv-status'?statusEl:null;
+sandbox.XIPTVTV={refreshTracks(){refreshed++;}};
+const sample=Buffer.concat([ebmlHeader,unknownSegment(Buffer.concat([tracksEl,cluster]))]);
+{
+  const order=[];
+  sandbox.XMLHttpRequest=fakeXhr(x=>{order.push('xhr '+x.headers.Range);return {status:206,text:sample.toString('latin1')};});
+  const deferred=mkv.setSource({url:'http://iptv.example:80/series/u/p/1.mkv',extension:'mkv'},()=>order.push('play'));
+  assert.equal(deferred,true,'MKV must defer playback until the header is read');
+  assert.equal(order.length,0,'nothing may start synchronously');
+  await wait(700);
+  assert.equal(order[0],'xhr bytes=0-786431');
+  assert.equal(order[1],'play','playback starts only after the header request finished');
+  assert.equal(order.length,2);
+  assert.equal(mkv.tracks().length,4);
+  assert.ok(refreshed>=1,'menus must be refreshed');
+  assert.match(statusEl.textContent,/2 ses, 2 altyazı/);
+}
+{
+  const order=[];
+  sandbox.XMLHttpRequest=fakeXhr(()=>({status:404,text:'<html><body>Not Found</body></html>'}));
+  mkv.setSource({url:'http://iptv.example:80/series/u/p/2.mkv',extension:'mkv'},()=>order.push('play'));
+  await wait(700);
+  assert.deepEqual(Array.from(order),['play'],'playback must still start when the header cannot be read');
+  assert.equal(mkv.tracks().length,0);
+  assert.match(statusEl.textContent,/HTTP 404/);
+  assert.match(statusEl.textContent,/iptv\.example/);
+  assert.match(statusEl.textContent,/Not Found/);
+  assert.ok(!/u\/p/.test(statusEl.textContent),'credentials must never be shown on screen');
+}
+{
+  const order=[];
+  sandbox.XMLHttpRequest=fakeXhr(()=>({status:206,text:sample.toString('latin1')}));
+  assert.equal(mkv.setSource({url:'http://iptv.example/movie/u/p/3.mp4',extension:'mp4'},()=>order.push('mp4')),false);
+  assert.equal(mkv.setSource(null,()=>order.push('live')),false);
+  await wait(500);
+  assert.equal(order.length,0,'non-MKV: the caller starts playback itself, callback is never used');
+}
+{
+  const order=[];
+  sandbox.XMLHttpRequest=fakeXhr(()=>({status:206,text:sample.toString('latin1')}));
+  mkv.setSource({url:'http://iptv.example/series/u/p/4.mkv',extension:'mkv'},()=>order.push('first'));
+  mkv.setSource({url:'http://iptv.example/series/u/p/5.mkv',extension:'mkv'},()=>order.push('second'));
+  await wait(700);
+  assert.deepEqual(Array.from(order),['second'],'a replaced selection must never start the old stream');
+}
+
+console.log('PASS: MKV header reader (unknown-size segment, seekhead jump, UTF-8 names, x-user-defined strings, non-mkv) + header-before-playback ordering');

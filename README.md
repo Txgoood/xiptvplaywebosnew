@@ -5,7 +5,10 @@ Bu depo yalnızca LG webOS Smart TV uygulaması ve onun opsiyonel FFprobe/FFmpeg
 ## Derleme
 GitHub Actions → **Build LG webOS IPK** → Run workflow. Başarılı çalıştırmanın artifact'i `xiptvplay-lg-webos-ipk` içindeki `.ipk` dosyasıdır.
 
-Sürüm: **1.0.17**. Mevcut oynatıcı varsayılandır; Shaka yalnızca HLS/DASH için isteğe bağlıdır.
+Sürüm: **1.0.18**. Mevcut oynatıcı varsayılandır; Shaka yalnızca HLS/DASH için isteğe bağlıdır.
+
+## 1.0.18 — MKV başlığı oynatmadan önce okunur
+TV'de 1.0.17 ile IPTV sunucusu parça listesi isteğine HTTP 404 döndürdü, Render servisi de aynı kaynağı açamadı. Olası neden: hesap tek eşzamanlı bağlantıya izin veriyor ve oynayan yayın bağlantıyı tutuyor. Bu yüzden: (1) önceki yayın kapatılır, (2) MKV başlığı oynatmadan ÖNCE okunur (en fazla ~7 sn, başarısız olsa da oynatma başlar), (3) Render servisi artık otomatik taranmaz (ikinci bağlantı yayını kesebilir; düğmeyle elle çalışır), (4) hata mesajı sunucu adı, yönlendirme ve yanıt metnini gösterir (kimlik bilgisi asla gösterilmez). Bu hâlâ TV'de doğrulanmamıştır.
 
 ## 1.0.17 — MKV ses/altyazı listesi
 - Yeni `webos/tv-mkv-tracks.js`: MKV/WebM dosyasının başlığını TV üzerinde tek bir HTTP Range isteğiyle okur ve ses/altyazı parçalarını (dil, ad, codec, kanal) “MKV:” öneki ile menüye ekler. Harici servise ve TV'nin `audioTracks/textTracks` bildirmesine bağlı değildir.
