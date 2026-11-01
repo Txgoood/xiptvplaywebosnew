@@ -1,0 +1,310 @@
+/* TV dashboard for legacy WebKit 538 / webOS 2: no grid, no CSS variables */
+body.tv-mode{overflow:hidden;background:#101923}
+body.tv-mode main{padding:0!important}
+body.tv-mode h1{position:absolute;top:0;left:0;right:0;height:56px;margin:0;padding:14px 3%;font-size:30px;background:#142536;z-index:4;box-sizing:border-box;border-bottom:2px solid #22a0b6}
+body.tv-mode main>p,body.tv-mode main>button:not(#iptv-open),body.tv-mode #status,body.tv-mode #events{display:none!important}
+body.tv-mode #iptv-open{position:absolute;right:3%;top:6px;z-index:5;font-size:16px;padding:7px}
+body.tv-mode #iptv-panel{display:block!important;position:absolute;left:0;right:0;top:58px;bottom:0;margin:0!important;padding:14px 2%!important;border:0!important;background:#101923!important;box-sizing:border-box;overflow:hidden}
+body.tv-mode #iptv-hide{position:absolute;right:2%;top:10px;z-index:7;font-size:16px;padding:8px 10px}
+body.tv-mode #iptv-message{position:absolute;bottom:4px;left:3%;right:3%;height:28px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:16px!important;margin:0;z-index:6}
+body.tv-mode #iptv-browser{position:absolute;left:2%;right:2%;top:57px;bottom:46px;overflow:hidden}
+body.tv-mode #iptv-browser>p{display:none}
+body.tv-mode #tv-now-playing{position:absolute;right:1%;top:0;width:43%;height:34px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#9eeeff;font-size:23px;font-weight:bold}
+body.tv-mode #iptv-categories{position:absolute;left:0;top:0;bottom:0;width:21%;max-height:none!important;overflow-y:auto!important;padding:5px;box-sizing:border-box;border-right:1px solid #365769}
+body.tv-mode #iptv-channels{position:absolute;left:22%;top:0;bottom:0;width:32%;max-height:none!important;overflow-y:auto!important;padding:5px;box-sizing:border-box}
+body.tv-mode #iptv-categories button,body.tv-mode #iptv-channels button{display:block!important;width:97%;font-size:17px!important;margin:2px 0 7px!important;padding:12px 8px!important;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-radius:6px}
+body.tv-mode #video{position:absolute;right:2.5%;top:165px;width:42%;height:53vh;max-height:53vh;background:#02060a;z-index:2;border:2px solid #284959;box-sizing:border-box}
+body.tv-mode #iptv-login{position:absolute;left:4%;top:5%;right:4%;bottom:40px;overflow-y:auto;background:#182b3e;padding:12px 20px;box-sizing:border-box}
+body.tv-mode #iptv-login p{font-size:18px;margin:10px 0}
+body.tv-mode #iptv-login input{max-width:45%;font-size:20px!important}
+body.tv-mode #iptv-keyboard{top:5%;height:88%;left:5%;width:90%}
+
+body.tv-mode #tv-mode-tabs{position:absolute;top:0;left:0;right:0;height:53px;z-index:3;white-space:nowrap;overflow:hidden}
+body.tv-mode #tv-mode-tabs button{font-size:19px;margin:2px 10px 5px 0;padding:9px 24px}
+body.tv-mode #iptv-categories,body.tv-mode #iptv-channels{top:58px}
+body.tv-mode #tv-now-playing{top:67px;z-index:3}
+body.tv-mode #tv-episodes{position:absolute;top:58px;bottom:0;left:22%;right:0;z-index:8;background:#152535;border:2px solid #3dcadd;padding:12px;box-sizing:border-box;overflow:hidden}
+body.tv-mode #tv-episodes-title{display:block;font-size:23px;max-width:75%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin:8px}
+body.tv-mode #tv-episodes-close{float:right;font-size:16px}
+body.tv-mode #tv-episodes-list{clear:both;overflow-y:auto;height:85%;padding:8px}
+body.tv-mode #tv-episodes-list button{display:block;width:94%;text-align:left;padding:12px;font-size:19px}
+
+body.tv-mode #tv-4k-options{position:absolute;right:1%;top:105px;width:43%;height:48px;z-index:4;white-space:nowrap}
+body.tv-mode #tv-4k-options button{font-size:16px;padding:7px 12px;margin:0 10px 0 0}
+
+/* Full-screen playback: legacy webOS 2 WebKit, keep native hardware video element. */
+body.tv-mode #tv-player-controls{position:absolute;right:1%;top:57px;width:43%;height:48px;z-index:9;white-space:nowrap}
+body.tv-mode #tv-player-controls button{font-size:16px;padding:7px 12px;margin:0 8px 0 0}
+body.tv-mode.tv-fullscreen #video{position:fixed!important;left:0!important;right:0!important;top:0!important;bottom:0!important;width:100%!important;height:100%!important;max-height:none!important;margin:0!important;border:0!important;z-index:100!important;object-fit:contain}
+body.tv-mode.tv-fullscreen #tv-player-controls{position:fixed!important;top:10px;right:10px;width:auto;z-index:103;background:rgba(4,14,24,.76);padding:5px}
+body.tv-mode.tv-fullscreen #tv-player-controls button{font-size:19px}
+body.tv-mode.tv-fullscreen #iptv-panel{z-index:auto}
+body.tv-mode.tv-fullscreen #iptv-browser{z-index:auto}
+body.tv-mode.tv-fullscreen #tv-now-playing{display:none}
+body.tv-mode.tv-fullscreen #tv-4k-options{display:none}
+body.tv-mode.tv-fullscreen #iptv-categories,body.tv-mode.tv-fullscreen #iptv-channels{visibility:hidden}
+body.tv-mode.tv-fullscreen #iptv-message{display:none}
+body.tv-mode.tv-fill #video{object-fit:cover;-webkit-transform:scale(1.18);transform:scale(1.18)}
+body.tv-mode.tv-fill.tv-fullscreen #video{-webkit-transform:scale(1.18);transform:scale(1.18)}
+
+body.tv-mode #tv-filter-panel{position:absolute;top:51px;left:0;right:0;height:45px;z-index:7;background:#152536;white-space:nowrap}
+body.tv-mode #tv-filter-panel input,body.tv-mode #tv-filter-panel select{font-size:17px;padding:5px;margin:2px 5px;max-width:24%}
+body.tv-mode #tv-filter-panel label{font-size:17px}
+body.tv-mode #tv-filter-panel button{font-size:15px;padding:6px 10px;margin:1px 8px}
+body.tv-mode #tv-mode-tabs{height:46px}
+body.tv-mode #iptv-categories,body.tv-mode #iptv-channels{top:104px}
+body.tv-mode #tv-now-playing{top:108px}
+body.tv-mode #tv-player-controls{top:145px}
+body.tv-mode #tv-4k-options{top:190px}
+body.tv-mode #video{top:245px;height:43vh;max-height:43vh}
+body.tv-mode #tv-episodes{top:104px}
+body.tv-mode #tv-controls{position:absolute;top:100px;left:23%;right:1%;z-index:25;background:#203649;border:2px solid #47b9cd;padding:10px;max-height:190px;overflow:auto}
+body.tv-mode #tv-controls select,body.tv-mode #tv-controls button{font-size:16px;padding:6px;margin:4px}
+body.tv-mode #tv-controls label{display:inline-block;font-size:16px;margin-right:9px}
+body.tv-mode.tv-fullscreen #tv-controls{position:fixed;top:65px;left:10%;right:10%;z-index:110}
+
+/* v0.7: Android XIPTV visual language adapted to ten-foot UI.
+   Only presentational selectors: no changes to stream, auth or local data. */
+body.tv-mode{background:#0e0e10;color:#e5e1e4;font-family:Arial,Helvetica,sans-serif}
+body.tv-mode h1{background:#141519;color:#00f0ff;border-bottom:1px solid #273a40;font-weight:bold;padding-left:3.2%;letter-spacing:.4px}
+body.tv-mode #tv-version-label{color:#e5e1e4;font-size:21px}
+body.tv-mode #iptv-panel{background:#0e0e10!important}
+body.tv-mode #iptv-browser{left:2.5%;right:2.5%}
+body.tv-mode #tv-mode-tabs{border-bottom:1px solid #2b3438}
+body.tv-mode #tv-mode-tabs button{background:transparent;border:0;color:#c0c9cb;border-bottom:3px solid transparent;border-radius:0;padding:8px 20px;font-size:20px;font-weight:bold}
+body.tv-mode #tv-mode-tabs button.active,body.tv-mode #tv-mode-tabs button:focus{color:#00f0ff;border-bottom-color:#00f0ff;outline:0;background:#173139}
+body.tv-mode #tv-filter-panel{background:#141519;border-bottom:1px solid #273a40}
+body.tv-mode #tv-filter-panel input,body.tv-mode #tv-filter-panel select{background:#22262c;border:1px solid #3c484e;color:#f4fafb;border-radius:6px}
+body.tv-mode #tv-filter-panel label{color:#cbd6d8}
+body.tv-mode #iptv-categories{background:#15171b;border-right:1px solid #313438;border-radius:9px 0 0 9px}
+body.tv-mode #iptv-channels{background:#101215;border-radius:0 9px 9px 0}
+body.tv-mode #iptv-categories button,body.tv-mode #iptv-channels button{
+ background:#21242a;border:1px solid #313740;border-radius:9px;color:#e5e1e4;
+ padding:13px 12px!important;font-size:18px!important;line-height:1.25
+}
+body.tv-mode #iptv-categories button:focus,body.tv-mode #iptv-channels button:focus,
+body.tv-mode #iptv-categories button.active,body.tv-mode #iptv-channels button.active{
+ background:#124a58!important;border:2px solid #00f0ff!important;color:white!important;
+ outline:0!important;box-shadow:0 0 10px rgba(0,240,255,.18)
+}
+body.tv-mode #tv-now-playing{color:#f5f7f8;font-size:23px}
+body.tv-mode #video{background:#050505;border:1px solid #344148;border-radius:9px}
+body.tv-mode #iptv-message{background:#17252b;color:#9bdded;border-radius:6px;padding:3px 12px;box-sizing:border-box}
+body.tv-mode #iptv-hide,body.tv-mode #iptv-open{background:#242930;color:#dce8eb;border:1px solid #49636e;border-radius:7px}
+body.tv-mode #tv-player-controls button,body.tv-mode #tv-4k-options button,
+body.tv-mode #tv-filter-panel button{background:#202d33;border:1px solid #40707c;border-radius:7px;color:#e6f9fc}
+body.tv-mode #tv-episodes,body.tv-mode #tv-controls,body.tv-mode #iptv-login{background:#191c22;border:1px solid #365d68;border-radius:10px;color:#f0f3f4}
+body.tv-mode #tv-episodes-list button{background:#252a30;border:1px solid #38434c;border-radius:8px;color:white}
+body.tv-mode button:focus,body.tv-mode select:focus,body.tv-mode input:focus{outline:3px solid #00f0ff;outline-offset:1px}
+
+/* Poster tiles: compatible with webOS 2 WebKit and the existing hardware video. */
+body.tv-mode #iptv-channels.tv-poster-list{font-size:0;text-align:left}
+body.tv-mode #iptv-channels.tv-poster-list>button{
+ display:inline-block!important;vertical-align:top;position:relative;
+ width:46%!important;height:210px!important;min-height:210px;
+ margin:1% 2%!important;padding:0!important;white-space:normal!important;
+ overflow:hidden!important;text-align:left;background:#1e242b!important;
+ border:2px solid #36434a!important;border-radius:10px!important;
+}
+body.tv-mode #iptv-channels.tv-poster-list>button img{
+ display:block;width:100%;height:164px;object-fit:cover;
+}
+body.tv-mode #iptv-channels.tv-poster-list>button .tv-card-title{
+ display:block;position:absolute;bottom:0;left:0;right:0;
+ height:42px;padding:5px 7px;box-sizing:border-box;
+ background:#1b2027;color:#f0f5f6;font-size:14px;
+ white-space:normal;overflow:hidden;line-height:17px
+}
+body.tv-mode #iptv-channels.tv-poster-list .tv-poster-placeholder{
+ display:block;height:164px;text-align:center;line-height:164px;
+ background:#24313a;color:#00f0ff;font-size:22px;font-weight:bold
+}
+body.tv-mode #iptv-channels.tv-poster-list>button:focus{
+ border-color:#00f0ff!important;outline:2px solid #00f0ff!important
+}
+
+body.tv-mode #tv-profile-panel{position:absolute;top:4%;left:8%;right:8%;bottom:4%;z-index:70;background:#171a21;border:2px solid #00f0ff;border-radius:12px;padding:20px;overflow-y:auto;box-sizing:border-box;box-shadow:0 0 0 400px rgba(0,0,0,.75)}
+body.tv-mode #tv-profile-panel h2{color:#00f0ff;font-size:29px;margin:4px}
+body.tv-mode #tv-profile-items{max-height:35%;overflow:auto}
+body.tv-mode #tv-profile-items button{display:inline-block;margin:8px;padding:16px;background:#25303b;color:#fff;border-radius:10px}
+body.tv-mode #tv-profile-close{float:right}
+body.tv-mode #tv-profile-panel input{padding:10px;margin:7px;font-size:19px;max-width:30%}
+body.tv-mode #tv-profile-panel label{font-size:20px}
+
+/* Compact non-obscuring text entry: input preview remains visible above keys. */
+#iptv-keyboard,body.tv-mode #iptv-keyboard{
+ position:fixed!important;left:4%!important;right:4%!important;top:auto!important;
+ bottom:2%!important;width:92%!important;height:43%!important;max-height:43%!important;
+ z-index:99999!important;border:2px solid #00f0ff!important;border-radius:12px;
+ box-sizing:border-box;background:#111b24!important;padding:9px 14px!important;
+ overflow:hidden!important;box-shadow:0 -3px 14px rgba(0,0,0,.6)!important
+}
+#iptv-keyboard-title{font-size:20px!important;line-height:26px;margin:0 0 6px!important;
+ background:#25353c;border-radius:6px;padding:5px 10px!important;color:#f3fbfc;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:28px!important}
+#iptv-keys{height:calc(100% - 48px)!important;overflow-y:auto!important;overflow-x:hidden!important}
+#iptv-keys button{font-size:18px!important;min-width:59px!important;margin:3px!important;padding:7px 9px!important}
+
+/* XIPTV TV consumer home, compatible with WebKit 538. */
+#tv-home{position:fixed;left:0;right:0;top:0;bottom:0;overflow:hidden;z-index:30;
+background:radial-gradient(ellipse at 76% 27%,#164451 0%,#121d29 42%,#0a0c12 82%);padding:10vh 7vw;box-sizing:border-box;color:#f7f9fb}
+#tv-home .tv-home-eyebrow{font-size:18px;color:#00f0ff;font-weight:bold;letter-spacing:4px}
+#tv-home h2{max-width:70%;font-size:52px;line-height:1.12;margin:38px 0 15px;color:#fff}
+#tv-home p{font-size:25px;color:#c0cbd0;margin:0 0 46px}
+#tv-home .tv-home-actions button{display:inline-block;min-width:210px;height:145px;
+ margin:0 18px 15px 0;padding:15px;text-align:center;background:#1c3039;
+border:2px solid #47717e;border-radius:16px;font-size:25px;font-weight:bold;color:#fff}
+#tv-home .tv-home-actions button:focus{outline:4px solid #00f0ff;background:#17677b;box-shadow:0 0 30px rgba(0,240,255,.23)}
+#tv-home .tv-home-foot{position:absolute;bottom:8vh;color:#9ab1bd;font-size:18px}
+#tv-show-diagnostics{position:absolute;right:5vw;bottom:6vh;font-size:15px;padding:9px;background:#1b232c;border:1px solid #44525b;border-radius:7px;color:#a8b4bb}
+
+/* Stitch Ten-Foot Cinematic Void: native ES5 TV layout, offline and webOS 2 safe. */
+#tv-home{position:fixed;top:0;left:0;right:0;bottom:0;padding:0;overflow:hidden;background:#0f131c;color:#dfe2ee;z-index:30;font-family:Arial,sans-serif}
+#stitch-side{position:absolute;top:0;bottom:0;left:0;width:82px;background:#0a0e16;border-right:1px solid #252e35;z-index:4;text-align:center}
+#stitch-side .stitch-logo{width:46px;height:46px;line-height:46px;margin:16px auto 36px;border-radius:12px;background:#00daf3;color:#00363d;font-size:29px;font-weight:bold}
+#stitch-side button{display:block;width:55px;height:49px;margin:7px auto;padding:3px;background:transparent;border:0;border-radius:10px;color:#cad7e4;font-size:28px}
+#stitch-side button.selected,#stitch-side button:focus{background:#00daf3;color:#00363d;outline:2px solid #b7f4ff}
+.stitch-main{position:absolute;left:82px;right:0;top:0;bottom:0}
+.stitch-top{height:60px;background:#11151e;padding:0 32px;box-sizing:border-box;border-bottom:1px solid #252f3d;line-height:60px}
+.stitch-top strong{font-size:24px;color:#c3f5ff}
+.stitch-top-meta{float:right;color:#b6c5ce;font-size:17px;margin-right:75px}
+.stitch-avatar{float:right;margin-right:-255px;margin-top:12px;border-radius:22px;background:#28333e;padding:0 15px;height:36px;line-height:36px;color:#c3f5ff}
+.stitch-scroll{position:absolute;left:0;right:0;top:60px;bottom:0;overflow-y:auto;padding:20px 34px 65px;box-sizing:border-box}
+#tv-home .stitch-hero{position:relative;height:300px;box-sizing:border-box;border-radius:15px;padding:46px 40px;overflow:hidden;background:linear-gradient(105deg,#101b28 0%,#132d3b 56%,#224b52 100%);border:1px solid #344a51}
+#tv-home .stitch-kicker{font-size:17px;color:#80edfc;letter-spacing:2px}
+#tv-home .stitch-hero h2{font-size:43px;max-width:95%;margin:12px 0 10px;color:#e6f9ff}
+#tv-home .stitch-hero p{font-size:21px;color:#d0dfe5;margin:0 0 22px}
+#tv-home .stitch-hero-buttons button{min-width:165px;margin:0 12px 0 0;border:1px solid #58808a;border-radius:8px;background:#242e3a;color:white;font-size:19px;padding:11px 17px}
+#tv-home #tv-feature-play{background:#00daf3;color:#00363d;border-color:#00daf3;font-weight:bold}
+#tv-home .stitch-hero-buttons button:focus{outline:3px solid #fff}
+.stitch-heading{margin:28px 0 12px;overflow:hidden}
+.stitch-heading strong{font-size:24px;color:#e4e8f1}
+.stitch-heading span{float:right;color:#a4b6c3;font-size:15px;margin-top:5px}
+.stitch-tiles{height:123px;white-space:nowrap;overflow-x:auto;overflow-y:hidden}
+.stitch-empty{display:inline-block;min-width:280px;max-width:92%;background:#1c2028;border:1px solid #303c45;border-radius:10px;padding:28px 22px;color:#b4c9d1;font-size:18px;white-space:normal}
+.stitch-footer{font-size:14px;color:#8ea9b1;background:#181c24;border-radius:10px;padding:15px 20px;margin-top:24px}
+#tv-home #tv-show-diagnostics{position:fixed;top:auto;bottom:8px;right:12px;z-index:6;opacity:.45;font-size:12px;padding:5px}
+
+#tv-home .stitch-movie-tile{display:inline-block;vertical-align:top;width:112px;height:120px;margin:0 14px 0 0;padding:0;background:#262b35;border:1px solid #3b494c;border-radius:8px;color:#e1e7ec;overflow:hidden}
+#tv-home .stitch-movie-tile img{display:block;height:90px;width:100%;object-fit:cover}
+#tv-home .stitch-movie-tile span{display:block;font-size:12px;padding:5px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tv-home .stitch-movie-tile:focus{outline:3px solid #00daf3}
+
+/* Stitch design fidelity pass: hero artwork and content density */
+#tv-home .stitch-scroll{background:#0f131c;padding:14px 29px 65px}
+#tv-home .stitch-hero{height:345px;border:0;border-radius:8px;background-color:#152330;background-position:center right;background-size:cover;padding:42px 32px}
+#tv-home .stitch-hero h2{font-size:41px;font-weight:bold;max-width:67%;margin:13px 0 13px;text-shadow:0 2px 9px rgba(0,0,0,.7)}
+#tv-home .stitch-hero p{max-width:62%;font-size:20px;line-height:1.35;color:#e4edf0;text-shadow:0 1px 6px #111}
+#tv-home .stitch-heading{margin-top:22px;margin-bottom:10px}
+#tv-home .stitch-heading strong{font-size:22px}
+#tv-home .stitch-tiles{height:168px}
+#tv-home .stitch-movie-tile{width:135px;height:158px;margin-right:12px;border-radius:7px}
+#tv-home .stitch-movie-tile img{height:126px}
+#tv-home .stitch-movie-tile span{font-size:13px;padding:5px 7px}
+#tv-home .stitch-empty{min-width:290px;max-width:75%;padding:24px;background:#181c24}
+#tv-home .stitch-top{box-sizing:border-box}
+#tv-home .stitch-avatar{float:none;display:inline-block;margin:0 0 0 15px;padding:4px 13px;vertical-align:middle;height:29px;line-height:29px}
+#tv-home .stitch-top-meta{float:right;margin-right:8px}
+
+/* Embedded icon shapes do not depend on Material Symbols or emoji fonts. */
+#stitch-side button svg{display:block;margin:auto;width:27px;height:27px;stroke:currentColor;fill:none}
+#stitch-side button:focus svg,#stitch-side button.selected svg{stroke:#00363d}
+#stitch-side .stitch-playmark{font-family:Arial,sans-serif;font-size:23px;line-height:46px;display:block;color:#00363d}
+
+/* v1.0.3: Stitch shell persists while catalog content switches */
+#stitch-side{position:fixed!important;left:0!important;top:0!important;bottom:0!important;z-index:90!important}
+body.tv-mode #iptv-panel{left:82px!important;top:60px!important;background:#0e121b!important}
+body.tv-mode #iptv-browser{left:2%!important;right:2%!important}
+body.tv-mode #tv-mode-tabs button{border-radius:7px 7px 0 0}
+body.tv-mode #iptv-channels{background:#121923;border:1px solid #293644}
+body.tv-mode #iptv-categories{background:#121923;border:1px solid #293644}
+body.tv-mode #tv-filter-panel{background:#121923}
+body.tv-mode #tv-video-favorite{display:none;position:fixed;right:3.2%;top:232px;z-index:55!important;background:rgba(14,20,29,.92);color:#fff;font-size:32px;width:52px;height:52px;border-radius:50%;border:2px solid #00daf3;margin:0;padding:0;text-align:center;line-height:44px}
+body.tv-mode #tv-video-favorite[style*="block"]{display:block}
+body.tv-mode #tv-video-favorite:focus{color:#ff6b91;background:#23303d;outline:3px solid white}
+body.tv-mode.tv-fullscreen #tv-video-favorite{top:70px;right:3%;z-index:111!important}
+
+
+/* LG TV settings drawer and compact overlay favorites, ES5-era layout. */
+#stitch-side #tv-nav-settings{position:absolute;bottom:18px;left:13px;margin:0}
+#tv-settings-panel{position:fixed;z-index:120;left:93px;bottom:20px;width:340px;max-height:70%;overflow:auto;background:#131b25;border:2px solid #00daf3;border-radius:12px;box-shadow:0 6px 35px #000;padding:16px;color:#e6f3f9}
+#tv-settings-panel h2{margin:4px 0 16px;color:#00daf3;font-size:25px}
+#tv-settings-panel button{display:block;width:100%;text-align:left;background:#22313d;color:white;border:1px solid #39505d;border-radius:8px;padding:12px;margin:7px 0;font-size:17px}
+#tv-settings-panel button:focus{outline:2px solid #00daf3}
+body.tv-mode #iptv-hide{display:none!important}
+body.tv-mode #iptv-channels .tv-item-wrap{display:block;position:relative;width:100%;box-sizing:border-box}
+body.tv-mode #iptv-channels .tv-item-wrap>button:first-child{width:97%;box-sizing:border-box}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap{display:inline-block;vertical-align:top;width:46%;margin:1% 2%;height:210px;font-size:0}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap>button:first-child{display:block!important;position:relative;width:100%!important;height:210px!important;margin:0!important;padding:0!important;overflow:hidden!important;background:#1e242b!important;border:2px solid #36434a!important;border-radius:10px!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap img{display:block;width:100%;height:164px;object-fit:cover}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap .tv-card-title{display:block;position:absolute;bottom:0;left:0;right:0;height:42px;padding:5px 7px;box-sizing:border-box;background:#1b2027;color:#f0f5f6;font-size:14px;white-space:normal;overflow:hidden;line-height:17px}
+body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-favorite{position:absolute!important;right:8px;top:8px;z-index:3;display:block!important;width:36px!important;height:36px!important;min-width:0!important;margin:0!important;padding:0!important;text-align:center!important;border-radius:50%!important;background:rgba(14,20,29,.9)!important;color:#ffda69!important;border:1px solid #00daf3!important;font-size:24px!important;line-height:34px!important}
+body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-favorite:focus{outline:3px solid #fff!important}
+
+/* webOS 2 TV v1.0.4: labeled navigation and compact native media controls. */
+#stitch-side{width:91px!important}
+#stitch-side button{width:82px!important;height:63px!important;margin:4px auto!important;padding:4px 2px!important;box-sizing:border-box}
+#stitch-side button svg{width:24px!important;height:24px!important}
+#stitch-side .stitch-nav-label{display:block;font-family:Arial,sans-serif;font-size:11px;line-height:15px;margin-top:3px;color:#c4dbe2;white-space:nowrap;text-align:center}
+#stitch-side button:focus .stitch-nav-label,#stitch-side button.selected .stitch-nav-label{color:#00363d}
+#stitch-side #tv-nav-settings{bottom:10px!important;left:4px!important}
+.stitch-main{left:91px!important}
+body.tv-mode #iptv-panel{left:91px!important}
+#tv-player-controls{transition:opacity .2s ease}
+body.tv-mode #tv-player-controls{width:44%!important;height:auto!important;min-height:44px!important;white-space:normal!important;z-index:61!important;background:rgba(15,23,34,.86);border-radius:8px;padding:4px}
+body.tv-mode #tv-player-controls button{font-size:13px!important;padding:5px 7px!important;margin:2px!important;border-radius:5px}
+body.tv-mode.tv-fullscreen #tv-player-controls{width:auto!important;max-width:88%!important;left:7%!important;right:7%!important;top:auto!important;bottom:10px!important;text-align:center!important;z-index:110!important}
+body.tv-mode #tv-media-info{position:fixed;left:24%;right:6%;bottom:11%;padding:18px 22px;background:#111e2b;color:#e5f6fc;border:2px solid #00daf3;border-radius:10px;z-index:115;max-height:50%;overflow-y:auto;font-size:19px}
+body.tv-mode #tv-media-info-close{float:right;padding:6px 13px;font-size:16px}
+body.tv-mode #tv-media-info-text{white-space:pre-wrap;line-height:1.5}
+
+/* Episode picker directly beneath the video, with legacy-friendly scrolling. */
+body.tv-mode #tv-episodes{left:auto!important;right:1%!important;width:43%!important;top:calc(245px + 43vh + 12px)!important;bottom:32px!important;overflow:hidden!important;z-index:72!important;padding:8px!important}
+body.tv-mode #tv-episodes-list{height:75%!important;overflow-y:auto!important}
+body.tv-mode #tv-episodes-list button{font-size:15px!important;padding:7px!important;margin:3px 0!important}
+body.tv-mode.tv-fullscreen #tv-episodes{position:fixed!important;left:16%!important;right:16%!important;width:auto!important;top:28%!important;bottom:16%!important;z-index:112!important;background:#16202c!important}
+
+/* Legacy TV: bottom-right media details and remote keyboard dismiss. */
+body.tv-mode #tv-detail-below{position:absolute;right:1%;top:calc(245px + 43vh + 12px);width:43%;height:21vh;overflow-y:auto;background:#17202b;border:1px solid #304451;border-radius:8px;padding:10px;box-sizing:border-box;font-size:15px}
+body.tv-mode #tv-detail-summary{max-height:75px;overflow-y:auto;font-size:15px;line-height:1.3;margin:6px 0}
+body.tv-mode #tv-season-tools select{font-size:15px;padding:5px}
+body.tv-mode #tv-season-episodes{max-height:90px;overflow-y:auto}
+body.tv-mode #tv-season-episodes button{font-size:13px;padding:5px;margin:3px}
+body.tv-mode #tv-episodes{display:none!important}
+body.tv-mode #tv-episodes[style*="block"]{display:none!important}
+body.tv-mode #tv-4k-options{display:none!important}
+body.tv-mode #tv-video-favorite{display:none!important}
+#iptv-keyboard-close{position:absolute;right:15px;top:9px;z-index:20;background:#384858;color:#fff;border:1px solid #00daf3;border-radius:6px;padding:5px 13px;font-size:18px}
+#tv-settings-panel label{display:block;font-size:16px;margin:12px 3px;color:#e5f5f9}
+body.tv-mode #tv-filter-panel #tv-search{max-width:23%}
+body.tv-mode #tv-filter-panel #tv-advanced-search{font-size:13px;padding:4px}
+
+/* v1.0.6: Keep details in genuinely free bottom-right viewport space. */
+body.tv-mode #tv-detail-below{position:fixed!important;left:auto!important;top:auto!important;right:2.5%!important;bottom:6%!important;width:40%!important;height:23%!important;max-height:23%!important;overflow-y:auto!important;z-index:20!important;padding:15px 18px!important;font-size:20px!important}
+body.tv-mode #tv-detail-summary{font-size:18px!important;max-height:80px!important;line-height:1.35!important}
+body.tv-mode #tv-season-tools select{font-size:20px!important;padding:9px!important}
+body.tv-mode #tv-season-episodes{max-height:140px!important}
+body.tv-mode #tv-season-episodes button{font-size:17px!important;padding:8px 12px!important}
+body.tv-mode #tv-favorites-panel{position:fixed;left:96px;top:25%;width:240px;z-index:105;background:#111c29;border:2px solid #00daf3;border-radius:9px;padding:12px;color:#fff;box-shadow:0 4px 22px #000}
+body.tv-mode #tv-favorites-panel button{display:block;width:100%;font-size:20px;padding:12px 8px;margin:7px 0;background:#253749;color:#fff;border:1px solid #456075;border-radius:7px}
+body.tv-mode #tv-favorites-panel h2{font-size:24px;color:#00daf3}
+body.tv-mode #iptv-channels{overflow-y:scroll!important;-webkit-overflow-scrolling:touch}
+body.tv-mode #iptv-channels .tv-item-wrap{min-height:45px}
+
+body.tv-mode #iptv-channels .tv-empty-results{padding:18px 12px;color:#f2d8a8;font-size:18px;line-height:1.5;white-space:normal}
+
+/* Favorites drawer is shared by the home launcher and the catalogue. */
+#tv-favorites-panel{position:fixed;left:96px;top:25%;width:240px;z-index:125;background:#111c29;border:2px solid #00daf3;border-radius:9px;padding:12px;color:#fff;box-shadow:0 4px 22px #000}
+#tv-favorites-panel button{display:block;width:100%;font-size:20px;padding:12px 8px;margin:7px 0;background:#253749;color:#fff;border:1px solid #456075;border-radius:7px}
+#tv-favorites-panel button:focus{outline:3px solid #00daf3}
+#tv-favorites-panel h2{font-size:24px;color:#00daf3}
+
+/* v1.0.7: optional read-only media track diagnostics; usable on old LG WebKit. */
+body.tv-mode #tv-track-scan{font-size:16px;padding:9px 15px;margin:7px 5px;background:#1e3643;color:#e8faff;border:1px solid #67c2d5}
+body.tv-mode #tv-track-scan-results{font-size:16px;line-height:1.55;white-space:pre-wrap;color:#c3e5ed;padding:7px;max-height:170px;overflow-y:auto}
+
+/* Optional LG media companion: subtitles are rendered independent of old WebKit textTracks. */
+#tv-lg-subtitle-overlay{position:fixed;left:8%;right:8%;bottom:10%;z-index:109;pointer-events:none;text-align:center;color:#fff;font-size:31px;line-height:1.35;font-weight:bold;white-space:pre-wrap;text-shadow:2px 2px 4px #000,-2px -2px 4px #000;box-sizing:border-box;padding:6px}
+body.tv-mode:not(.tv-fullscreen) #tv-lg-subtitle-overlay{position:absolute;left:56%;right:3%;bottom:8%;font-size:19px}
+body.tv-mode #tv-lg-media-scan,body.tv-mode #tv-lg-native-return{font-size:16px;padding:8px 12px;margin:6px;background:#183540;color:#e6f9fb;border:1px solid #00daf3;border-radius:6px}
+body.tv-mode #tv-lg-media-status{font-size:16px;color:#bce7e8;line-height:1.4;max-height:90px;overflow-y:auto;padding:5px}

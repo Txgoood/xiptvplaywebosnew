@@ -1,0 +1,24 @@
+name: Test LG Media Companion
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/lg-webos-tv
+    paths:
+      - 'lg-media-service/**'
+      - '.github/workflows/test-lg-media.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install bundled FFprobe and FFmpeg for integration tests
+        run: npm install --prefix lg-media-service --omit=dev
+      - name: Verify isolated server syntax
+        run: node --check lg-media-service/server.mjs
+      - name: Run security and track parsing tests
+        run: node --test lg-media-service/test.mjs lg-media-service/integration.test.mjs

@@ -1,0 +1,117 @@
+name: Build LG webOS IPK
+run-name: XIPTV Play LG webOS v1.0.16 • ${{ github.event_name }} • ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/lg-webos-tv
+    paths:
+      - 'webos/**'
+      - '.github/workflows/build-webos.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Package and verify webOS 2 IPK
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout TV branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test isolated LG media service
+        run: |
+          node --check lg-media-service/server.mjs
+          node --test lg-media-service/test.mjs
+          node --check webos/tv-lg-media.js
+          node --check webos/tv-alt-player.js
+          node --check webos/tv-posters.js
+          node --check webos/tv-home.js
+          node --check webos/tv-features.js
+          node --check webos/tv-iptv.js
+
+      - name: Prepare standalone webOS 2 app
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp webos/legacy-index.html dist/index.html
+          WEBOS_LEGACY=true node webos/build.mjs
+
+      - name: Generate offline H.264 Baseline / AAC-LC sample
+        run: |
+          set -euo pipefail
+          # Avoid slow apt mirrors: download only the prebuilt Linux binaries from npm.
+          # These tools are build-time only and are not included in the IPK.
+          npm install --prefix /tmp/webos-media-tools --no-save --ignore-scripts --no-audit --no-fund --fetch-retries=2 --fetch-timeout=90000 @ffmpeg-installer/linux-x64@4.1.0 @ffprobe-installer/linux-x64@5.2.0
+          FFMPEG=/tmp/webos-media-tools/node_modules/@ffmpeg-installer/linux-x64/ffmpeg
+          FFPROBE=/tmp/webos-media-tools/node_modules/@ffprobe-installer/linux-x64/ffprobe
+          chmod +x "$FFMPEG" "$FFPROBE"
+          "$FFMPEG" -version | head -n 1
+          "$FFPROBE" -version | head -n 1
+          "$FFMPEG" -nostdin -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=640x360:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 5 -c:v libx264 -profile:v baseline -level:v 3.0 -pix_fmt yuv420p -b:v 900k -maxrate 900k -bufsize 1800k -c:a aac -profile:a aac_low -b:a 96k -ar 48000 -ac 2 -movflags +faststart -shortest webos-package/sample.mp4
+          "$FFPROBE" -v error -show_entries stream=codec_name,profile,width,height -of default=noprint_wrappers=1 webos-package/sample.mp4 | tee /tmp/webos-video-codecs.txt
+          grep -q 'codec_name=h264' /tmp/webos-video-codecs.txt
+          grep -q 'codec_name=aac' /tmp/webos-video-codecs.txt
+          grep -Eqi 'profile=.*Baseline' /tmp/webos-video-codecs.txt
+          test -s webos-package/sample.mp4
+
+      - name: Check webOS package content
+        run: |
+          set -euo pipefail
+          test -s webos-package/index.html
+          test -s webos-package/appinfo.json
+          test -s webos-package/icon.png
+          test -s webos-package/tv-remote.js
+          test -s webos-package/tv-iptv.js
+          test -s webos-package/tv-features.js
+          test -s webos-package/tv-profiles.js
+          test -s webos-package/tv-alt-player.js
+          test -s webos-package/tv-posters.js
+          test -s webos-package/tv-home.js
+          test -s webos-package/tv-keyboard.js
+          test -s webos-package/tv-layout.css
+          grep -q 'id="iptv-open"' webos-package/index.html
+          grep -q 'Yerel Video' webos-package/index.html
+          grep -q 'sample.mp4' webos-package/index.html
+          grep -q 'Proxy MP4' webos-package/index.html
+          grep -q 'HLS Source' webos-package/index.html
+          grep -q 'MP4 Source' webos-package/index.html
+          grep -q 'Blob MP4' webos-package/index.html
+          if grep -q 'type="module"' webos-package/index.html; then
+            echo "Unsupported modern JavaScript module found in webOS 2 package"
+            exit 1
+          fi
+          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.16'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true) process.exit(1)"
+
+      - name: Run remote-control and playback UI smoke tests
+        run: node webos/legacy-smoke-test.mjs
+
+      - name: Install webOS CLI
+        run: |
+          npm install --global @webos-tools/cli
+          ares-package --version
+
+      - name: Build IPK
+        run: |
+          set -euo pipefail
+          mkdir -p webos-artifacts
+          ares-package --no-minify ./webos-package -o ./webos-artifacts
+          find webos-artifacts -maxdepth 1 -name '*.ipk' -type f -size +0c -print | tee /tmp/webos-ipk-list.txt
+          test -s /tmp/webos-ipk-list.txt
+
+      - name: Upload IPK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xiptvplay-lg-webos-ipk
+          path: webos-artifacts/*.ipk
+          if-no-files-found: error
+          retention-days: 14

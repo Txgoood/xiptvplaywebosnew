@@ -1,0 +1,5 @@
+/* TV'ye özel odak görünürlüğü. Mobil stilleri etkilemez. */
+:focus-visible { outline: 4px solid #00f0ff !important; outline-offset: 3px !important; }
+html, body, #root { min-height: 100%; }
+body { overscroll-behavior: none; }
+button, a, [role="button"] { scroll-margin: 90px; }

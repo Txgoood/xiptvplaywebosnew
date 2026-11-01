@@ -1,0 +1,17 @@
+{
+  "name": "xiptv-lg-media-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@ffmpeg-installer/linux-x64": "4.1.0",
+    "@ffprobe-installer/linux-x64": "5.2.0"
+  }
+}
