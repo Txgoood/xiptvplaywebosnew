@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/lg-webos-tv
+      - main
     paths:
       - 'lg-media-service/**'
       - '.github/workflows/test-lg-media.yml'
