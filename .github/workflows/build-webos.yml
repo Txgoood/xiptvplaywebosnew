@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feature/lg-webos-tv
+      - main
     paths:
       - 'webos/**'
       - '.github/workflows/build-webos.yml'
@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Checkout TV branch
+      - name: Checkout standalone webOS repository
         uses: actions/checkout@v4
 
       - name: Set up Node.js
