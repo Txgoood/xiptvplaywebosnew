@@ -5,7 +5,10 @@ Bu depo yalnızca LG webOS Smart TV uygulaması ve onun opsiyonel FFprobe/FFmpeg
 ## Derleme
 GitHub Actions → **Build LG webOS IPK** → Run workflow. Başarılı çalıştırmanın artifact'i `xiptvplay-lg-webos-ipk` içindeki `.ipk` dosyasıdır.
 
-Sürüm: **1.0.20**. Mevcut oynatıcı varsayılandır; Shaka yalnızca HLS/DASH için isteğe bağlıdır.
+Sürüm: **1.0.21**. Mevcut oynatıcı varsayılandır; Shaka yalnızca HLS/DASH için isteğe bağlıdır.
+
+## 1.0.21 — Paket kimliği ve TV teşhisi
+TV'de köprü hatası aynı metinle göründüğü için hangi paketin çalıştığı ayırt edilemiyordu. Artık hata satırı `paket=netcast|native`, `PalmSystem` (eski webOS'ta köprü yerine bu olabilir), `window` üzerindeki palm/webos/luna/netcast benzeri anahtarlar ve UA'yı gösterir. Native pakette de köprü yoksa mesaj bunu açıkça söyler.
 
 ## 1.0.20 — İki paket: ana (netcast) ve "XIPTV Play Native"
 TV'de 1.0.19 ile hata ekranı şunu gösterdi: `webOS=undefined, service=undefined, PalmServiceBridge=undefined, webOSSystem=undefined`. Yani 1.0.19'daki `typeof` varsayımı yanlıştı; köprü gerçekten yok. Neden: `appinfo.json` içindeki `trustLevel: "netcast"` modu `window.PalmServiceBridge`'i kaldırır (webosbrew appinfo belgesi). Aynı mod `allowCrossDomain` ile CORS denetimini kapattığı için IPTV istekleri (katalog, MKV başlığı) çalışıyor; bu yüzden ana paket değiştirilmedi.

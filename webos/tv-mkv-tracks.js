@@ -299,8 +299,17 @@ function notice(){
 /* ---- selection via the TV media pipeline (luna selectTrack), verified, with rollback ---- */
 function bridgeInfo(){
  function t(v){return v===null?'null':typeof v;}
- var svc;try{svc=win.webOS&&win.webOS.service;}catch(e){}
- return 'webOS='+t(win.webOS)+', service='+t(svc)+', PalmServiceBridge='+t(win.PalmServiceBridge)+', webOSSystem='+t(win.webOSSystem);
+ var svc,keys=[],k,n=0,ua='',m;
+ try{svc=win.webOS&&win.webOS.service;}catch(e){}
+ try{for(k in win){if(/palm|webos|luna|netcast|hcap|lgtv|nethost/i.test(k)){keys.push(k);if(++n>=14)break;}}}catch(e){}
+ try{m=String(win.navigator.userAgent).match(/(Web0S|webOS|NetCast)[^;)]*|Chrome\/[\d.]+|AppleWebKit\/[\d.]+/g);ua=m?m.join(' '):'';}catch(e){}
+ return 'paket='+(win.XIPTV_PKG||'?')+', webOS='+t(win.webOS)+', service='+t(svc)+', PalmServiceBridge='+t(win.PalmServiceBridge)+', PalmSystem='+t(win.PalmSystem)+', webOSSystem='+t(win.webOSSystem)+', anahtarlar=['+keys.join(',')+'], UA='+ua;
+}
+function noBridgeMessage(){
+ var why=win.XIPTV_PKG==='native'
+  ?'Bu “Native” pakette de TV servis köprüsü (PalmServiceBridge) yok; bu TV uygulamaya köprüyü vermiyor.'
+  :'TV servis köprüsü (PalmServiceBridge) “netcast” paket modunda yok. Seçim için “XIPTV Play Native” uygulamasını deneyin.';
+ return why+' ('+bridgeInfo()+')';
 }
 function luna(method,params,cb){
  var uri='luna://com.webos.media',done=false,bridge=null;
@@ -322,7 +331,7 @@ function luna(method,params,cb){
     else finish({ok:true,data:r});
    };
    bridge.call(uri+'/'+method,JSON.stringify(params));
-  }else finish({ok:false,error:'TV servis köprüsü (PalmServiceBridge) bu paket modunda yok: “netcast” modu köprüyü kapatır. Seçim için “XIPTV Play Native” uygulamasını deneyin. ('+bridgeInfo()+')'});
+  }else finish({ok:false,error:noBridgeMessage()});
  }catch(e){finish({ok:false,error:String(e&&e.message||e)});}
  setTimeout(function(){finish({ok:false,error:'yanıt gelmedi'});},6000);
 }

@@ -222,6 +222,20 @@ sandbox.PalmServiceBridge=function(){
   assert.match(statusEl.textContent,/XIPTV Play Native/);
 }
 
+// 6b) Native package without a bridge: the message says so and shows what this TV does expose.
+{
+  sandbox.XIPTV_PKG='native';
+  sandbox.PalmSystem={};sandbox.navigator={userAgent:'Mozilla/5.0 (Web0S; Linux/SmartTV) AppleWebKit/537.36 Chrome/38.0.2125.122'};
+  mkv.choose('audio',0);
+  await wait(60);
+  assert.match(statusEl.textContent,/Native” pakette de/);
+  assert.match(statusEl.textContent,/paket=native/);
+  assert.match(statusEl.textContent,/PalmSystem=object/);
+  assert.match(statusEl.textContent,/anahtarlar=\[[^\]]*PalmSystem/);
+  assert.match(statusEl.textContent,/UA=Web0S/);
+  delete sandbox.XIPTV_PKG;delete sandbox.PalmSystem;
+}
+
 // 7) Native package: the track list comes from the TV pipeline when the header cannot be read (CORS).
 {
   const stream=(language,codec_name,extra)=>({language,codec_name,...extra});
