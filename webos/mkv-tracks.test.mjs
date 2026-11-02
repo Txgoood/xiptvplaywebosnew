@@ -178,16 +178,14 @@ sandbox.PalmServiceBridge=function(){
   assert.match(statusEl.textContent,/önceki ses parçasına dönüldü/);
 }
 {
-  // subtitles: 'text' rejected, 'subtitle' accepted, then best-effort enable
+  // subtitles: safely enable without using risky selectTrack on older TV firmware
   calls.length=0;
-  replyFor=(uri,p)=>uri.endsWith('/selectTrack')&&p.type==='text'?{returnValue:false,errorText:'bad type'}:{returnValue:true};
+  replyFor=()=>({returnValue:true});
   mkv.choose('subtitle',1);
   await wait(120);
-  assert.deepEqual(calls.map(c=>c.uri.split('/').pop()),['selectTrack','selectTrack','setSubtitleEnable']);
-  assert.equal(calls[0].params.type,'text');assert.equal(calls[1].params.type,'subtitle');
-  assert.equal(calls[1].params.index,1);
-  assert.equal(calls[2].params.enable,true);
-  assert.match(statusEl.textContent,/Altyazı seçildi/);
+  assert.deepEqual(calls.map(c=>c.uri.split('/').pop()),['setSubtitleEnable']);
+  assert.equal(calls[0].params.enable,true);
+  assert.match(statusEl.textContent,/Altyazı etkinleştirme kabul edildi/);
   // turning subtitles off after selecting one
   calls.length=0;replyFor=()=>({returnValue:true});
   mkv.subtitleOff();
@@ -202,7 +200,7 @@ sandbox.PalmServiceBridge=function(){
   replyFor=()=>({returnValue:false,errorText:'invalid index',errorCode:-1});
   mkv.choose('subtitle',0);
   await wait(120);
-  assert.match(statusEl.textContent,/kabul etmedi: invalid index/);
+  assert.match(statusEl.textContent,/TV altyazı açma komutunu reddetti: invalid index/);
 }
 {
   // no bridge at all: message lists what exists, so the next screenshot is conclusive
