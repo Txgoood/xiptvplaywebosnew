@@ -441,10 +441,19 @@ function choose(kind,index){
     });
    });
   }else{
-   state.subSel=index;
-   luna('setSubtitleEnable',{mediaId:mediaId,enable:true},function(){});
-   nativeTextMode(index);
-   say('Altyazı seçildi (TV komutu kabul etti). Görünmüyorsa TV bu MKV için altyazıyı çizemiyor olabilir.');
+   // A successful selectTrack reply does not mean subtitles were actually enabled.
+   // Confirm the enable command and report errors instead of a false success.
+   luna('setSubtitleEnable',{mediaId:mediaId,enable:true},function(enabled){
+    if(!enabled.ok){
+     say('Altyazı parçası seçildi ancak TV altyazıyı etkinleştirmedi: '+enabled.error+
+      '. Ses oynatımı değiştirilmedi.');
+     return;
+    }
+    state.subSel=index;
+    nativeTextMode(index);
+    say('Altyazı seçimi ve etkinleştirme komutları kabul edildi. Ekranda görünmüyorsa TV medya motorunun MKV altyazı desteği incelenmeli.');
+    refresh();
+   });
   }
  });
 }
