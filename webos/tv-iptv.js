@@ -165,7 +165,7 @@
     try{video.pause();video.removeAttribute('src');while(video.firstChild)video.removeChild(video.firstChild);video.load();}catch(e){}
     // A channel may expose only MPEG-TS even when Xtream HLS was requested.
     // Attempt TS once if HLS errors or never reaches playback; leave movies/series untouched.
-    var liveTimer=null,liveError=null,livePlaying=null,liveFallback=false,liveActive=true;
+    var liveTimer=null,liveError=null,livePlaying=null,liveFallback=false,liveActive=true,liveStarted=false;
     if(window.XIPTVLiveCleanup)window.XIPTVLiveCleanup();
     function cleanupLive(){
       liveActive=false;
@@ -182,8 +182,18 @@
         var tsUrl=server.replace(/\/$/,'')+'/live/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.ts';
         try{video.pause();video.src=tsUrl;video.load();var promise=video.play();if(promise&&promise.catch)promise.catch(function(){});say('HLS görüntü vermedi; TS deneniyor: '+String(name||'Kanal'));}catch(e){say('Canlı TV TS hatası: '+e.message);}
       }
-      liveError=function(){fallbackTs();};
-      livePlaying=function(){if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}};
+      liveError=function(){
+        // Only the first HLS startup may trigger fallback; runtime errors must
+        // not switch a channel's transport after minutes of playback.
+        if(!liveStarted)fallbackTs();
+        else say('Canlı TV bağlantısı kesildi. Kanala yeniden girerek tekrar deneyin.');
+      };
+      livePlaying=function(){
+        // A 'playing' event alone is not proof of frames arriving on older webOS.
+        // Do not switch sources after playback has actually progressed.
+        liveStarted=true;
+        if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}
+      };
       video.addEventListener('error',liveError,false);
       video.addEventListener('playing',livePlaying,false);
       liveTimer=setTimeout(fallbackTs,9000);
