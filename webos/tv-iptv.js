@@ -176,7 +176,7 @@
     window.XIPTVLiveCleanup=cleanupLive;
     if(kind==='live'&&suffix==='m3u8'){
       function fallbackTs(){
-        if(!liveActive||liveFallback)return;
+        if(!liveActive||liveFallback||liveStarted)return;
         liveFallback=true;
         if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}
         var tsUrl=server.replace(/\/$/,'')+'/live/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.ts';
