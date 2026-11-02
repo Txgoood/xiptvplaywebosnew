@@ -428,7 +428,21 @@ function choose(kind,index){
  if(!mediaId){say('Bu TV oynatıcısı mediaId vermediği için '+name.toLowerCase()+' seçimi uygulanamıyor.');return;}
  var previous=isAudio?state.audioSel:state.subSel;
  say(name+' parçası TV medya motoruna iletiliyor…');
- trySelect(mediaId,isAudio?['audio']:['text','subtitle'],index,function(res){
+ if(!isAudio){
+  // On older LG firmware selectTrack(type:'text') can stall MKV decoding.
+  // Keep video/audio intact; use supported subtitle enable and HTML5 tracks when present.
+  luna('setSubtitleEnable',{mediaId:mediaId,enable:true},function(res){
+   if(!res.ok){say('TV altyazı açma komutunu reddetti: '+res.error);return;}
+   state.subSel=index;
+   nativeTextMode(index);
+   var v=$('video'),nativeCount=0;
+   try{nativeCount=(v.textTracks||[]).length;}catch(e){}
+   say('Altyazı etkinleştirme kabul edildi. '+(nativeCount?'TV metin kanalı da seçildi.':'TV MKV altyazısını çizmezse ayrı metin altyazısı dönüştürme yolu gerekli.') );
+   refresh();
+  });
+  return;
+ }
+ trySelect(mediaId,['audio'],index,function(res){
   if(!res.ok){say('TV medya motoru '+name.toLowerCase()+' değişimini kabul etmedi: '+res.error);return;}
   if(isAudio){
    state.audioSel=index;
