@@ -12,7 +12,7 @@
 var win=window,doc=win.document;
 var HEAD_BYTES=786432,TRACKS_BYTES=196608,START_DELAY=900,PREFETCH_TIMEOUT=5000,GUARD_MS=7000,RELEASE_MS=350;
 var ID_EBML=0x1A45DFA3,ID_SEGMENT=0x18538067,ID_SEEKHEAD=0x114D9B74,ID_TRACKS=0x1654AE6B,ID_CLUSTER=0x1F43B675;
-var state={url:'',tracks:[],audio:[],subs:[],status:'',gen:0,xhr:null,timer:null,guard:null,done:null,audioSel:-1,subSel:-1};
+var state={url:'',tracks:[],audio:[],subs:[],status:'',gen:0,xhr:null,timer:null,guard:null,done:null,audioSel:-1,subSel:-1,pipelineTried:false,origin:''};
 
 function $(id){return doc&&doc.getElementById?doc.getElementById(id):null;}
 function say(text){state.status=String(text||'');var el=$('tv-mkv-status');if(el)el.textContent=state.status;}
@@ -29,7 +29,7 @@ function codecName(id){
  if(CODEC[id])return CODEC[id];
  if(id.indexOf('A_AAC')===0)return 'AAC';
  if(id.indexOf('A_DTS')===0)return 'DTS';
- return id.replace(/^[ASV]_/,'');
+ return id.replace(/^[ASV]_/,'').toUpperCase();
 }
 function channelText(n){return n===1?'1.0':n===2?'2.0':n===6?'5.1':n===8?'7.1':n>0?n+' kanal':'';}
 
@@ -199,8 +199,9 @@ function reason(err){
  return 'MKV başlığı çözümlenemedi ('+m+').';
 }
 function refresh(){if(win.XIPTVTV&&win.XIPTVTV.refreshTracks)win.XIPTVTV.refreshTracks();}
-function apply(tracks,gen){
+function apply(tracks,gen,origin){
  if(gen!==state.gen)return;
+ state.origin=origin||'MKV başlığından';
  var i,t;
  state.tracks=tracks;state.audio=[];state.subs=[];
  for(i=0;i<tracks.length;i++){t=tracks[i];if(t.kind==='audio')state.audio.push(t);else state.subs.push(t);}
@@ -208,7 +209,7 @@ function apply(tracks,gen){
  for(i=0;i<state.audio.length;i++)if(state.audio[i].def){state.audioSel=i;break;}
  if(state.audioSel<0&&state.audio.length)state.audioSel=0;
  if(!tracks.length)say('MKV başlığında ses veya altyazı parçası bulunamadı.');
- else say('MKV başlığından '+state.audio.length+' ses, '+state.subs.length+' altyazı parçası okundu.');
+ else say(state.origin+' '+state.audio.length+' ses, '+state.subs.length+' altyazı parçası okundu.');
  refresh();
 }
 /* Read finished (success or failure): let playback start, after a short pause so the provider
@@ -241,7 +242,7 @@ function load(gen,timeout){
    in which case the caller must start playback itself. */
 function setSource(data,onDone){
  state.gen++;abortActive();state.done=null;
- state.url='';state.tracks=[];state.audio=[];state.subs=[];state.audioSel=-1;state.subSel=-1;say('');
+ state.url='';state.tracks=[];state.audio=[];state.subs=[];state.audioSel=-1;state.subSel=-1;state.pipelineTried=false;state.origin='';say('');
  var ext=data&&data.url?String(data.extension||'').toLowerCase():'';
  if(!data||!data.url||(ext!=='mkv'&&ext!=='webm'&&ext!=='mka'))return false;
  state.url=String(data.url);
@@ -263,7 +264,9 @@ function setSource(data,onDone){
 }
 function rescan(){
  if(!state.url){say('Bu içerik MKV değil veya henüz bir film/dizi açılmadı.');return;}
- state.gen++;abortActive();state.done=null;load(state.gen,25000);
+ state.gen++;abortActive();state.done=null;
+ if(lunaAvailable()){scanPipeline(state.gen);return;}
+ load(state.gen,25000);
 }
 function trackLabel(t){
  var parts=[languageName(t.lang)];
@@ -290,7 +293,7 @@ function extendMenus(sub,aud,nativeTextCount,nativeAudioCount){
 /* The status line (tv-mkv-status) already explains failures; the notice only describes success. */
 function notice(){
  if(!state.tracks.length)return '';
- return 'MKV başlığından '+state.audio.length+' ses, '+state.subs.length+' altyazı okundu. Seçim TV medya motoruna iletilir; görüntü tabanlı (PGS/VobSub) altyazılar TV tarafından çizilir.';
+ return state.origin+' '+state.audio.length+' ses, '+state.subs.length+' altyazı okundu. Seçim TV medya motoruna iletilir; görüntü tabanlı (PGS/VobSub) altyazılar TV tarafından çizilir.';
 }
 
 /* ---- selection via the TV media pipeline (luna selectTrack), verified, with rollback ---- */
@@ -319,7 +322,7 @@ function luna(method,params,cb){
     else finish({ok:true,data:r});
    };
    bridge.call(uri+'/'+method,JSON.stringify(params));
-  }else finish({ok:false,error:'webOS medya servisi bu uygulamada erişilebilir değil ('+bridgeInfo()+')'});
+  }else finish({ok:false,error:'TV servis köprüsü (PalmServiceBridge) bu paket modunda yok: “netcast” modu köprüyü kapatır. Seçim için “XIPTV Play Native” uygulamasını deneyin. ('+bridgeInfo()+')'});
  }catch(e){finish({ok:false,error:String(e&&e.message||e)});}
  setTimeout(function(){finish({ok:false,error:'yanıt gelmedi'});},6000);
 }
@@ -331,6 +334,66 @@ function stalledAfter(ms,onStalled){
   if((video.currentTime||0)<=t0+0.4)onStalled();
  },ms);
 }
+/* ---- Track list from the TV media pipeline (needs the luna bridge; independent of CORS) ---- */
+function lunaAvailable(){
+ var svc;try{svc=win.webOS&&win.webOS.service&&win.webOS.service.request;}catch(e){}
+ return !!(svc||win.PalmServiceBridge);
+}
+function isArray(x){return Object.prototype.toString.call(x)==='[object Array]';}
+function streamToTrack(s,kind,i){
+ s=s||{};var tags=s.tags||{};
+ return {number:i+1,type:kind==='audio'?2:17,kind:kind,typeIndex:i,
+  lang:String(s.language||s.lang||tags.language||tags.LANGUAGE||'und'),
+  name:String(tags.title||tags.TITLE||s.title||''),
+  codec:String(s.codec_name||s.codec||''),
+  channels:Number(s.channels)||0,def:false,forced:false,enabled:true};
+}
+/* getPipelineState answers {returnValue,data}; data is an object or a JSON string holding
+   sourceInfo.{audio_streams,subtitle_streams} (some firmware nests them under programs[0]). */
+function parsePipeline(payload){
+ var obj=payload||{},details=obj.data!==undefined?obj.data:obj,src,audio,subs,p,out=[],i;
+ if(typeof details==='string')try{details=JSON.parse(details);}catch(e){details={};}
+ src=(details&&(details.sourceInfo||details.source_info))||{};
+ audio=src.audio_streams||src.audioTracks||[];
+ subs=src.subtitle_streams||src.text_streams||src.subtitles||[];
+ p=(src.programs&&src.programs[0])||(src.programInfo&&src.programInfo[0])||null;
+ if(p){
+  if(!isArray(audio)||!audio.length)audio=p.audio_streams||p.audioTrackInfo||[];
+  if(!isArray(subs)||!subs.length)subs=p.subtitle_streams||p.subtitleTrackInfo||[];
+ }
+ if(!isArray(audio))audio=[];
+ if(!isArray(subs))subs=[];
+ for(i=0;i<audio.length&&i<32;i++)out.push(streamToTrack(audio[i],'audio',i));
+ for(i=0;i<subs.length&&i<64;i++)out.push(streamToTrack(subs[i],'subtitle',i));
+ return out;
+}
+function scanPipeline(gen){
+ if(gen!==state.gen||!state.url)return;
+ var mediaId=currentMediaId();
+ if(!mediaId){say('TV oynatıcısı mediaId vermedi; parça listesi TV medya motorundan okunamıyor.');return;}
+ luna('getPipelineState',{mediaId:mediaId},function(res){
+  if(gen!==state.gen)return;
+  if(!res.ok){say('TV medya motorundan parça listesi alınamadı: '+res.error);return;}
+  var tracks=parsePipeline(res.data),raw='';
+  if(!tracks.length){
+   try{raw=JSON.stringify(res.data);}catch(e){}
+   say('TV medya motoru parça listesi vermedi. Yanıt: '+String(raw).replace(/\s+/g,' ').substr(0,170));
+   return;
+  }
+  apply(tracks,gen,'TV medya motorundan');
+ });
+}
+function schedulePipeline(){
+ var gen=state.gen;
+ if(!state.url||state.tracks.length||state.pipelineTried||!lunaAvailable())return;
+ state.pipelineTried=true;
+ setTimeout(function(){if(gen===state.gen&&!state.tracks.length)scanPipeline(gen);},1500);
+}
+(function hookPlayback(){
+ var v=$('video');
+ if(v&&v.addEventListener){v.addEventListener('loadedmetadata',schedulePipeline,false);v.addEventListener('playing',schedulePipeline,false);}
+})();
+
 function trySelect(mediaId,types,index,cb){
  var i=0,last='';
  (function next(){
@@ -405,6 +468,7 @@ win.XIPTVMkv={
  tracks:function(){return state.tracks.slice(0);},
  parseHead:parseHead,
  parseTracksAt:parseTracksAt,
+ parsePipeline:parsePipeline,
  choose:choose,
  subtitleOff:subtitleOff,
  bridgeInfo:bridgeInfo

@@ -1,5 +1,5 @@
 name: Build LG webOS IPK
-run-name: XIPTV Play LG webOS v1.0.19 • ${{ github.event_name }} • ${{ github.sha }}
+run-name: XIPTV Play LG webOS v1.0.20 • ${{ github.event_name }} • ${{ github.sha }}
 
 on:
   workflow_dispatch:
@@ -93,10 +93,19 @@ jobs:
             echo "Unsupported modern JavaScript module found in webOS 2 package"
             exit 1
           fi
-          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.19'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true) process.exit(1)"
+          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.20'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true) process.exit(1)"
 
       - name: Run remote-control and playback UI smoke tests
         run: node webos/legacy-smoke-test.mjs
+
+      - name: Prepare native-trust test variant (luna bridge available)
+        run: |
+          set -euo pipefail
+          WEBOS_LEGACY=true WEBOS_VARIANT=native node webos/build.mjs
+          cp webos-package/sample.mp4 webos-package-native/sample.mp4
+          test -s webos-package-native/tv-mkv-tracks.js
+          grep -q 'tv-mkv-tracks.js' webos-package-native/index.html
+          node -e "const f=require('./webos-package-native/appinfo.json'); if(f.id!=='com.xiptvplay.tv.native'||f.version!=='1.0.20'||f.trustLevel!==undefined||f.vendorExtension!==undefined||f.title!=='XIPTV Play Native'||f.main!=='index.html') process.exit(1)"
 
       - name: Install webOS CLI
         run: |
@@ -110,11 +119,23 @@ jobs:
           ares-package --no-minify ./webos-package -o ./webos-artifacts
           find webos-artifacts -maxdepth 1 -name '*.ipk' -type f -size +0c -print | tee /tmp/webos-ipk-list.txt
           test -s /tmp/webos-ipk-list.txt
+          mkdir -p webos-artifacts-native
+          ares-package --no-minify ./webos-package-native -o ./webos-artifacts-native
+          find webos-artifacts-native -maxdepth 1 -name '*.ipk' -type f -size +0c -print | tee /tmp/webos-ipk-native-list.txt
+          test -s /tmp/webos-ipk-native-list.txt
 
       - name: Upload IPK artifact
         uses: actions/upload-artifact@v4
         with:
           name: xiptvplay-lg-webos-ipk
           path: webos-artifacts/*.ipk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload native-trust test IPK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xiptvplay-lg-webos-native-ipk
+          path: webos-artifacts-native/*.ipk
           if-no-files-found: error
           retention-days: 14

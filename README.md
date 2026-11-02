@@ -5,7 +5,16 @@ Bu depo yalnızca LG webOS Smart TV uygulaması ve onun opsiyonel FFprobe/FFmpeg
 ## Derleme
 GitHub Actions → **Build LG webOS IPK** → Run workflow. Başarılı çalıştırmanın artifact'i `xiptvplay-lg-webos-ipk` içindeki `.ipk` dosyasıdır.
 
-Sürüm: **1.0.19**. Mevcut oynatıcı varsayılandır; Shaka yalnızca HLS/DASH için isteğe bağlıdır.
+Sürüm: **1.0.20**. Mevcut oynatıcı varsayılandır; Shaka yalnızca HLS/DASH için isteğe bağlıdır.
+
+## 1.0.20 — İki paket: ana (netcast) ve "XIPTV Play Native"
+TV'de 1.0.19 ile hata ekranı şunu gösterdi: `webOS=undefined, service=undefined, PalmServiceBridge=undefined, webOSSystem=undefined`. Yani 1.0.19'daki `typeof` varsayımı yanlıştı; köprü gerçekten yok. Neden: `appinfo.json` içindeki `trustLevel: "netcast"` modu `window.PalmServiceBridge`'i kaldırır (webosbrew appinfo belgesi). Aynı mod `allowCrossDomain` ile CORS denetimini kapattığı için IPTV istekleri (katalog, MKV başlığı) çalışıyor; bu yüzden ana paket değiştirilmedi.
+
+Bu sürüm iki IPK üretir:
+- **XIPTV Play** (`com.xiptvplay.tv`, netcast): MKV ses/altyazı **listesi** görünür (başlık okuma); TV'ye seçim komutu gönderilemez ve ekranda nedeni açıkça yazar.
+- **XIPTV Play Native** (`com.xiptvplay.tv.native`, varsayılan güven seviyesi): `PalmServiceBridge` vardır. Parça listesi `luna://com.webos.media/getPipelineState` ile TV'den okunur (CORS'tan bağımsız), seçim `selectTrack` ile gönderilir (`type`: `audio` / `text`, `index`: 0..n). CORS denetimi açıktır; arka uç (`xiptvplay.onrender.com`) CORS izni vermiyorsa katalog yüklenmeyebilir. **TV üzerinde doğrulanmamıştır**; `com.webos.media` özel bir servistir ve uygulamaya izin verilip verilmediği cihazda görülmelidir.
+
+Yeni dosya yok; `webos/build.mjs` `WEBOS_VARIANT=native` ile ikinci paketi (`webos-package-native`) üretir, CI iki artifact yükler: `xiptvplay-lg-webos-ipk` ve `xiptvplay-lg-webos-native-ipk`.
 
 ## 1.0.19 — Ses/altyazı seçimi TV'ye iletilir
 TV'de 1.0.18 ile liste geldi (9 ses, 38 altyazı) ama seçim "webOS medya servisi bu uygulamada erişilebilir değil" hatasıyla reddedildi. Neden: eski webOS WebKit'i `PalmServiceBridge` gibi yerel nesneler için `typeof` olarak `'function'` yerine `'object'` döndürebiliyor; kod köprüyü yok sanıyordu (aynı hata "TV medya kanallarını tara" düğmesinde de vardı). Artık köprü doğruluk değeriyle algılanır. Seçim `luna://com.webos.media/selectTrack` ile gönderilir (ses: `audio`; altyazı: `text`, olmazsa `subtitle`; ardından en iyi çaba `setSubtitleEnable`). Altyazı "Kapalı" seçilince `setSubtitleEnable false` gönderilir. Menü yenilense de seçilen altyazı korunur. TV komutu reddederse gerçek hata metni ekranda gösterilir. **TV üzerinde doğrulanmamıştır.**

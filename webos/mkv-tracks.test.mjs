@@ -209,8 +209,61 @@ sandbox.PalmServiceBridge=function(){
   delete sandbox.PalmServiceBridge;
   mkv.choose('subtitle',0);
   await wait(60);
-  assert.match(statusEl.textContent,/erişilebilir değil/);
+  assert.match(statusEl.textContent,/köprü/);
   assert.match(statusEl.textContent,/PalmServiceBridge=undefined/);
 }
 
-console.log('PASS: MKV header reader (unknown-size segment, seekhead jump, UTF-8 names, x-user-defined strings, non-mkv) + header-before-playback ordering + luna track selection/rollback/off');
+// 6) netcast package: no bridge at all -> the message explains why and what to install.
+{
+  assert.equal(sandbox.PalmServiceBridge,undefined);
+  mkv.choose('audio',0);
+  await wait(60);
+  assert.match(statusEl.textContent,/netcast/);
+  assert.match(statusEl.textContent,/XIPTV Play Native/);
+}
+
+// 7) Native package: the track list comes from the TV pipeline when the header cannot be read (CORS).
+{
+  const stream=(language,codec_name,extra)=>({language,codec_name,...extra});
+  const pipelineReply={returnValue:true,data:JSON.stringify({sourceInfo:{
+    audio_streams:[stream('eng','ac3',{channels:6}),stream('tur','ac3',{channels:6})],
+    subtitle_streams:[stream('tur','subrip'),stream('eng','subrip'),stream('fre','hdmv_pgs_subtitle')]}})};
+  const parsed=mkv.parsePipeline(pipelineReply);
+  assert.equal(parsed.length,5);
+  assert.equal(parsed.filter(t=>t.kind==='audio').length,2);
+  assert.equal(parsed.filter(t=>t.kind==='subtitle').length,3);
+  assert.equal(parsed[1].lang,'tur');assert.equal(parsed[1].typeIndex,1);
+  assert.equal(parsed[2].kind,'subtitle');assert.equal(parsed[2].typeIndex,0);
+  // alternative shapes: object payload, and streams nested under programs[0]
+  assert.equal(mkv.parsePipeline({data:{sourceInfo:{audio_streams:[{language:'tur'}]}}}).length,1);
+  assert.equal(mkv.parsePipeline({data:JSON.stringify({sourceInfo:{programs:[{audio_streams:[{language:'a'}],subtitle_streams:[{language:'b'}]}]}})}).length,2);
+  assert.equal(mkv.parsePipeline({returnValue:true}).length,0);
+
+  sandbox.PalmServiceBridge=function(){
+    const self=this;
+    this.call=(uri,json)=>{calls.push({uri,params:JSON.parse(json)});setImmediate(()=>self.onservicecallback(JSON.stringify(replyFor(uri,JSON.parse(json)))));};
+    this.cancel=()=>{};
+  };
+  sandbox.XMLHttpRequest=fakeXhr(()=>({status:0,text:''}));    // header read fails (CORS)
+  let started=false;
+  mkv.setSource({url:'http://iptv.example/series/u/p/9.mkv',extension:'mkv'},()=>{started=true;});
+  await wait(700);
+  assert.equal(started,true);
+  assert.equal(mkv.tracks().length,0);
+  calls.length=0;
+  replyFor=uri=>uri.endsWith('/getPipelineState')?pipelineReply:{returnValue:true};
+  mkv.rescan();                                              // the "yeniden oku" button
+  await wait(80);
+  assert.equal(calls[0].uri,'luna://com.webos.media/getPipelineState');
+  assert.deepEqual({...calls[0].params},{mediaId:'pipe-1'});
+  assert.equal(mkv.tracks().length,5);
+  assert.match(statusEl.textContent,/TV medya motorundan 2 ses, 3 altyazı/);
+  // an unreadable answer shows the raw response so the structure can be diagnosed
+  replyFor=()=>({returnValue:true,data:'{"unknown":1}'});
+  mkv.rescan();
+  await wait(80);
+  assert.match(statusEl.textContent,/parça listesi vermedi\. Yanıt:/);
+  assert.match(statusEl.textContent,/unknown/);
+}
+
+console.log('PASS: MKV header reader (unknown-size segment, seekhead jump, UTF-8 names, x-user-defined strings, non-mkv) + header-before-playback ordering + luna track selection/rollback/off + netcast message + pipeline track list');
