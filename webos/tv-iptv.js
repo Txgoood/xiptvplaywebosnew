@@ -163,6 +163,31 @@
     if(window.XIPTVAltPlayer&&window.XIPTVAltPlayer.beforeSourceChange)window.XIPTVAltPlayer.beforeSourceChange();
     // Release the previous stream first: many IPTV accounts allow only one connection.
     try{video.pause();video.removeAttribute('src');while(video.firstChild)video.removeChild(video.firstChild);video.load();}catch(e){}
+    // A channel may expose only MPEG-TS even when Xtream HLS was requested.
+    // Attempt TS once if HLS errors or never reaches playback; leave movies/series untouched.
+    var liveTimer=null,liveError=null,livePlaying=null,liveFallback=false,liveActive=true;
+    if(window.XIPTVLiveCleanup)window.XIPTVLiveCleanup();
+    function cleanupLive(){
+      liveActive=false;
+      if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}
+      if(liveError)video.removeEventListener('error',liveError,false);
+      if(livePlaying)video.removeEventListener('playing',livePlaying,false);
+    }
+    window.XIPTVLiveCleanup=cleanupLive;
+    if(kind==='live'&&suffix==='m3u8'){
+      function fallbackTs(){
+        if(!liveActive||liveFallback)return;
+        liveFallback=true;
+        if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}
+        var tsUrl=server.replace(/\\/$/,'')+'/live/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.ts';
+        try{video.pause();video.src=tsUrl;video.load();var promise=video.play();if(promise&&promise.catch)promise.catch(function(){});say('HLS görüntü vermedi; TS deneniyor: '+String(name||'Kanal'));}catch(e){say('Canlı TV TS hatası: '+e.message);}
+      }
+      liveError=function(){fallbackTs();};
+      livePlaying=function(){if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}};
+      video.addEventListener('error',liveError,false);
+      video.addEventListener('playing',livePlaying,false);
+      liveTimer=setTimeout(fallbackTs,9000);
+    }
     var started=false;
     function startPlayback(){
       if(started)return;started=true;
