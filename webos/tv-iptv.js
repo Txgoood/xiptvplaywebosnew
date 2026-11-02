@@ -179,7 +179,7 @@
         if(!liveActive||liveFallback)return;
         liveFallback=true;
         if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}
-        var tsUrl=server.replace(/\\/$/,'')+'/live/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.ts';
+        var tsUrl=server.replace(/\/$/,'')+'/live/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.ts';
         try{video.pause();video.src=tsUrl;video.load();var promise=video.play();if(promise&&promise.catch)promise.catch(function(){});say('HLS görüntü vermedi; TS deneniyor: '+String(name||'Kanal'));}catch(e){say('Canlı TV TS hatası: '+e.message);}
       }
       liveError=function(){fallbackTs();};
