@@ -285,6 +285,7 @@ function extendMenus(sub,aud,nativeTextCount,nativeAudioCount){
  if(state.subs.length>(nativeTextCount||0))
   for(i=0;i<state.subs.length;i++){t=state.subs[i];addOption(sub,'MKV: '+trackLabel(t),'mkv:s:'+t.typeIndex);}
  if(state.audioSel>=0)try{aud.value='mkv:a:'+state.audioSel;}catch(e){}
+ if(state.subSel>=0)try{sub.value='mkv:s:'+state.subSel;}catch(e){}
 }
 /* The status line (tv-mkv-status) already explains failures; the notice only describes success. */
 function notice(){
@@ -293,6 +294,11 @@ function notice(){
 }
 
 /* ---- selection via the TV media pipeline (luna selectTrack), verified, with rollback ---- */
+function bridgeInfo(){
+ function t(v){return v===null?'null':typeof v;}
+ var svc;try{svc=win.webOS&&win.webOS.service;}catch(e){}
+ return 'webOS='+t(win.webOS)+', service='+t(svc)+', PalmServiceBridge='+t(win.PalmServiceBridge)+', webOSSystem='+t(win.webOSSystem);
+}
 function luna(method,params,cb){
  var uri='luna://com.webos.media',done=false,bridge=null;
  function finish(res){
@@ -301,19 +307,19 @@ function luna(method,params,cb){
   cb(res);
  }
  try{
-  if(win.webOS&&win.webOS.service&&typeof win.webOS.service.request==='function'){
+  if(win.webOS&&win.webOS.service&&win.webOS.service.request){
    win.webOS.service.request(uri,{method:method,parameters:params,
     onSuccess:function(r){finish({ok:true,data:r});},
     onFailure:function(e){finish({ok:false,error:String(e&&(e.errorText||e.message)||'reddedildi')});}});
-  }else if(typeof win.PalmServiceBridge==='function'){
+  }else if(win.PalmServiceBridge){
    bridge=new win.PalmServiceBridge();
    bridge.onservicecallback=function(raw){
     var r={};try{r=JSON.parse(raw);}catch(e){}
-    if(r&&r.returnValue===false)finish({ok:false,error:String(r.errorText||r.errorCode||'reddedildi')});
+    if(r&&r.returnValue===false)finish({ok:false,error:String(r.errorText||r.errorCode||'reddedildi')+' • '+String(raw).replace(/\s+/g,' ').substr(0,90)});
     else finish({ok:true,data:r});
    };
    bridge.call(uri+'/'+method,JSON.stringify(params));
-  }else finish({ok:false,error:'webOS medya servisi bu uygulamada erişilebilir değil'});
+  }else finish({ok:false,error:'webOS medya servisi bu uygulamada erişilebilir değil ('+bridgeInfo()+')'});
  }catch(e){finish({ok:false,error:String(e&&e.message||e)});}
  setTimeout(function(){finish({ok:false,error:'yanıt gelmedi'});},6000);
 }
@@ -325,23 +331,58 @@ function stalledAfter(ms,onStalled){
   if((video.currentTime||0)<=t0+0.4)onStalled();
  },ms);
 }
-function choose(kind,index){
- var video=$('video'),mediaId='';
- try{mediaId=String(video&&video.mediaId||'');}catch(e){}
- if(!mediaId){say('Bu TV oynatıcısı mediaId vermediği için parça seçimi uygulanamıyor.');return;}
- var type=kind==='audio'?'audio':'text',previous=kind==='audio'?state.audioSel:state.subSel;
- say((kind==='audio'?'Ses':'Altyazı')+' parçası TV medya motoruna iletiliyor…');
- luna('selectTrack',{mediaId:mediaId,type:type,index:index},function(res){
-  if(!res.ok){say('TV medya motoru '+(kind==='audio'?'ses':'altyazı')+' değişimini kabul etmedi: '+res.error);return;}
-  if(kind==='audio')state.audioSel=index;else state.subSel=index;
-  say((kind==='audio'?'Ses':'Altyazı')+' seçimi TV medya motoruna iletildi.');
-  if(kind==='audio'&&previous>=0&&previous!==index)stalledAfter(4500,function(){
-   luna('selectTrack',{mediaId:mediaId,type:'audio',index:previous},function(back){
-    state.audioSel=previous;
-    say('Seçilen ses parçasıyla oynatma ilerlemedi; önceki ses parçasına dönüldü'+(back.ok?'.':' (geri dönüş de yanıtsız kaldı).'));
-    refresh();
-   });
+function trySelect(mediaId,types,index,cb){
+ var i=0,last='';
+ (function next(){
+  if(i>=types.length){cb({ok:false,error:last});return;}
+  var type=types[i++];
+  luna('selectTrack',{mediaId:mediaId,type:type,index:index},function(res){
+   if(res.ok){res.type=type;cb(res);return;}
+   last=res.error;next();
   });
+ })();
+}
+function nativeTextMode(index){
+ var list=[],i;
+ try{list=$('video').textTracks||[];}catch(e){}
+ for(i=0;i<list.length;i++)try{list[i].mode=(index>=0&&i===index)?'showing':'disabled';}catch(e2){}
+}
+function currentMediaId(){
+ var video=$('video');
+ try{return String(video&&video.mediaId||'');}catch(e){return '';}
+}
+function choose(kind,index){
+ var isAudio=kind==='audio',name=isAudio?'Ses':'Altyazı',mediaId=currentMediaId();
+ if(!mediaId){say('Bu TV oynatıcısı mediaId vermediği için '+name.toLowerCase()+' seçimi uygulanamıyor.');return;}
+ var previous=isAudio?state.audioSel:state.subSel;
+ say(name+' parçası TV medya motoruna iletiliyor…');
+ trySelect(mediaId,isAudio?['audio']:['text','subtitle'],index,function(res){
+  if(!res.ok){say('TV medya motoru '+name.toLowerCase()+' değişimini kabul etmedi: '+res.error);return;}
+  if(isAudio){
+   state.audioSel=index;
+   say('Ses parçası değiştirildi (TV komutu kabul etti). Ses duyulmuyorsa birkaç saniye bekleyin.');
+   if(previous>=0&&previous!==index)stalledAfter(4500,function(){
+    luna('selectTrack',{mediaId:mediaId,type:'audio',index:previous},function(back){
+     state.audioSel=previous;
+     say('Seçilen ses parçasıyla oynatma ilerlemedi; önceki ses parçasına dönüldü'+(back.ok?'.':' (geri dönüş de yanıtsız kaldı).'));
+     refresh();
+    });
+   });
+  }else{
+   state.subSel=index;
+   luna('setSubtitleEnable',{mediaId:mediaId,enable:true},function(){});
+   nativeTextMode(index);
+   say('Altyazı seçildi (TV komutu kabul etti). Görünmüyorsa TV bu MKV için altyazıyı çizemiyor olabilir.');
+  }
+ });
+}
+function subtitleOff(){
+ var mediaId=currentMediaId();
+ if(state.subSel<0&&!mediaId)return;
+ state.subSel=-1;nativeTextMode(-1);
+ if(!mediaId)return;
+ luna('setSubtitleEnable',{mediaId:mediaId,enable:false},function(res){
+  say(res.ok?'Altyazı kapatıldı.':'Altyazıyı kapatma komutu kabul edilmedi: '+res.error);
  });
 }
 (function bind(){
@@ -351,6 +392,7 @@ function choose(kind,index){
  },false);
  if(sub&&sub.addEventListener)sub.addEventListener('change',function(){
   if(this.value.indexOf('mkv:s:')===0)choose('subtitle',Number(this.value.split(':')[2]));
+  else if(this.value==='off'&&state.subSel>=0)subtitleOff();
  },false);
  if(scan)scan.onclick=rescan;
 })();
@@ -362,6 +404,9 @@ win.XIPTVMkv={
  notice:notice,
  tracks:function(){return state.tracks.slice(0);},
  parseHead:parseHead,
- parseTracksAt:parseTracksAt
+ parseTracksAt:parseTracksAt,
+ choose:choose,
+ subtitleOff:subtitleOff,
+ bridgeInfo:bridgeInfo
 };
 })();

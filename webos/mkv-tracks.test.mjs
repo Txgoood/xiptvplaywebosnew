@@ -153,4 +153,64 @@ const sample=Buffer.concat([ebmlHeader,unknownSegment(Buffer.concat([tracksEl,cl
   assert.deepEqual(Array.from(order),['second'],'a replaced selection must never start the old stream');
 }
 
-console.log('PASS: MKV header reader (unknown-size segment, seekhead jump, UTF-8 names, x-user-defined strings, non-mkv) + header-before-playback ordering');
+// 5) Track selection through the TV media pipeline (luna). The bridge is detected by truthiness,
+//    because old WebKit reports typeof 'object' for host constructors.
+const fakeVideo={mediaId:'pipe-1',paused:false,ended:false,currentTime:10};
+sandbox.document.getElementById=id=>id==='video'?fakeVideo:id==='tv-mkv-status'?statusEl:null;
+const calls=[];let replyFor=()=>({returnValue:true});
+sandbox.PalmServiceBridge=function(){
+  const self=this;
+  this.call=(uri,json)=>{const params=JSON.parse(json);calls.push({uri,params});setImmediate(()=>self.onservicecallback(JSON.stringify(replyFor(uri,params))));};
+  this.cancel=()=>{};
+};
+{
+  // state from block 4: 2 audio tracks, default audio index 0
+  calls.length=0;
+  mkv.choose('audio',1);
+  await wait(60);
+  assert.equal(calls[0].uri,'luna://com.webos.media/selectTrack');
+  assert.deepEqual({...calls[0].params},{mediaId:'pipe-1',type:'audio',index:1});
+  assert.match(statusEl.textContent,/Ses parçası değiştirildi/);
+  // playback never advances (currentTime fixed) -> automatic rollback to the previous audio track
+  await wait(4800);
+  assert.equal(calls.length,2,'rollback must call selectTrack again');
+  assert.deepEqual({...calls[1].params},{mediaId:'pipe-1',type:'audio',index:0});
+  assert.match(statusEl.textContent,/önceki ses parçasına dönüldü/);
+}
+{
+  // subtitles: 'text' rejected, 'subtitle' accepted, then best-effort enable
+  calls.length=0;
+  replyFor=(uri,p)=>uri.endsWith('/selectTrack')&&p.type==='text'?{returnValue:false,errorText:'bad type'}:{returnValue:true};
+  mkv.choose('subtitle',1);
+  await wait(120);
+  assert.deepEqual(calls.map(c=>c.uri.split('/').pop()),['selectTrack','selectTrack','setSubtitleEnable']);
+  assert.equal(calls[0].params.type,'text');assert.equal(calls[1].params.type,'subtitle');
+  assert.equal(calls[1].params.index,1);
+  assert.equal(calls[2].params.enable,true);
+  assert.match(statusEl.textContent,/Altyazı seçildi/);
+  // turning subtitles off after selecting one
+  calls.length=0;replyFor=()=>({returnValue:true});
+  mkv.subtitleOff();
+  await wait(60);
+  assert.equal(calls[0].uri.split('/').pop(),'setSubtitleEnable');
+  assert.equal(calls[0].params.enable,false);
+  assert.match(statusEl.textContent,/Altyazı kapatıldı/);
+}
+{
+  // rejected by the TV: the real error is shown on screen
+  calls.length=0;
+  replyFor=()=>({returnValue:false,errorText:'invalid index',errorCode:-1});
+  mkv.choose('subtitle',0);
+  await wait(120);
+  assert.match(statusEl.textContent,/kabul etmedi: invalid index/);
+}
+{
+  // no bridge at all: message lists what exists, so the next screenshot is conclusive
+  delete sandbox.PalmServiceBridge;
+  mkv.choose('subtitle',0);
+  await wait(60);
+  assert.match(statusEl.textContent,/erişilebilir değil/);
+  assert.match(statusEl.textContent,/PalmServiceBridge=undefined/);
+}
+
+console.log('PASS: MKV header reader (unknown-size segment, seekhead jump, UTF-8 names, x-user-defined strings, non-mkv) + header-before-playback ordering + luna track selection/rollback/off');

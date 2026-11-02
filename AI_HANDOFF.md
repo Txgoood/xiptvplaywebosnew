@@ -13,10 +13,12 @@ Bu depo sadece **LG webOS Smart TV IPK** içindir. Android koduna, Android APK d
 - `lg-media-service/server.mjs`: ayrı medya analiz servisinin kaynakları. Android backend'inden farklıdır; doğrulanmış Xtream hesapları, SSRF korumaları ve FFprobe içerir.
 - `webos/tv-alt-player.js`: Shaka yalnızca HLS/DASH denemesi (MKV'yi doğrudan açmaz), geri dönüş mekanizması.
 - `webos/tv-home.js`: ana sayfa, devam et ve kartlar.
-- `webos/build.mjs`: IPK paket klasörünü oluşturur, `appinfo.json` sürümü 1.0.18.
+- `webos/build.mjs`: IPK paket klasörünü oluşturur, `appinfo.json` sürümü 1.0.19.
 - `.github/workflows/build-webos.yml`: **Build LG webOS IPK**.
 
 ## Öncelikli hata
+**v1.0.19 (TV geri bildirimi):** v1.0.18'de MKV parça listesi TV'de göründü (9 ses/38 altyazı). Seçim, `typeof PalmServiceBridge==='function'` kontrolü yüzünden "erişilebilir değil" diyordu (eski WebKit `'object'` dönebilir). v1.0.19 doğruluk değeriyle algılar ve `selectTrack` gönderir. Hâlâ doğrulanmadı: TV'nin bu MKV'de ses değişimini/altyazı çizimini gerçekten yapıp yapmadığı. Ekranda çıkan luna yanıtı/hata metni (ve köprü yoksa `bridgeInfo` satırı) bir sonraki adımın temelidir. Altyazı verisini kendimiz çizmek, tüm dosyanın okunmasını gerektirir (MKV altyazıları cluster'lara dağılmıştır) ve tek bağlantılı hesapta oynarken mümkün değildir.
+
 **v1.0.18 (TV geri bildirimi):** v1.0.17'de TV'deki okuyucu "IPTV sunucusu HTTP 404 döndürdü" mesajı verdi ve Render servisi "Medya analizi başarısız oldu" döndürdü; yani sağlayıcı ikinci istemcilere yanıt vermiyor. En güçlü hipotez: tek eşzamanlı bağlantı sınırı (oynayan yayın bağlantıyı tutuyor). v1.0.18 başlığı oynatmadan önce okur ve Render'ı otomatik çalıştırmaz. Hipotez doğrulanmadı; 404 oynatma başlamadan önce de sürerse sebep User-Agent/Origin filtresi gibi başka bir şeydir ve ekrandaki yeni teşhis mesajına (sunucu adı, yönlendirme, yanıt metni) bakılmalıdır.
 
 **v1.0.17 güncellemesi:** Kök neden: MKV parça listesi yalnızca (a) TV'nin HTML5 `audioTracks/textTracks` bildirmesine, (b) Render'daki ücretsiz servisin cevap vermesine bağlıydı (soğuk başlangıç + 28 sn zaman aşımı + tek deneme). İkisi de başarısız olunca menü boş kalıyordu. v1.0.17 başlığı TV üzerinde okur (`tv-mkv-tracks.js`). Parça *seçiminin* gerçek TV'de çalıştığı hâlâ doğrulanmadı.

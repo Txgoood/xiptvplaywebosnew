@@ -126,9 +126,9 @@ function scanNativeTracks(){
  }
  var args={mediaId:mediaId};
  try{
-  if(window.webOS&&webOS.service&&typeof webOS.service.request==='function'){
+  if(window.webOS&&webOS.service&&webOS.service.request){
    webOS.service.request('luna://com.webos.media',{method:'getPipelineState',parameters:args,onSuccess:result,onFailure:failure});
-  }else if(typeof window.PalmServiceBridge==='function'){
+  }else if(window.PalmServiceBridge){
    activeNativeBridge=new window.PalmServiceBridge();
    activeNativeBridge.onservicecallback=function(raw){try{result(JSON.parse(raw));}catch(e){failure(e);}};
    activeNativeBridge.call('luna://com.webos.media/getPipelineState',JSON.stringify(args));
