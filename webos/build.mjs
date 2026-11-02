@@ -5,7 +5,7 @@ const nativeVariant=process.env.WEBOS_VARIANT==='native';
 const root=process.cwd(), out=path.join(root,nativeVariant?'webos-package-native':'webos-package');
 fs.rmSync(out,{recursive:true,force:true});
 fs.cpSync(path.join(root,'dist'),out,{recursive:true});
-const VERSION='1.0.22';
+const VERSION='1.0.23';
 // Main package: trustLevel netcast (CORS validation off, but NO PalmServiceBridge / luna access).
 // Native test package: default trust level, separate app id; luna is available, CORS is enforced.
 const info=nativeVariant
