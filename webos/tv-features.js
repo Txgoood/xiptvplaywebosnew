@@ -137,7 +137,7 @@ function scanNativeTracks(){
   }
  }catch(e){failure(e);}
 }
-document.getElementById('tv-track-scan').onclick=scanNativeTracks;
+var trackScanButton=document.getElementById('tv-track-scan');if(trackScanButton)trackScanButton.onclick=scanNativeTracks;
 var ctrl=document.getElementById('tv-controls');
 document.getElementById('tv-controls-toggle').onclick=function(){
  ctrl.style.display=ctrl.style.display==='none'?'block':'none';tracksMenu();

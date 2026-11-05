@@ -55,7 +55,6 @@ assert(html.includes('id="tv-mkv-scan"'));
 new vm.Script(fs.readFileSync('webos-package/tv-mkv-tracks.js','utf8'),{filename:'tv-mkv-tracks.js'});
 assert(fs.readFileSync('webos-package/tv-iptv.js','utf8').includes('XIPTVMkv.setSource'),'playStream must hand MKV sources to the header reader');
 new vm.Script(fs.readFileSync('webos-package/tv-lg-media.js','utf8'),{filename:'tv-lg-media.js'});
-assert(html.includes('id="tv-track-scan"'));
 assert(featureScript.includes('scanNativeTracks'));
 assert(html.includes('id="tv-favorite-only"'));
 assert(html.includes('id="tv-search"'));

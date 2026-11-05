@@ -308,3 +308,5 @@ body.tv-mode #tv-track-scan-results{font-size:16px;line-height:1.55;white-space:
 body.tv-mode:not(.tv-fullscreen) #tv-lg-subtitle-overlay{position:absolute;left:56%;right:3%;bottom:8%;font-size:19px}
 body.tv-mode #tv-lg-media-scan,body.tv-mode #tv-lg-native-return{font-size:16px;padding:8px 12px;margin:6px;background:#183540;color:#e6f9fb;border:1px solid #00daf3;border-radius:6px}
 body.tv-mode #tv-lg-media-status{font-size:16px;color:#bce7e8;line-height:1.4;max-height:90px;overflow-y:auto;padding:5px}
+body.tv-mode #tv-controls #tv-mkv-status,body.tv-mode #tv-controls #tv-lg-media-status{margin-right:46%;white-space:normal}
+body.tv-mode #tv-controls #tv-mkv-scan,body.tv-mode #tv-controls #tv-lg-media-scan{display:inline-block;margin-top:8px}
