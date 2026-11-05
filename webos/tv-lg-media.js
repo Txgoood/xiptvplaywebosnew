@@ -2,7 +2,7 @@
    Configured only after a separate media service has been approved/deployed. */
 (function(){
  var video=document.getElementById('video'),url=String(window.XIPTV_LG_MEDIA_URL||'').replace(/\/+$/,'');
- var ctx=null,session=null,busy=false,busySince=0,manual=false,started=false,offset=0,scanSequence=0;
+ var ctx=null,lastKind='',session=null,busy=false,busySince=0,manual=false,started=false,offset=0,scanSequence=0;
  var playerOverlay=document.getElementById('tv-lg-subtitle-overlay'),cues=[],lastCue=-1,sourceKey='';
  var scanButton=document.getElementById('tv-lg-media-scan'),summary=document.getElementById('tv-lg-media-status'),returnButton=document.getElementById('tv-lg-native-return');
  function say(s){summary.textContent=String(s||'');}
@@ -196,7 +196,7 @@
   }catch(e){}
  }
  function scan(){
-  if(!ctx){say('Bu bölüm için analiz kaynağı yok. Bölümü yeniden başlatıp tekrar deneyin.');return;}
+  if(!ctx){say(lastKind==='live'?'Son başlatılan yayın canlı TV. Analiz yalnızca dizi ve film için. Bölümü listeden tekrar seçin.':'Bu oynatma için analiz kaynağı yok (son tür: '+(lastKind||'bilinmiyor')+'). Bölümü listeden seçip tekrar deneyin.');return;}
   if(busy&&Date.now()-busySince<150000){say('Önceki analiz hâlâ sürüyor, birkaç saniye bekleyin.');return;}
   busy=false;
   if(!url){say('LG alternatif medya hizmeti henüz Render üzerinde yapılandırılmadı. Mevcut TV oynatıcı kullanılmaya devam ediyor.');return;}
@@ -240,7 +240,7 @@
   if(this.value.indexOf('native:a:')===0){var n=Number(this.value.split(':')[2]);try{for(var i=0;i<video.audioTracks.length;i++)video.audioTracks[i].enabled=i===n;say('TV ses kanalı seçildi.');}catch(e){say('TV ses kanalı geçişini desteklemiyor.');}}
  },false);
  window.XIPTVLGMedia={
-  setSource:function(data){scanSequence++;ctx=data;session=null;manual=false;busy=false;started=false;offset=0;cues=[];lastCue=-1;playerOverlay.style.display='none';scanButton.disabled=false;returnButton.style.display='none';summary.textContent='';/* No automatic scan: a second connection to the IPTV account can interrupt the playing stream. Use the scan button. */},
+  setSource:function(data){scanSequence++;ctx=data;lastKind=data?String(data.kind||''):'live';session=null;manual=false;busy=false;started=false;offset=0;cues=[];lastCue=-1;playerOverlay.style.display='none';scanButton.disabled=false;returnButton.style.display='none';summary.textContent='';/* No automatic scan: a second connection to the IPTV account can interrupt the playing stream. Use the scan button. */},
   extendMenus:extendMenus,
   scan:scan,
   subtitleForMkvOrdinal:subtitleForMkvOrdinal
