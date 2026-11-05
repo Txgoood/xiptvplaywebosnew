@@ -87,6 +87,30 @@
   }catch(e){say(e.message);}
  }
  function track(type,index){if(!session)return null;for(var i=0;i<session.tracks.length;i++)if(session.tracks[i].type===type&&session.tracks[i].index===index)return session.tracks[i];return null;}
+ /* MKV subtitle chosen in the TV menu: the TV cannot draw it, so map its subtitle ordinal
+    (0 = first subtitle stream) to the service track and render the WebVTT cues in the overlay. */
+ var pendingMkvOrdinal=null;
+ function applyPendingMkv(){
+  if(pendingMkvOrdinal===null||!session)return;
+  var ord=pendingMkvOrdinal,n=0,t=null,i;
+  pendingMkvOrdinal=null;
+  for(i=0;i<session.tracks.length;i++){
+   if(session.tracks[i].type!=='subtitle')continue;
+   if(n===ord){t=session.tracks[i];break;}
+   n++;
+  }
+  if(!t){say('Bu MKV altyazısı LG medya servisi listesinde bulunamadı.');return;}
+  subtitle(t.index);
+ }
+ function subtitleForMkvOrdinal(ord){
+  if(!url||!ctx)return false;
+  manual=true;
+  pendingMkvOrdinal=ord;
+  if(session){applyPendingMkv();return true;}
+  say('Altyazı için LG medya servisi taranıyor…');
+  scan();
+  return true;
+ }
  function revert(oldSrc,oldPosition){
   try{
    video.pause();video.src=oldSrc;video.load();
@@ -183,10 +207,12 @@
     if(thisScan!==scanSequence)return;
     if(err&&!retried&&/analiz işlemi sürüyor/i.test(String(err.message))){retried=true;setTimeout(function(){if(thisScan===scanSequence)analyse();},4000);return;}
     busy=false;scanButton.disabled=false;
+    if(err)pendingMkvOrdinal=null;
     if(err){say('LG medya servisi: '+url+' — '+err.message+'. MKV içi parçalar için üstteki “MKV:” girdileri doğrudan dosya başlığından okunur.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
     if(!data||!data.tracks){say('Parça listesi alınamadı.');return;}
     session=data;say(data.tracks.length+' parça bulundu: '+data.tracks.filter(function(t){return t.type==='audio';}).length+' ses, '+data.tracks.filter(function(t){return t.type==='subtitle';}).length+' altyazı. Desteklenmeyen altyazılar yalnızca bilgi amaçlıdır.');
     if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();
+    applyPendingMkv();
     // Never silently replace a working stream. User chooses a track explicitly.
    },70000);
   }
@@ -214,6 +240,7 @@
  window.XIPTVLGMedia={
   setSource:function(data){scanSequence++;ctx=data;session=null;manual=false;busy=false;started=false;offset=0;cues=[];lastCue=-1;playerOverlay.style.display='none';scanButton.disabled=false;returnButton.style.display='none';summary.textContent='';/* No automatic scan: a second connection to the IPTV account can interrupt the playing stream. Use the scan button. */},
   extendMenus:extendMenus,
-  scan:scan
+  scan:scan,
+  subtitleForMkvOrdinal:subtitleForMkvOrdinal
  };
 })();

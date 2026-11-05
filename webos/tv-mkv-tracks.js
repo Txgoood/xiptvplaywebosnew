@@ -480,13 +480,28 @@ function subtitleOff(){
   say(res.ok?'Altyazı kapatıldı.':'Altyazıyı kapatma komutu kabul edilmedi: '+res.error);
  });
 }
+/* MKV subtitles are drawn by the LG companion overlay when that service is configured:
+   the TV's own text pipeline accepts the command but does not draw MKV subtitles on this firmware. */
+function viaLgService(ord){
+ var lg=win.XIPTVLGMedia,mediaId=currentMediaId();
+ if(!lg||!lg.subtitleForMkvOrdinal||!win.XIPTV_LG_MEDIA_URL)return false;
+ if(!lg.subtitleForMkvOrdinal(ord))return false;
+ state.subSel=ord;
+ nativeTextMode(-1);
+ if(mediaId)luna('setSubtitleEnable',{mediaId:mediaId,enable:false},function(){});
+ return true;
+}
 (function bind(){
  var aud=$('tv-audio'),sub=$('tv-subtitles'),scan=$('tv-mkv-scan');
  if(aud&&aud.addEventListener)aud.addEventListener('change',function(){
   if(this.value.indexOf('mkv:a:')===0)choose('audio',Number(this.value.split(':')[2]));
  },false);
  if(sub&&sub.addEventListener)sub.addEventListener('change',function(){
-  if(this.value.indexOf('mkv:s:')===0)choose('subtitle',Number(this.value.split(':')[2]));
+  if(this.value.indexOf('mkv:s:')===0){
+   var ord=Number(this.value.split(':')[2]);
+   if(viaLgService(ord))return;
+   choose('subtitle',ord);
+  }
   else if(this.value==='off'&&state.subSel>=0)subtitleOff();
  },false);
  if(scan)scan.onclick=rescan;
