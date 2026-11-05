@@ -183,15 +183,23 @@ function readBody(req){
   req.on('error',reject);
  });
 }
+/* Short, URL-free summary of FFprobe stderr so the TV can show the real reason (e.g. HTTP 403). */
+function diagnose(text){
+ const t=String(text||'').replace(/https?:\/\/\S+/gi,'[url]').replace(/(user(name)?|pass(word)?)=\S+/gi,'$1=[redacted]').replace(/\s+/g,' ').trim();
+ const code=(t.match(/(?:HTTP error|Server returned|returned error|status code)[^0-9]{0,12}(\d{3})/i)||[])[1];
+ const tail=t.split(' ').slice(-18).join(' ').slice(0,140);
+ return (code?'HTTP '+code+' - ':'')+(tail||'FFprobe çıktı vermedi');
+}
 function collect(executable,args,timeout=PROBE_TIMEOUT,maxBytes=256000){
  return new Promise((resolve,reject)=>{
-  let ended=false,bytes=0,chunks=[];
-  const proc=spawn(executable,args,{stdio:['ignore','pipe','ignore'],windowsHide:true});
+  let ended=false,bytes=0,chunks=[],errText='';
+  const proc=spawn(executable,args,{stdio:['ignore','pipe','pipe'],windowsHide:true});
+  proc.stderr.on('data',chunk=>{if(errText.length<4000)errText+=String(chunk);});
   const timer=setTimeout(()=>{proc.kill('SIGKILL');finish(Error('Analiz zaman aşımı.'));},timeout);
   function finish(err,value){if(ended)return;ended=true;clearTimeout(timer);if(err)reject(err);else resolve(value);}
   proc.on('error',()=>finish(Error('Medya analiz aracı bu sunucuda kullanılamıyor.')));
   proc.stdout.on('data',chunk=>{bytes+=chunk.length;if(bytes>maxBytes){proc.kill('SIGKILL');finish(Error('Medya analiz çıktısı çok büyük.'));}else chunks.push(chunk);});
-  proc.on('close',code=>{if(code!==0)finish(Error('Medya analizi başarısız oldu; kaynak veya codec desteklenmiyor.'));else finish(null,Buffer.concat(chunks).toString('utf8'));});
+  proc.on('close',code=>{if(code!==0)finish(Error('Medya analizi başarısız: '+diagnose(errText)));else finish(null,Buffer.concat(chunks).toString('utf8'));});
  });
 }
 function probeArgs(url,fallback=false){
