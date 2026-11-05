@@ -2,7 +2,7 @@
    Configured only after a separate media service has been approved/deployed. */
 (function(){
  var video=document.getElementById('video'),url=String(window.XIPTV_LG_MEDIA_URL||'').replace(/\/+$/,'');
- var ctx=null,session=null,busy=false,manual=false,started=false,offset=0,scanSequence=0;
+ var ctx=null,session=null,busy=false,busySince=0,manual=false,started=false,offset=0,scanSequence=0;
  var playerOverlay=document.getElementById('tv-lg-subtitle-overlay'),cues=[],lastCue=-1,sourceKey='';
  var scanButton=document.getElementById('tv-lg-media-scan'),summary=document.getElementById('tv-lg-media-status'),returnButton=document.getElementById('tv-lg-native-return');
  function say(s){summary.textContent=String(s||'');}
@@ -196,10 +196,12 @@
   }catch(e){}
  }
  function scan(){
-  if(busy||!ctx)return;
+  if(!ctx){say('Bu bölüm için analiz kaynağı yok. Bölümü yeniden başlatıp tekrar deneyin.');return;}
+  if(busy&&Date.now()-busySince<150000){say('Önceki analiz hâlâ sürüyor, birkaç saniye bekleyin.');return;}
+  busy=false;
   if(!url){say('LG alternatif medya hizmeti henüz Render üzerinde yapılandırılmadı. Mevcut TV oynatıcı kullanılmaya devam ediyor.');return;}
   scanNativeTracks();scanHlsManifest();
-  busy=true;scanButton.disabled=true;var thisScan=++scanSequence;say('LG medya servisi kontrol ediliyor…');
+  busy=true;busySince=Date.now();scanButton.disabled=true;var thisScan=++scanSequence;say('LG medya servisi kontrol ediliyor…');
   var retried=false;
   function analyse(){
    say('MKV/MP4 ses ve altyazı parçaları analiz ediliyor…');
