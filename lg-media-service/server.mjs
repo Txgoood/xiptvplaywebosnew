@@ -126,6 +126,8 @@ function relayMedia(url,req,res,ticket,remaining=2){
   if(req.headers.range&&/^bytes=\d*-\d*$/.test(String(req.headers.range)))headers.Range=req.headers.range;
   const upstream=transport.request(u,{
    method:'GET',headers,timeout:12000,agent:false,
+   // Tek bir doğrulanmış IP sabitlendiği için Node'dan adres dizisi istemesini engelle.
+   autoSelectFamily:false,
    lookup:(_host,_opts,cb)=>cb(null,pinned,isIP(pinned))
   },response=>{
    const status=Number(response.statusCode||502);
