@@ -26,6 +26,8 @@ const STREAM_SECONDS=Math.max(15,Math.min(300,Number(process.env.LG_MEDIA_MAX_ST
 const STREAM_BYTES=Math.max(5,Math.min(100,Number(process.env.LG_MEDIA_MAX_STREAM_MB||60)))*1024*1024;
 const sessions=new Map(),ratelimits=new Map(),mediaTickets=new Map();
 const MAX_UPSTREAM_BYTES=85*1024*1024;
+const MAX_SUBTITLE_INPUT_BYTES=2*1024*1024*1024;
+const MAX_SUBTITLE_OUTPUT_BYTES=2*1024*1024;
 let mediaProxyPort=0;
 let activeProbes=0,activeStreams=0;
 function json(res,status,body){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(body));}
@@ -147,7 +149,7 @@ function relayMedia(url,req,res,ticket,remaining=2){
    res.writeHead(status,outHeaders);
    response.on('data',chunk=>{
     ticket.bytes+=chunk.length;
-    if(ticket.bytes>MAX_UPSTREAM_BYTES){
+    if(ticket.bytes>(ticket.maxBytes||MAX_UPSTREAM_BYTES)){
      upstream.destroy();
      if(!res.destroyed)res.destroy();
     }
@@ -307,8 +309,23 @@ const server=http.createServer(async(req,res)=>{
    const args=['-nostdin','-v','error','-user_agent','VLC/3.0.18','-rw_timeout','12000000','-ss',String(start),'-i',s.proxyUrl,'-map','0:v:0','-map','0:'+index,'-c:v','copy','-c:a','copy','-f','mpegts','pipe:1'];
    sendStream(res,req,args,'video/mp2t',STREAM_SECONDS*1000);
   }else{
-   const args=['-nostdin','-v','error','-rw_timeout','12000000','-i',s.url,'-map','0:'+index,'-c:s','webvtt','-f','webvtt','pipe:1'];
-   sendStream(res,req,args,'text/vtt; charset=utf-8',90000);
+   // Altyazıyı da analizle aynı doğrulanmış bağlantı üzerinden oku.
+   // Tam dosya taraması analiz kotasını tüketmesin.
+   const subtitleToken=randomBytes(24).toString('hex');
+   mediaTickets.set(subtitleToken,{url:s.url,expiry:Date.now()+90000,bytes:0,maxBytes:MAX_SUBTITLE_INPUT_BYTES});
+   try{
+    const args=['-nostdin','-v','error','-xerror','-protocol_whitelist','http,tcp','-rw_timeout','12000000','-i',proxyUrl(subtitleToken),'-map','0:'+index,'-c:s','webvtt','-f','webvtt','pipe:1'];
+    const vtt=await collect(FFMPEG,args,90000,MAX_SUBTITLE_OUTPUT_BYTES);
+    if(!vtt.startsWith('WEBVTT'))throw Error('Geçerli altyazı verisi üretilemedi.');
+    res.writeHead(200,{'Content-Type':'text/vtt; charset=utf-8','Cache-Control':'no-store'});
+    res.end(vtt);
+   }catch(e){
+    console.warn('[lg-media] subtitle extraction failed: '+diagnose(e.message));
+    error(res,502,'Altyazı çıkarılamadı.');
+   }finally{
+    mediaTickets.delete(subtitleToken);
+    activeStreams--;
+   }
   }
   return;
  }
