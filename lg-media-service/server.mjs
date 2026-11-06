@@ -25,6 +25,10 @@ const MAX_BODY=8192, PROBE_TIMEOUT=22000, MAX_SESSIONS=64, SESSION_TTL=90*60*100
 const STREAM_SECONDS=Math.max(15,Math.min(300,Number(process.env.LG_MEDIA_MAX_STREAM_SECONDS||120)));
 const STREAM_BYTES=Math.max(5,Math.min(100,Number(process.env.LG_MEDIA_MAX_STREAM_MB||60)))*1024*1024;
 const sessions=new Map(),ratelimits=new Map(),mediaTickets=new Map();
+const subtitleJobs=new Map();
+const subtitleCache=new Map();
+const SUBTITLE_CACHE_TTL=10*60*1000;
+const MAX_SUBTITLE_CACHE_ENTRIES=8;
 const MAX_UPSTREAM_BYTES=85*1024*1024;
 const MAX_SUBTITLE_INPUT_BYTES=2*1024*1024*1024;
 const MAX_SUBTITLE_OUTPUT_BYTES=2*1024*1024;
@@ -176,7 +180,11 @@ function limited(req,res){
  if(now-entry.time>60000){entry.time=now;entry.count=0;}
  entry.count++;ratelimits.set(addr,entry);
  if(ratelimits.size>1000)ratelimits.clear();
- if(entry.count>40){error(res,429,'Çok fazla istek. Bir dakika sonra deneyin.');return true;}
+ if(entry.count>40){
+  console.warn('[lg-media] request rate limit reached');
+  res.setHeader('Retry-After',String(Math.max(1,Math.ceil((60000-now+entry.time)/1000))));
+  error(res,429,'Çok fazla istek. Bir dakika sonra deneyin.');return true;
+ }
  return false;
 }
 function readBody(req){
@@ -264,6 +272,22 @@ function sendStream(res,req,args,contentType,maxMs){
  res.on('close',()=>{if(!res.writableEnded)proc.kill('SIGKILL');});
 }
 function cleanup(){for(const [k,v] of sessions)if(v.expiry<Date.now()){sessions.delete(k);mediaTickets.delete(k);}for(const [k,v] of mediaTickets)if(v.expiry<Date.now())mediaTickets.delete(k);}
+async function extractSubtitle(url,index){
+ // Tam altyazı taraması için analiz kotasından ayrı bir medya bileti kullan.
+ const token=randomBytes(24).toString('hex');
+ mediaTickets.set(token,{url,expiry:Date.now()+90000,bytes:0,maxBytes:MAX_SUBTITLE_INPUT_BYTES});
+ try{
+  const args=['-nostdin','-v','error','-xerror','-protocol_whitelist','http,tcp','-rw_timeout','12000000','-i',proxyUrl(token),'-map','0:'+index,'-c:s','webvtt','-f','webvtt','pipe:1'];
+  const vtt=await collect(FFMPEG,args,90000,MAX_SUBTITLE_OUTPUT_BYTES);
+  if(!vtt.startsWith('WEBVTT'))throw Error('Geçerli altyazı verisi üretilemedi.');
+  return vtt;
+ }catch(e){
+  console.warn('[lg-media] subtitle extraction failed: '+diagnose(e.message));
+  throw e;
+ }finally{
+  mediaTickets.delete(token);
+ }
+}
 const server=http.createServer(async(req,res)=>{
  const origin=req.headers.origin;
  if(origin&&allowOrigins.includes(origin)){res.setHeader('Access-Control-Allow-Origin',origin);res.setHeader('Vary','Origin');}
@@ -301,32 +325,48 @@ const server=http.createServer(async(req,res)=>{
   if(!s){error(res,401,'Analiz oturumu sona erdi. Tekrar tarayın.');return;}
   const track=s.streams.find(t=>t.index===index&&t.type===(type==='stream'?'audio':'subtitle'));
   if(!track){error(res,400,'Bu parça medya kaynağında bulunmuyor.');return;}
-  if(type==='subtitle'&&!track.externalVtt){error(res,422,'Bu altyazı biçimi webVTT olarak dönüştürülemiyor.');return;}
+  if(type==='subtitle'){
+   if(!track.externalVtt){error(res,422,'Bu altyazı biçimi webVTT olarak dönüştürülemiyor.');return;}
+   const key=s.url+'\n'+index;
+   const cached=subtitleCache.get(key);
+   let job=subtitleJobs.get(key);
+   if(cached&&cached.expiry>Date.now()){
+    job=Promise.resolve(cached.vtt);
+   }else if(!job){
+    subtitleCache.delete(key);
+    if(activeStreams>=1){
+     console.warn('[lg-media] subtitle worker busy');
+     res.setHeader('Retry-After','5');
+     error(res,429,'Altyazı hazırlama işlemi meşgul. Biraz sonra tekrar deneyin.');
+     return;
+    }
+    activeStreams++;
+    job=extractSubtitle(s.url,index).then(vtt=>{
+     if(subtitleCache.size>=MAX_SUBTITLE_CACHE_ENTRIES)subtitleCache.delete(subtitleCache.keys().next().value);
+     subtitleCache.set(key,{vtt,expiry:Date.now()+SUBTITLE_CACHE_TTL});
+     return vtt;
+    }).finally(()=>{
+     subtitleJobs.delete(key);
+     activeStreams--;
+    });
+    subtitleJobs.set(key,job);
+   }
+   try{
+    const vtt=await job;
+    if(!res.destroyed){
+     res.writeHead(200,{'Content-Type':'text/vtt; charset=utf-8','Cache-Control':'no-store'});
+     res.end(vtt);
+    }
+   }catch(e){
+    if(!res.destroyed)error(res,502,'Altyazı çıkarılamadı.');
+   }
+   return;
+  }
   if(activeStreams>=1){error(res,429,'Alternatif oynatma meşgul.');return;}
   activeStreams++;
-  if(type==='stream'){
-   const start=Math.max(0,Math.min(14400,Number(new URL(req.url,'http://localhost').searchParams.get('start'))||0));
-   const args=['-nostdin','-v','error','-user_agent','VLC/3.0.18','-rw_timeout','12000000','-ss',String(start),'-i',s.proxyUrl,'-map','0:v:0','-map','0:'+index,'-c:v','copy','-c:a','copy','-f','mpegts','pipe:1'];
-   sendStream(res,req,args,'video/mp2t',STREAM_SECONDS*1000);
-  }else{
-   // Altyazıyı da analizle aynı doğrulanmış bağlantı üzerinden oku.
-   // Tam dosya taraması analiz kotasını tüketmesin.
-   const subtitleToken=randomBytes(24).toString('hex');
-   mediaTickets.set(subtitleToken,{url:s.url,expiry:Date.now()+90000,bytes:0,maxBytes:MAX_SUBTITLE_INPUT_BYTES});
-   try{
-    const args=['-nostdin','-v','error','-xerror','-protocol_whitelist','http,tcp','-rw_timeout','12000000','-i',proxyUrl(subtitleToken),'-map','0:'+index,'-c:s','webvtt','-f','webvtt','pipe:1'];
-    const vtt=await collect(FFMPEG,args,90000,MAX_SUBTITLE_OUTPUT_BYTES);
-    if(!vtt.startsWith('WEBVTT'))throw Error('Geçerli altyazı verisi üretilemedi.');
-    res.writeHead(200,{'Content-Type':'text/vtt; charset=utf-8','Cache-Control':'no-store'});
-    res.end(vtt);
-   }catch(e){
-    console.warn('[lg-media] subtitle extraction failed: '+diagnose(e.message));
-    error(res,502,'Altyazı çıkarılamadı.');
-   }finally{
-    mediaTickets.delete(subtitleToken);
-    activeStreams--;
-   }
-  }
+  const start=Math.max(0,Math.min(14400,Number(new URL(req.url,'http://localhost').searchParams.get('start'))||0));
+  const args=['-nostdin','-v','error','-user_agent','VLC/3.0.18','-rw_timeout','12000000','-ss',String(start),'-i',s.proxyUrl,'-map','0:v:0','-map','0:'+index,'-c:v','copy','-c:a','copy','-f','mpegts','pipe:1'];
+  sendStream(res,req,args,'video/mp2t',STREAM_SECONDS*1000);
   return;
  }
  error(res,404,'Uç nokta bulunamadı.');
