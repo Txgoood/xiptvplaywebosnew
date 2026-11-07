@@ -49,23 +49,8 @@
   if(!cues.length||video.paused){playerOverlay.style.display='none';return;}
   var now=(video.currentTime||0)+offset,chosen=-1;
   for(var i=0;i<cues.length;i++)if(now>=cues[i].start&&now<cues[i].end){chosen=i;break;}
-  if(chosen!==lastCue){
-   lastCue=chosen;
-   playerOverlay.textContent=chosen<0?'':cues[chosen].text;
-  }
-  if(chosen>=0&&video.getBoundingClientRect){
-   var rect=video.getBoundingClientRect();
-   var width=window.innerWidth||document.documentElement.clientWidth;
-   var height=window.innerHeight||document.documentElement.clientHeight;
-   var left=Math.max(0,rect.left),right=Math.min(width,rect.right),bottom=Math.min(height,rect.bottom);
-   playerOverlay.style.position='fixed';
-   playerOverlay.style.left=(left+(right-left)*0.05)+'px';
-   playerOverlay.style.right='auto';
-   playerOverlay.style.width=((right-left)*0.9)+'px';
-   playerOverlay.style.bottom=Math.max(0,height-bottom+(bottom-Math.max(0,rect.top))*0.10)+'px';
-   playerOverlay.style.fontSize=Math.max(19,Math.min(34,(bottom-rect.top)*0.045))+'px';
-   playerOverlay.style.zIndex='109';
-  }
+  if(chosen===lastCue)return;
+  lastCue=chosen;playerOverlay.textContent=chosen<0?'':cues[chosen].text;
   playerOverlay.style.display=chosen<0?'none':'block';
  }
  function timing(t){
@@ -93,10 +78,7 @@
    x.onreadystatechange=function(){if(x.readyState!==4)return;
      if(x.status!==200){say('Altyazı açılamadı. HTTP '+x.status);return;}
      cues=parseVtt(x.responseText);
-     var lastEnd=0;
-      for(var i=0;i<cues.length;i++)lastEnd=Math.max(lastEnd,cues[i].end);
-      function minute(value){return Math.floor(value/60)+':'+('0'+Math.floor(value%60)).slice(-2);}
-      say(cues.length?cues.length+' altyazı satırı yüklendi. Aralık '+minute(cues[0].start)+'–'+minute(lastEnd)+'. Video '+minute((video.currentTime||0)+offset)+'.':'Altyazı dosyasından kullanılabilir satır okunamadı.');
+     say(cues.length?cues.length+' altyazı satırı yüklendi.':'Altyazı dosyasından kullanılabilir satır okunamadı.');
      paintSubtitles();
    };
    x.onerror=function(){say('Harici altyazı indirilmedi.');};
@@ -246,10 +228,6 @@
  returnButton.onclick=function(){if(ctx&&ctx.originalUrl){var pos=(video.currentTime||0)+offset;revert(ctx.originalUrl,pos);say('Önceki çalışan TV oynatıcısı geri açıldı.');}};
  video.addEventListener('timeupdate',paintSubtitles,false);
  video.addEventListener('pause',paintSubtitles,false);
- video.addEventListener('play',paintSubtitles,false);
- video.addEventListener('playing',paintSubtitles,false);
- video.addEventListener('seeked',paintSubtitles,false);
- window.addEventListener('resize',paintSubtitles,false);
  document.getElementById('tv-subtitles').addEventListener('change',function(){
   if(this.value==='off'){cues=[];lastCue=-1;playerOverlay.style.display='none';return;}
   if(this.value.indexOf('lg:s:')===0){manual=true;subtitle(Number(this.value.split(':')[2]));}
