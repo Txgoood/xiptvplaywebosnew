@@ -58,6 +58,7 @@ function shelf(node,items,type,limit){
   }else if(/^https?:\/\//i.test(cover)){var img=document.createElement('img');img.src=cover;img.alt='';img.onerror=function(){this.style.display='none';};b.appendChild(img);}
   var title=document.createElement('span');title.textContent=String(item.name||item.title||'İçerik');b.appendChild(title);
   if(type==='films'||type==='series')decorateProgress(b,type==='films'?'movie':'series',item);
+  if(type==='series'&&window.XIPTVTV&&window.XIPTVTV.getNewEpisodeCount&&window.XIPTVTV.getNewEpisodeCount(item.series_id)>0){var newTag=document.createElement('strong');newTag.className='tv-new-episode-tag';newTag.textContent='Yeni bölüm +'+window.XIPTVTV.getNewEpisodeCount(item.series_id);b.appendChild(newTag);}
   b.onclick=function(){open(type==='films'?'films':type==='series'?'series':'live');window.XIPTVTV.openItem(type==='films'?'movie':type==='series'?'series':'live',item);};
   node.appendChild(b);
  })(items[n]);}
