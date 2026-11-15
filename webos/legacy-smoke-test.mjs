@@ -83,6 +83,7 @@ assert(iptvScript.includes("setClass('tv-fullscreen'"));
 assert(iptvScript.includes("function changeLiveChannel(step)"),'Fullscreen live-TV channel zapping must be present');
 assert(iptvScript.includes("liveChannelOrder=matches.slice(0)"),'Channel zapping must follow filtered and sorted live channels');
 assert(iptvScript.includes("key===427||key===428"),'LG channel keycodes must be handled');
+assert(iptvScript.includes("key===406"),'Blue remote key must toggle fullscreen');
 assert(html.includes('id="tv-try-hls"'));
 assert(iptvScript.includes("playStream('live',lastLive.stream_id,'ts'"));
 assert(html.includes('id="tv-episodes-list"'));
