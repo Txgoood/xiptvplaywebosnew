@@ -177,6 +177,7 @@
     var url=server.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
     window.XIPTVTV.beforePlay(kind,id,url,name);
+    if(window.XIPTVPlayerUI){window.XIPTVPlayerUI.closeMenu();window.XIPTVPlayerUI.update();}
     if(window.XIPTVLGMedia&&window.XIPTVLGMedia.setSource)window.XIPTVLGMedia.setSource(kind==='live'?null:{serverUrl:server,username:username,password:password,kind:kind,id:id,extension:suffix,originalUrl:url});
     if(window.XIPTVAltPlayer&&window.XIPTVAltPlayer.beforeSourceChange)window.XIPTVAltPlayer.beforeSourceChange();
     // Release the previous stream first: many IPTV accounts allow only one connection.
@@ -397,6 +398,10 @@
     if(document.getElementById('tv-home').style.display!=='none')return;
     if(document.getElementById('iptv-keyboard').style.display!=='none')return;
     var key=e.keyCode||e.which;
+    // Handle custom selector before fullscreen channel-zapping or focus navigation.
+    if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.menuOpen()&&window.XIPTVPlayerUI.onKey(key)){
+      e.preventDefault();e.stopImmediatePropagation();return;
+    }
     // Blue remote key: toggle fullscreen without changing the selected channel.
     // Keep OK, Back and the other color keys on their existing paths.
     if(key===406 && (video.currentSrc||video.getAttribute('src'))){
