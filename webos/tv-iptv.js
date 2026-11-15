@@ -339,6 +339,9 @@
     }
     renderChannels();
   }
+  var previousChannel=null,numberBuffer='',numberTimer=null;
+  function channelNotice(message){if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.notice)window.XIPTVPlayerUI.notice(message,'info');}
+  function chooseChannelNumber(n){if(!lastLive||!liveChannelOrder.length||n<1||n>liveChannelOrder.length)return;playChannel(liveChannelOrder[n-1]);}
   function changeLiveChannel(step){
     if(!lastLive||!liveChannelOrder.length)return;
     var now=new Date().getTime();
@@ -354,7 +357,9 @@
   }
   function playChannel(item){
     if(window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem('live',item)){say('Bu kanal için ebeveyn onayı gerekiyor.');return;}
+    if(lastLive&&String(lastLive.stream_id)!==String(item.stream_id))previousChannel=lastLive;
     lastLive=item;
+    channelNotice('Kanal: '+String(item.name||'Canlı TV'));
     window.XIPTVTV.setPlayingItem('live',item);
     playStream('live',item.stream_id,'m3u8',item.name);
   }
@@ -402,6 +407,16 @@
     var key=e.keyCode||e.which;
     // Handle custom selector before fullscreen channel-zapping or focus navigation.
     if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.menuOpen()&&window.XIPTVPlayerUI.onKey(key)){
+      e.preventDefault();e.stopImmediatePropagation();return;
+    }
+    // Yellow remote key returns to the previous channel. LG firmware may reserve it.
+    if(key===405&&hasClass('tv-fullscreen')&&previousChannel){playChannel(previousChannel);e.preventDefault();e.stopImmediatePropagation();return;}
+    // Numeric remote keys select the 1-based visible channel order after 1.2s.
+    if(hasClass('tv-fullscreen')&&lastLive&&((key>=48&&key<=57)||(key>=96&&key<=105))){
+      var digit=key>=96?key-96:key-48;numberBuffer=(numberBuffer+String(digit)).slice(-4);
+      channelNotice('Kanal numarası: '+numberBuffer);
+      if(numberTimer)clearTimeout(numberTimer);
+      numberTimer=setTimeout(function(){var n=Number(numberBuffer);numberBuffer='';chooseChannelNumber(n);},1200);
       e.preventDefault();e.stopImmediatePropagation();return;
     }
     // Blue remote key: toggle fullscreen without changing the selected channel.
@@ -509,6 +524,8 @@
         if(error){show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Katalog hatası: '+error.message);return;}
         catalogData=catalog;sortedCache={};categoryCache={};focusCache=null;currentPage=0;
         cacheHome(catalog);
+        try{localStorage.setItem('xiptv_webos2_last_catalog_refresh',new Date().toISOString());}catch(e){}
+        var updated=document.getElementById('tv-last-catalog-update');if(updated)updated.textContent='Son katalog yenileme: '+new Date().toLocaleString('tr-TR');
         if(!liveCategoryMatches(catalog))setTimeout(retryLiveCatalog,900);
         if(window.XIPTVTVHome&&window.XIPTVTVHome.render)window.XIPTVTVHome.render(catalog);
         window.XIPTVTV.catalogReady();
@@ -519,6 +536,7 @@
       });
     });
   };
+  var manualRefresh=document.getElementById('tv-manual-catalog-refresh');if(manualRefresh)manualRefresh.onclick=function(){document.getElementById('iptv-connect').click();};
   // Startup: connect silently with saved credentials; show login only on failure.
   if(hydrate()){
     show(panel);hide(login);hide(browser);say('Katalog otomatik yükleniyor...');document.getElementById('iptv-connect').click();
