@@ -210,6 +210,7 @@ window.XIPTVTV={
  setProfile:function(id,child){childProfile=!!child;scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
  isFavorite:isFavorite,
  getResume:function(){return read('positions',{});},
+ getMediaProgress:function(mode,item){var k=key(mode,item),positions=read('positions',{}),durations=read('durations',{}),watched=read('watched',{}),pos=Number(positions[k]||0),duration=Number(durations[k]||0);return {position:pos,duration:duration,percent:duration>0?Math.min(100,Math.round(100*pos/duration)):0,watched:!!watched[k]};},
  decorateItem:decorateItem,
  beforePlay:function(kind,id,url,name){
    // Bölüm kimliği yerine ana dizinin kimliğini kullan: ana sayfa doğru diziyi bulur.
@@ -240,8 +241,11 @@ video.addEventListener('timeupdate',function(){
  var now=Date.now();if(now-(window.XIPTVTV.lastSave||0)<10000)return;
  window.XIPTVTV.lastSave=now;
  var positions=read('positions',{});positions[currentKey]=Math.floor(video.currentTime);save('positions',positions);
+ if(isFinite(video.duration)&&video.duration>0){var durations=read('durations',{});durations[currentKey]=Math.floor(video.duration);save('durations',durations);}
 },false);
 video.addEventListener('ended',function(){
  if(!currentKey)return;var positions=read('positions',{});delete positions[currentKey];save('positions',positions);
+ var watched=read('watched',{});watched[currentKey]=true;save('watched',watched);
+ if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();
 },false);
 })();
