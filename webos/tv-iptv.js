@@ -258,6 +258,7 @@
       if(selectedCategory!=='all' && String(ch.category_id)!==selectedCategory)continue;
       if(query){var inName=String(ch.name||ch.title||'').toLowerCase().indexOf(query)>=0;var inCategory=String(categoryNames[String(ch.category_id)]||'').toLowerCase().indexOf(query)>=0;if(searchScope==='name'&&!inName||searchScope==='category'&&!inCategory||searchScope==='all'&&!inName&&!inCategory)continue;}
       if(!window.XIPTVTV.filterFavorite(mode,ch))continue;
+      if(window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(mode,ch))continue;
       var catLabel=categoryNames[String(ch.category_id)]||'';
       if(document.getElementById('tv-tr-only').checked && catLabel.toUpperCase().indexOf('TR')!==0)continue;
       if(document.getElementById('tv-hide-adult').checked && /^(XXX|18\+|ADULT|🔞|❤)/i.test(catLabel))continue;
@@ -352,6 +353,7 @@
     playChannel(liveChannelOrder[next]);
   }
   function playChannel(item){
+    if(window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem('live',item)){say('Bu kanal için ebeveyn onayı gerekiyor.');return;}
     lastLive=item;
     window.XIPTVTV.setPlayingItem('live',item);
     playStream('live',item.stream_id,'m3u8',item.name);
@@ -446,6 +448,7 @@
   },true);
   window.XIPTVTV.openSection=function(next){window.XIPTVTV.startMode=next;launcher.click();};
   window.XIPTVTV.openItem=function(kind,item){
+    if(window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(kind,item)){say('Bu içerik için ebeveyn onayı gerekiyor.');return;}
     window.XIPTVTV.setPlayingItem(kind,item);
     if(kind==='series')showSeries(item);
     else if(kind==='movie')playStream('movie',item.stream_id,String(item.container_extension||'mp4').replace(/[^a-zA-Z0-9]/g,''),item.name);
