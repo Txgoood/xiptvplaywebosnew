@@ -28,6 +28,7 @@ function shelf(node,items,type,limit){
  if(!items.length){var empty=document.createElement('div');empty.className='stitch-empty';empty.textContent='Henüz içerik bulunamadı.';node.appendChild(empty);return;}
  for(var n=0;n<items.length&&n<limit;n++){(function(item){
   var b=document.createElement('button');b.type='button';b.className='stitch-movie-tile';
+  b.setAttribute('aria-label',String(item.name||item.title||'İçerik'));
   var cover=String(item.stream_icon||item.cover_big||item.cover||'');
   if(/^https?:\/\//i.test(cover)){var img=document.createElement('img');img.src=cover;img.alt='';img.onerror=function(){this.style.display='none';};b.appendChild(img);}
   var title=document.createElement('span');title.textContent=String(item.name||item.title||'İçerik');b.appendChild(title);
@@ -132,33 +133,47 @@ document.getElementById('tv-settings-connection').onclick=function(){settings(fa
 document.getElementById('tv-settings-diagnostics').onclick=function(){settings(false);document.getElementById('tv-show-diagnostics').click();};
 document.getElementById('tv-show-diagnostics').onclick=function(){diag.style.display='block';home.style.display='none';document.getElementById('system').focus();};
 document.getElementById('iptv-hide').addEventListener('click',function(){home.style.display='block';document.body.className='';document.getElementById('tv-nav-home').focus();},false);
+function posterRows(){return document.querySelectorAll('#tv-home .stitch-tiles');}
+function rowButtons(row){return row.querySelectorAll('.stitch-movie-tile');}
+function revealPoster(button){
+ if(!button)return;
+ var row=button.parentNode,visibleLeft=row.scrollLeft,visibleRight=visibleLeft+row.clientWidth;
+ var left=button.offsetLeft-row.offsetLeft, right=left+button.offsetWidth;
+ if(left<visibleLeft)row.scrollLeft=Math.max(0,left-12);
+ else if(right>visibleRight)row.scrollLeft=right-row.clientWidth+12;
+ // Keep the selected category visible without relying on smooth-scrolling support.
+ var viewport=document.querySelector('#tv-home .stitch-scroll'), top=row.offsetTop;
+ if(viewport){var parent=row.offsetParent;while(parent&&parent!==viewport){top+=parent.offsetTop;parent=parent.offsetParent;}
+  if(top<viewport.scrollTop+45)viewport.scrollTop=Math.max(0,top-56);
+  else if(top+row.offsetHeight>viewport.scrollTop+viewport.clientHeight-18)viewport.scrollTop=top+row.offsetHeight-viewport.clientHeight+24;
+ }
+}
+function firstPoster(){var rows=posterRows();for(var i=0;i<rows.length;i++){var buttons=rowButtons(rows[i]);if(buttons.length){buttons[0].focus();revealPoster(buttons[0]);return true;}}return false;}
 document.addEventListener('keydown',function(e){
  if(document.getElementById('tv-settings-panel').style.display!=='none')return;
  if(home.style.display==='none')return;
  var k=e.keyCode||e.which;if(k!==37&&k!==38&&k!==39&&k!==40&&k!==13)return;
- var active=document.activeElement,tiles=document.querySelectorAll('#tv-home .stitch-movie-tile'),index=-1,t;
- for(t=0;t<tiles.length;t++)if(tiles[t]===active){index=t;break;}
- if(index>=0){
-  if(k===13){active.click();}
-  else {
-   var target=index+(k===37?-1:k===39?1:0);
-   if(k===38||k===40){
-    var currentParent=active.parentNode,row=active.parentNode,rows=document.querySelectorAll('#tv-home .stitch-tiles'),rowIndex=-1,col=0,n;
-    for(n=0;n<rows.length;n++)if(rows[n]===row)rowIndex=n;
-    for(n=0;n<row.children.length;n++)if(row.children[n]===active){col=n;break;}
-    var desired=rowIndex+(k===38?-1:1);
-    while(desired>=0&&desired<rows.length&&!rows[desired].querySelector('.stitch-movie-tile'))desired+=(k===38?-1:1);
-    if(desired>=0&&desired<rows.length){var options=rows[desired].querySelectorAll('.stitch-movie-tile');options[Math.min(col,options.length-1)].focus();}
-    else if(k===38)document.getElementById('tv-feature-play').focus();
-   }else if(target>=0&&target<tiles.length&&tiles[target].parentNode===active.parentNode){tiles[target].focus();}
+ var active=document.activeElement,rows=posterRows(),rowIndex=-1,col=-1,r,j,buttons;
+ for(r=0;r<rows.length;r++){buttons=rowButtons(rows[r]);for(j=0;j<buttons.length;j++)if(buttons[j]===active){rowIndex=r;col=j;break;}if(rowIndex>=0)break;}
+ if(rowIndex>=0){
+  if(k===13)active.click();
+  else if(k===37&&col===0){document.getElementById('tv-nav-home').focus();}
+  else if(k===37||k===39){
+   buttons=rowButtons(rows[rowIndex]);var next=col+(k===37?-1:1);
+   if(next>=0&&next<buttons.length){buttons[next].focus();revealPoster(buttons[next]);}
+  }else{
+   var nextRow=rowIndex+(k===38?-1:1),step=k===38?-1:1;
+   while(nextRow>=0&&nextRow<rows.length&&!rowButtons(rows[nextRow]).length)nextRow+=step;
+   if(nextRow>=0&&nextRow<rows.length){buttons=rowButtons(rows[nextRow]);var chosen=buttons[Math.min(col,buttons.length-1)];chosen.focus();revealPoster(chosen);}
+   else if(k===38)document.getElementById('tv-feature-play').focus();
   }
-  try{document.activeElement.scrollIntoView(false);}catch(err){}
   e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return;
  }
- if(k===40&&(active===document.getElementById('tv-feature-play')||active===document.getElementById('tv-feature-detail'))&&tiles.length){
-  tiles[0].focus();try{tiles[0].scrollIntoView(false);}catch(err){}
-  e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return;
+ if(k===40&&(active===document.getElementById('tv-feature-play')||active===document.getElementById('tv-feature-detail'))){
+  if(firstPoster()){e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return;}
  }
+ // Right from the navigation sidebar enters the poster shelves immediately.
+ if(k===39&&active&&active.parentNode===side){if(firstPoster()){e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return;}}
  var current=0;for(var p=0;p<nodes.length;p++)if(nodes[p]===document.activeElement)current=p;
  if(k===13)nodes[current].click();
  else{var delta=(k===37||k===38)?-1:1;nodes[(current+delta+nodes.length)%nodes.length].focus();}
