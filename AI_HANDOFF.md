@@ -42,3 +42,31 @@ Kaynak dal: https://github.com/Txgoood/xiptvplay/tree/feature/lg-webos-tv
 Eski IPK geçmişi: https://github.com/Txgoood/xiptvplay/actions/workflows/build-webos.yml
 Yeni IPK derlemeleri: https://github.com/Txgoood/xiptvplaywebosnew/actions/workflows/build-webos.yml
 Bu depo, eski dalın 1.0.16 anlık görüntüsünün webOS'a ait dosyalarından oluşturuldu; eski GitHub Actions run/artifact geçmişi GitHub'da bu depoya otomatik taşınmaz. Önceki denemeleri eski depodan okuyun.
+
+## 2026-11-15 — v1.0.45 geliştirme devri (42 kullanıcı seçimi)
+**Güncel sürüm:** webos/build.mjs = 1.0.45. Android deposu değiştirilmedi. GitHub Actions workflow push ile tetiklenir; başarılı derlemeyi Actions sayfasından kontrol et. Kullanıcı TV modeli: LG 49UF8507-ZB (webOS 2.0). Tüm yeni özellikler kullanıcı TV'sinde henüz uçtan uca test edilmedi.
+
+### Uygulanan / koda bağlanan özellikler
+- v1.0.34: fullscreen kanal P+/P-, yön tuşu yedeği ve mavi tuş tam ekran.
+- v1.0.35: çocuk/aile öneri rafları ve doğrulanmış giriş sonrası küçük ana ekran önbelleği.
+- v1.0.36: özel tam ekran oynatıcı kontrolleri, ses/altyazı/hız menüleri ve kısa uyarılar; oynatıcı motoru korunuyor.
+- v1.0.37: 6 büyük dikey poster ve D-pad yatay/dikey raf gezintisi.
+- v1.0.38: çocuk profili için ebeveyn onay listesi; katalog erişiminde ve oynatmada izin kontrolü; izleme yüzdesi ve izlendi etiketi; poster boyutu ve ana ekran raf sırası; Çocuk TV butonu; numarayla kanal, önceki kanal ve manuel katalog yenilemesi; Actions build numarası.
+- v1.0.39: tv-metadata.js ile mevcut Render /api/tmdb/details ve /api/tmdb/age-check servislerine isteğe bağlı erişim, afiş fallback, film detayları ve yaş sertifikasıyla filtrelenen aile/yaş rafları.
+- v1.0.40: sezon/bölüm sıralama, bölüm izleme takibi ve sıradaki bölümü öneren panel; yeni bölüm sayısı artışını dizi ayrıntısı açıldığında saptama.
+- v1.0.41: canlı TV yan kanal listesi (yeşil kumanda tuşu), kumanda yardım paneli.
+- v1.0.42: yıl/tür/puan arama filtreleri, puan sıralaması ve favori kanal sıralama.
+- v1.0.43: çocuk profili sadeleşmesi, ebeveyn izni yoksa eski hero görselini gizleme, haftalık aile önerisi sırası, uygulamanın çizdiği altyazı için stil ayarları.
+- v1.0.44: yeni eklenen film/dizi rafları, önceki katalogla sınırlı kimlik karşılaştırması.
+- v1.0.45: TMDb koleksiyon filmleri (katalog adları eşleşirse), kaynak oyuncu alanı varsa oyuncu keşfi, kategoriye göre benzer içerikler, film/dizi kataloglarında afiş fallback.
+
+### Kritik sınırlamalar ve sıradaki doğrulama
+- TMDb çağrıları Render sunucusundaki TMDB anahtarına ve API'nin yayında olmasına bağlıdır. Servis 503/404 verdiğinde arayüz oynatmayı bozmaz; **yaş verisi doğrulanmamış eserler aile rafına alınmaz.**
+- Çocuk profili izin listesi güvenli varsayımla başta boştur. Yetişkin profili katalog kartındaki **Çocuğa izin** düğmesiyle içerik seçer. Kullanıcının seçmediği yetişkin PIN zorunluluğu otomatik eklenmedi; PIN'siz yetişkin profiline geçiş ayrıca risk olabilir.
+- Yerel TV ses/altyazı medyası webOS 2.0 API erişimine bağlı; yalnızca uygulama çizimi altyazı boyut/konum ayarlarına uyar.
+- TMDb afiş tamamlama sınırlandırılmış istek kuyruğu kullanır (oturum başına maksimum 24 metadata sorgusu). Katalogdaki tüm eksik posterlerin garantili tamamlanması beklenmez.
+- IMDb puanı, yıl, tür, oyuncu arama ve keşif Xtream kaynak alanları mevcutsa işler; tüm sağlayıcılar bu alanları iletmez.
+- Yeni dizi bölümü tespiti yalnızca dizinin ayrıntı verisi açıldığında eski sayıyla karşılaştırılır. Yeni film/dizi tespiti en fazla ilk 1800 film / 1000 dizi kimliğiyle çalışır.
+- TMDb film serisi ve oyuncu keşfi ancak doğrulanabilir başlık/oyuncu eşleşmesinde sonuç verir; benzer içerik şu an aynı IPTV kategorisine dayanır, TMDb tabanlı tam benzerlik algoritması değildir.
+- Gerçek LG TV üzerinde doğrulama öncelikleri: açılış/katalog, çocuk onay seçimi, poster kaydırma, ses/sub menüsü, P+/P-, mavi/yeşil/sarı tuş, numara tuşları, dizi bölüm seçimi/sonraki bölüm, yeni afişler ve altyazı konumu.
+- GitHub Actions'ı başarılı görmek **TV'de çalıştı** demek değildir; test edilmemiş özellikleri test edildi diye bildirme.
