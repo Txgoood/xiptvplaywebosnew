@@ -398,3 +398,13 @@ body.tv-mode #tv-next-episode button{font-size:20px;padding:13px;margin:14px 10p
 body.tv-mode #tv-next-episode button:focus{outline:3px solid white}
 
 #tv-home .stitch-movie-tile .tv-new-episode-tag{position:absolute!important;top:6px!important;right:5px!important;left:auto!important;bottom:auto!important;background:#004d58!important;color:#fff!important;font-size:13px!important;padding:4px 6px!important;border-radius:5px!important;z-index:7!important}
+
+/* v1.0.41: remote-control guide and fullscreen channel drawer */
+body.tv-mode #tv-channel-panel{position:fixed!important;right:2%!important;top:9%!important;bottom:9%!important;width:34%!important;overflow-y:auto!important;background:rgba(7,25,35,.97)!important;border:2px solid #00dbef!important;border-radius:15px!important;z-index:151!important;padding:17px!important;box-sizing:border-box!important;color:#fff!important}
+body.tv-mode #tv-channel-panel strong{display:block;font-size:27px;margin:5px 0 14px}
+body.tv-mode #tv-channel-panel button{display:block;width:100%;font-size:20px;text-align:left;padding:10px 12px;margin:5px 0;background:#1a303d;color:white;border:1px solid #315b66;border-radius:7px}
+body.tv-mode #tv-channel-panel button:focus{outline:3px solid #00f2df;background:#075f67}
+#tv-remote-help{position:fixed;left:18%;right:18%;top:9%;bottom:9%;background:rgba(8,24,35,.98);color:#fff;border:2px solid #00dbef;border-radius:15px;z-index:210;padding:22px 32px;overflow-y:auto;box-sizing:border-box}
+#tv-remote-help h2{font-size:30px;color:#aefbff}#tv-remote-help p{font-size:21px;margin:9px 0}
+#tv-remote-help button{background:#075b64;color:white;border:2px solid #00dbef;border-radius:8px;font-size:23px;padding:12px}
+#tv-remote-help button:focus{outline:3px solid white}

@@ -178,6 +178,9 @@ try{var savedFilters=JSON.parse(localStorage.getItem(FILTER_KEY)||'{}');document
 document.getElementById('tv-settings-tr').onchange=syncFilters;
 document.getElementById('tv-settings-adult').onchange=syncFilters;
 document.getElementById('tv-settings-close').onclick=function(){settings(false);document.getElementById('tv-nav-settings').focus();};
+var helpPanel=document.getElementById('tv-remote-help');
+document.getElementById('tv-settings-help').onclick=function(){settings(false);helpPanel.style.display='block';document.getElementById('tv-remote-help-close').focus();};
+document.getElementById('tv-remote-help-close').onclick=function(){helpPanel.style.display='none';document.getElementById('tv-nav-home').focus();};
 document.getElementById('tv-settings-player').onclick=function(){settings(false);open('live');var tools=document.getElementById('tv-player-settings');if(tools)tools.click();else document.getElementById('tv-controls-toggle').click();};
 document.getElementById('tv-settings-profiles').onclick=function(){settings(false);open('live');document.getElementById('tv-profile-switch').click();};
 document.getElementById('tv-settings-connection').onclick=function(){settings(false);open('live');document.getElementById('iptv-login').style.display='block';document.getElementById('iptv-browser').style.display='none';};
@@ -202,6 +205,7 @@ function revealPoster(button){
 function firstPoster(){var rows=posterRows();for(var i=0;i<rows.length;i++){var buttons=rowButtons(rows[i]);if(buttons.length){buttons[0].focus();revealPoster(buttons[0]);return true;}}return false;}
 document.addEventListener('keydown',function(e){
  if(document.getElementById('tv-settings-panel').style.display!=='none')return;
+ if(helpPanel.style.display!=='none'){if(e.keyCode===461||e.keyCode===27||e.keyCode===13){helpPanel.style.display='none';document.getElementById('tv-nav-home').focus();e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}return;}
  if(home.style.display==='none')return;
  var k=e.keyCode||e.which;
  if(k===457&&document.activeElement&&document.activeElement._xiptvItem&&window.XIPTVMetadata){

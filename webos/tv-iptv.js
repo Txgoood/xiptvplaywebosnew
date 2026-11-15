@@ -359,6 +359,18 @@
     renderChannels();
   }
   var previousChannel=null,numberBuffer='',numberTimer=null;
+  var channelPanel=document.getElementById('tv-channel-panel');
+  function toggleChannelPanel(){
+    if(!lastLive){say('Önce bir canlı kanal aç.');return;}
+    if(channelPanel.style.display!=='none'){channelPanel.style.display='none';return;}
+    clear(channelPanel);var heading=document.createElement('strong');heading.textContent='Canlı Kanallar';channelPanel.appendChild(heading);
+    var first=Math.max(0,liveChannelOrder.length>26?liveChannelOrder.indexOf(lastLive)-9:0);
+    if(first<0)first=0;
+    var last=Math.min(liveChannelOrder.length,first+26),selected=null;
+    for(var ci=first;ci<last;ci++)(function(item,number){var btn=document.createElement('button');btn.type='button';btn.className='tv-channel-choice';btn.textContent=number+'. '+String(item.name||'Kanal');btn.onclick=function(){channelPanel.style.display='none';playChannel(item);};channelPanel.appendChild(btn);if(lastLive&&String(lastLive.stream_id)===String(item.stream_id))selected=btn;})(liveChannelOrder[ci],ci+1);
+    channelPanel.style.display='block';if(selected)selected.focus();else{var buttons=channelPanel.getElementsByTagName('button');if(buttons.length)buttons[0].focus();}
+  }
+  var channelButton=document.getElementById('tv-player-channels');if(channelButton)channelButton.onclick=toggleChannelPanel;
   function channelNotice(message){if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.notice)window.XIPTVPlayerUI.notice(message,'info');}
   function chooseChannelNumber(n){if(!lastLive||!liveChannelOrder.length||n<1||n>liveChannelOrder.length)return;playChannel(liveChannelOrder[n-1]);}
   function changeLiveChannel(step){
@@ -427,6 +439,15 @@
     // Handle custom selector before fullscreen channel-zapping or focus navigation.
     if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.menuOpen()&&window.XIPTVPlayerUI.onKey(key)){
       e.preventDefault();e.stopImmediatePropagation();return;
+    }
+    // Green remote key opens or closes the fullscreen channel drawer.
+    if(key===404&&hasClass('tv-fullscreen')&&lastLive){toggleChannelPanel();e.preventDefault();e.stopImmediatePropagation();return;}
+    if(channelPanel.style.display!=='none'){
+      if(key===461||key===27){channelPanel.style.display='none';e.preventDefault();e.stopImmediatePropagation();return;}
+      var channelButtons=channelPanel.getElementsByTagName('button'),currentIndex=-1;
+      for(var cb=0;cb<channelButtons.length;cb++)if(channelButtons[cb]===document.activeElement)currentIndex=cb;
+      if(key===38||key===40){if(channelButtons.length)channelButtons[(currentIndex+(key===38?-1:1)+channelButtons.length)%channelButtons.length].focus();e.preventDefault();e.stopImmediatePropagation();return;}
+      if(key===13){if(currentIndex>=0)channelButtons[currentIndex].click();e.preventDefault();e.stopImmediatePropagation();return;}
     }
     // Yellow remote key returns to the previous channel. LG firmware may reserve it.
     if(key===405&&hasClass('tv-fullscreen')&&previousChannel){playChannel(previousChannel);e.preventDefault();e.stopImmediatePropagation();return;}
