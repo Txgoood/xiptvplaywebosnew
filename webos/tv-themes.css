@@ -1,0 +1,41 @@
+/* v1.0.47 — Offline ES5-compatible visual variants. Current classic styling untouched. */
+/* Rules scoped under html so body.className resets do not remove a selected theme. */
+html.xiptv-theme-cinema #tv-home,html.xiptv-theme-cinema #tv-home .stitch-scroll{background:#090a0d!important;color:#f7f0e1!important}
+html.xiptv-theme-cinema #stitch-side{background:#0b0b0f!important;border-right-color:#53442d!important}
+html.xiptv-theme-cinema #stitch-side .stitch-logo,html.xiptv-theme-cinema #stitch-side button:focus,html.xiptv-theme-cinema #stitch-side button.selected{background:#e3ae59!important;color:#241700!important}
+html.xiptv-theme-cinema #stitch-side button:focus svg,html.xiptv-theme-cinema #stitch-side button.selected svg{stroke:#241700!important}
+html.xiptv-theme-cinema #tv-home .stitch-heading strong{color:#fff0cb!important}
+html.xiptv-theme-cinema #tv-home .stitch-hero{background-color:#19130e!important;border:1px solid #6d4e2a!important}
+html.xiptv-theme-cinema #tv-home .stitch-movie-tile{background:#1b1716!important;border-color:#594937!important;width:19%!important}
+html.xiptv-theme-cinema #tv-home .stitch-movie-tile:focus{outline-color:#ecc57c!important;box-shadow:0 0 8px #bd8b4c!important}
+html.xiptv-theme-cinema #tv-home .stitch-movie-tile span{background:#1d1815!important;color:#fff2d7!important}
+html.xiptv-theme-cinema #tv-settings-panel{background:#171310!important;border-color:#d9a65e!important}
+html.xiptv-theme-cinema #tv-settings-panel button:focus{outline-color:#d9a65e!important}
+
+html.xiptv-theme-kids #tv-home,html.xiptv-theme-kids #tv-home .stitch-scroll{background:#262443!important;color:#fff8fc!important}
+html.xiptv-theme-kids #stitch-side{background:#211e41!important;border-right-color:#7366bb!important}
+html.xiptv-theme-kids #stitch-side .stitch-logo,html.xiptv-theme-kids #stitch-side button:focus,html.xiptv-theme-kids #stitch-side button.selected{background:#83e9f4!important;color:#20264f!important}
+html.xiptv-theme-kids #stitch-side button:focus svg,html.xiptv-theme-kids #stitch-side button.selected svg{stroke:#20264f!important}
+html.xiptv-theme-kids #tv-home .stitch-hero{background-color:#403166!important;border-radius:20px!important}
+html.xiptv-theme-kids #tv-home .stitch-heading strong{color:#ffebaa!important;font-size:31px!important}
+html.xiptv-theme-kids #tv-home .stitch-movie-tile{width:23.8%!important;border:3px solid #9d89f6!important;border-radius:18px!important;background:#423763!important}
+html.xiptv-theme-kids #tv-home .stitch-movie-tile:focus{outline-color:#fffaa4!important;box-shadow:0 0 9px #93f3f5!important}
+html.xiptv-theme-kids #tv-home .stitch-movie-tile span{background:#302b51!important;color:#fff!important;font-size:20px!important}
+html.xiptv-theme-kids #tv-settings-panel{background:#302b51!important;border-color:#83e9f4!important}
+
+html.xiptv-theme-lite #tv-home,html.xiptv-theme-lite #tv-home .stitch-scroll{background:#202327!important;color:#fff!important}
+html.xiptv-theme-lite #stitch-side{background:#181b1f!important;border-right-color:#626d70!important}
+html.xiptv-theme-lite #stitch-side .stitch-logo,html.xiptv-theme-lite #stitch-side button:focus,html.xiptv-theme-lite #stitch-side button.selected{background:#bad5d6!important;color:#162a2e!important}
+html.xiptv-theme-lite #stitch-side button:focus svg,html.xiptv-theme-lite #stitch-side button.selected svg{stroke:#162a2e!important}
+html.xiptv-theme-lite #tv-home .stitch-hero{height:230px!important;background-color:#293139!important;border-radius:4px!important}
+html.xiptv-theme-lite #tv-home .stitch-tiles{height:148px!important}
+html.xiptv-theme-lite #tv-home .stitch-movie-tile{width:31%!important;height:127px!important;border-radius:5px!important;border:1px solid #7f8b91!important;background:#30363b!important}
+html.xiptv-theme-lite #tv-home .stitch-movie-tile img{display:none!important}
+html.xiptv-theme-lite #tv-home .stitch-movie-tile span{position:relative!important;top:0!important;left:0!important;right:auto!important;bottom:auto!important;min-height:0!important;max-height:none!important;height:100%!important;line-height:1.25!important;padding:25px 18px!important;font-size:23px!important;background:#30363b!important;color:white!important}
+html.xiptv-theme-lite #tv-home .stitch-movie-tile:focus{outline-color:#d3f4f5!important;box-shadow:none!important}
+html.xiptv-theme-lite #tv-home .stitch-heading strong{color:#e7f3f3!important}
+html.xiptv-theme-lite #tv-settings-panel{background:#242b30!important;border-color:#a9cace!important}
+
+/* Keep the independent player overlay and its controls unchanged in every theme. */
+#tv-settings-panel #tv-theme-select{display:block!important;width:96%!important;font-size:21px!important;padding:12px!important;margin:10px 0!important;border:2px solid #4a9ba5!important;border-radius:7px!important;color:#fff!important;background:#243741!important}
+#tv-settings-panel #tv-theme-description{font-size:16px!important;line-height:1.35!important;color:#d3edf0!important}

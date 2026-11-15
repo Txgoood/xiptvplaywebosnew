@@ -12,6 +12,7 @@ function select(p){
  panel.style.display='none';pinInput.value='';
  document.getElementById('tv-profile-switch').textContent='Profil: '+p.name;
  if(window.XIPTVTV&&window.XIPTVTV.setProfile)window.XIPTVTV.setProfile(p.id,p.child);
+ if(window.XIPTVTheme)window.XIPTVTheme.applyProfile(p.id,p.child);
 }
 function render(){
  while(items.firstChild)items.removeChild(items.firstChild);
