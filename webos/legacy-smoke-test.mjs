@@ -114,6 +114,9 @@ assert(playerUIScript.includes('window.XIPTVPlayerUI'), 'Player UI must expose n
 assert(html.includes('id="tv-aspect"'));
 assert(iptvScript.includes("setClass('tv-fullscreen'"));
 assert(iptvScript.includes("function changeLiveChannel(step)"),'Fullscreen live-TV channel zapping must be present');
+assert(iptvScript.includes('function chooseChannelNumber(n)'), 'Remote digits must select channels');
+assert(iptvScript.includes('previousChannel'), 'Previous-channel navigation must exist');
+assert(html.includes('id="tv-manual-catalog-refresh"'), 'Manual catalogue refresh must be accessible');
 assert(iptvScript.includes("liveChannelOrder=matches.slice(0)"),'Channel zapping must follow filtered and sorted live channels');
 assert(iptvScript.includes("key===427||key===428"),'LG channel keycodes must be handled');
 assert(iptvScript.includes("key===406"),'Blue remote key must toggle fullscreen');
