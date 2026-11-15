@@ -37,7 +37,7 @@ assert(homeScript.includes('tv-kids-screen'));
 assert(html.includes('id="tv-subtitle-size"'));
 assert(html.includes('id="tv-subtitle-position"'));
 assert(html.includes('id="tv-subtitle-background"'));
-assert(html.includes('v1.0.43'));
+assert(html.includes('v'+metadata.version), 'Displayed version must match package metadata');
 assert(homeScript.includes('function firstPoster()'), 'D-pad must enter poster shelves');
 assert(homeScript.includes('function applyShelfOrder()'), 'Shelf ordering should be persistent');
 assert(homeScript.includes('function applyPosterSize()'), 'Poster size setting must be wired');
