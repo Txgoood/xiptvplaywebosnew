@@ -310,3 +310,35 @@ body.tv-mode #tv-lg-media-scan,body.tv-mode #tv-lg-native-return{font-size:16px;
 body.tv-mode #tv-lg-media-status{font-size:16px;color:#bce7e8;line-height:1.4;max-height:90px;overflow-y:auto;padding:5px}
 body.tv-mode #tv-controls #tv-mkv-status,body.tv-mode #tv-controls #tv-lg-media-status,body.tv-mode #tv-controls #tv-track-notice{margin-right:46%;white-space:normal}
 body.tv-mode #tv-controls #tv-mkv-scan,body.tv-mode #tv-controls #tv-lg-media-scan{display:inline-block;margin-top:8px}
+
+/* v1.0.36 – lightweight ES5-compatible TV player UI. */
+body.tv-mode #tv-filter-panel #tv-controls-toggle{display:none!important}
+body.tv-mode #tv-player-controls.tv-custom-player{box-sizing:border-box!important;width:43%!important;max-width:none!important;height:auto!important;top:145px!important;right:1%!important;bottom:auto!important;left:auto!important;padding:10px 12px!important;background:rgba(6,18,25,.91)!important;border:1px solid #315f67;border-radius:12px!important;white-space:normal!important;color:#fff;z-index:103!important;text-align:left!important}
+body.tv-mode.tv-fullscreen #tv-player-controls.tv-custom-player{position:fixed!important;top:auto!important;bottom:3%!important;left:7%!important;right:7%!important;width:86%!important;max-width:none!important;padding:15px 20px!important;background:rgba(5,20,22,.89)!important;border:1px solid #5ca09d!important;border-radius:22px!important;z-index:120!important}
+body.tv-mode #tv-player-controls .tv-player-top{display:block;font-size:18px;font-weight:bold;padding:4px 8px 8px}
+body.tv-mode #tv-player-controls #tv-player-live-label{float:right;color:#84e6dd;font-size:14px;font-weight:normal}
+body.tv-mode #tv-player-controls .tv-progress-row{display:-webkit-flex;display:flex;align-items:center;padding:0 8px 10px;gap:10px;font-size:14px}
+body.tv-mode #tv-progress{-webkit-appearance:none;appearance:none;flex:1;min-width:30px;height:8px;border-radius:8px;background:#32505a;accent-color:#00ddcf}
+body.tv-mode #tv-progress::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;background:#00e5d5;border-radius:50%;border:2px solid white}
+body.tv-mode #tv-progress:disabled{opacity:.35}
+body.tv-mode #tv-player-controls .tv-player-actions{display:-webkit-flex;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px}
+body.tv-mode #tv-player-controls .tv-player-languages{display:-webkit-flex;display:flex;justify-content:space-around;gap:8px;border-top:1px solid #36535b;padding:9px 0 0;margin-top:9px}
+body.tv-mode #tv-player-controls.tv-custom-player button{font-size:15px!important;padding:9px 12px!important;margin:2px!important;background:rgba(28,49,55,.95)!important;color:#f1fafc!important;border:1px solid #577780!important;border-radius:9px!important;min-height:40px}
+body.tv-mode #tv-player-controls.tv-custom-player .tv-player-languages button{flex:1;font-size:15px!important}
+body.tv-mode #tv-player-controls.tv-custom-player button:focus{outline:3px solid #00f5df!important;background:#084f52!important}
+body.tv-mode #tv-player-controls.tv-custom-player #tv-player-playpause{font-size:19px!important;font-weight:bold;background:#007a76!important;border:2px solid #00ebd7!important;box-shadow:0 0 13px rgba(0,235,215,.48)}
+body.tv-mode #tv-player-controls.tv-custom-player #tv-alt-player{display:none}
+body.tv-mode #tv-player-controls.tv-custom-player #tv-alt-return[style*="none"]{display:none!important}
+body.tv-mode #tv-player-controls.tv-custom-player #tv-alt-player-status{display:none}
+body.tv-mode #tv-player-menu.tv-player-menu{position:fixed!important;right:8%!important;top:13%!important;left:auto!important;bottom:auto!important;max-height:59vh!important;width:340px!important;overflow-y:auto!important;background:rgba(6,21,27,.96)!important;color:#f1ffff!important;border:2px solid #00cabb!important;border-radius:18px!important;z-index:135!important;box-sizing:border-box!important;padding:16px!important;box-shadow:0 16px 35px rgba(0,0,0,.55)}
+body.tv-mode:not(.tv-fullscreen) #tv-player-menu.tv-player-menu{right:2%!important;top:22%!important}
+body.tv-mode #tv-player-menu .tv-menu-heading{font-weight:bold;font-size:24px;color:#d9fff9;margin-bottom:12px}
+body.tv-mode #tv-player-menu button{display:block!important;width:100%;text-align:left;padding:13px 15px!important;margin:5px 0!important;background:#1b3239!important;border:1px solid #45666e!important;border-radius:9px!important;color:#fff!important;font-size:19px!important}
+body.tv-mode #tv-player-menu button.active,body.tv-mode #tv-player-menu button:focus{background:#065650!important;border:2px solid #00f4d0!important;outline:2px solid #c4fff8!important}
+body.tv-mode #tv-player-menu .tv-menu-close{width:auto!important;float:right;margin-top:-42px!important;font-size:15px!important;padding:6px 9px!important}
+body.tv-mode #tv-player-menu .tv-menu-note{font-size:15px;line-height:1.4;color:#efdea6}
+body.tv-mode #tv-player-toast.tv-toast{position:fixed!important;right:8%!important;top:5%!important;max-width:55%!important;z-index:140!important;padding:15px 20px!important;background:rgba(17,45,50,.95)!important;border:2px solid #00c8b6!important;color:#fff!important;border-radius:10px!important;font-size:21px!important;line-height:1.35;box-shadow:0 7px 25px rgba(0,0,0,.6)}
+body.tv-mode #tv-player-toast.tv-toast-error{border-color:#ff6572!important;background:rgba(73,17,25,.96)!important}
+body.tv-mode #tv-player-toast.tv-toast-warning{border-color:#f9c24a!important;background:rgba(58,48,20,.96)!important}
+body.tv-mode.tv-fullscreen #tv-controls{display:none}
+body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay{bottom:27%!important}
