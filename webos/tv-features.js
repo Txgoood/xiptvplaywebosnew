@@ -210,6 +210,7 @@ window.XIPTVTV={
  setProfile:function(id,child){childProfile=!!child;scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
  isFavorite:isFavorite,
  getResume:function(){return read('positions',{});},
+ isEpisodeWatched:function(seriesId,episodeId){var watched=read('watched',{});return !!watched['episode:'+String(seriesId)+':'+String(episodeId)];},
  getMediaProgress:function(mode,item){var k=key(mode,item),positions=read('positions',{}),durations=read('durations',{}),watched=read('watched',{}),pos=Number(positions[k]||0),duration=Number(durations[k]||0);return {position:pos,duration:duration,percent:duration>0?Math.min(100,Math.round(100*pos/duration)):0,watched:mode==='series'?false:!!watched[k]};},
  decorateItem:decorateItem,
  beforePlay:function(kind,id,url,name){
