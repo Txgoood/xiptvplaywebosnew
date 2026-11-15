@@ -23,6 +23,28 @@ function open(section){
  window.XIPTVTV.openSection(window.XIPTVTV.startMode);
 }
 function clear(node){while(node.firstChild)node.removeChild(node.firstChild);}
+/* A shelf is visible only when it has real playable cards.
+   Hide headings with empty shelves; do not erase user settings or catalog data. */
+function setShelfVisibility(node,visible){
+ if(!node)return;
+ var heading=node.previousElementSibling;
+ node.style.display=visible?'':'none';
+ if(heading&&String(heading.className).indexOf('stitch-heading')>=0)heading.style.display=visible?'':'none';
+}
+function syncShelfVisibility(child){
+ var rows=home.querySelectorAll('.stitch-tiles'),i,row,hasCards;
+ for(i=0;i<rows.length;i++){
+  row=rows[i];
+  hasCards=row.querySelectorAll('.stitch-movie-tile').length>0;
+  if(child&&(row.id==='stitch-recent'||row.id==='stitch-series'))hasCards=false;
+  setShelfVisibility(row,hasCards);
+ }
+}
+function hideEmptyShelvesAtLaunch(){
+ var rows=home.querySelectorAll('.stitch-tiles');
+ for(var i=0;i<rows.length;i++)if(!rows[i].querySelectorAll('.stitch-movie-tile').length)setShelfVisibility(rows[i],false);
+}
+hideEmptyShelvesAtLaunch();
 var SIZE_KEY='xiptv_webos2_poster_size_v1',ORDER_KEY='xiptv_webos2_shelf_order_v1';
 function savedValue(k,f){try{return localStorage.getItem(k)||f;}catch(e){return f;}}
 function saveValue(k,v){try{localStorage.setItem(k,v);}catch(e){}}
@@ -46,7 +68,7 @@ function decorateProgress(button,mode,item){
 var ageLookupStarted=false;
 function shelf(node,items,type,limit){
  clear(node);
- if(!items.length){var empty=document.createElement('div');empty.className='stitch-empty';empty.textContent=(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile())?'Ebeveyn onaylı içerik bulunamadı. Yetişkin profilinden Çocuğa izin ver seçeneğini kullanın.':'Henüz içerik bulunamadı.';node.appendChild(empty);return;}
+ if(!items||!items.length){setShelfVisibility(node,false);return;}
  for(var n=0;n<items.length&&n<limit;n++){(function(item){
   var b=document.createElement('button');b.type='button';b.className='stitch-movie-tile';
   b.setAttribute('aria-label',String(item.name||item.title||'İçerik'));
@@ -63,6 +85,7 @@ function shelf(node,items,type,limit){
   b.onclick=function(){open(type==='films'?'films':type==='series'?'series':'live');window.XIPTVTV.openItem(type==='films'?'movie':type==='series'?'series':'live',item);};
   node.appendChild(b);
  })(items[n]);}
+ setShelfVisibility(node,node.querySelectorAll('.stitch-movie-tile').length>0);
 }
 // Suggestions use only the user's IPTV catalogue; a title/category match is not an age rating.
 function safeText(v){return String(v||'').toLowerCase().replace(/[İI]/g,'i');}
@@ -151,7 +174,7 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  for(var r=0;r<resumeMovies.length&&continuing.length<8;r++)if(Number(resume['movie:'+String(resumeMovies[r].stream_id)]||0)>20)continuing.push({item:resumeMovies[r],type:'films'});
  for(var k=0;k<resumeSeries.length&&continuing.length<8;k++)if(Number(resume['series:'+String(resumeSeries[k].series_id)]||0)>20)continuing.push({item:resumeSeries[k],type:'series'});
  var node=document.getElementById('stitch-continue');clear(node);
- if(!continuing.length){var empty=document.createElement('div');empty.className='stitch-empty';empty.textContent='İzlemeye başladığın filmler ve diziler burada görünecek.';node.appendChild(empty);}
+ // Do not display a blank Continue Watching shelf before any actual resume exists.
  for(var z=0;z<continuing.length;z++){(function(record){
   var b=document.createElement('button');b.type='button';b.className='stitch-movie-tile';
   var im=String(record.item.stream_icon||record.item.cover||'');
@@ -161,11 +184,14 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
   b.onclick=function(){open(record.type);if(record.type==='series')window.XIPTVTV.resumeSeriesFromHome=true;window.XIPTVTV.openItem(record.type==='films'?'movie':'series',record.item);};
   node.appendChild(b);
  })(continuing[z]);}
+ setShelfVisibility(node,continuing.length>0);
  shelf(document.getElementById('stitch-series'),child?childShows:series,'series',8);
  shelf(document.getElementById('stitch-live'),child?childChannels:channels,'live',8);
  window.XIPTVTVHome.data={movies:child?childMovies:movies,series:child?childShows:series,channels:child?childChannels:channels};
  // Weekly rotation makes family cinema recommendations change without random reshuffling per launch.
  if(familyMovies.length>1){var shift=Math.floor(new Date().getTime()/604800000)%familyMovies.length;familyMovies=familyMovies.slice(shift).concat(familyMovies.slice(0,shift));shelf(document.getElementById('stitch-family'),familyMovies,'films',12);}
+ // Enforce the final result after every render, including age-check and catalog refresh.
+ syncShelfVisibility(child);
  var lead=(child?childMovies:movies)[0];
  if(!lead){var emptyHero=document.getElementById('stitch-hero');emptyHero.style.backgroundImage='none';document.getElementById('stitch-feature-title').textContent=child?'Ebeveyn Onaylı Çocuk Ekranı':'Kataloğu Keşfet';document.getElementById('stitch-feature-description').textContent=child?'Yalnızca ebeveynin izin verdiği içerikler burada görünecek.':'İçerik yükleniyor.';return;}
  var cover=String(lead.stream_icon||lead.cover||'');
