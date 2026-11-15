@@ -26,6 +26,23 @@
       return true;
     }catch(e){return false;}
   }
+  function trackNewCatalogItems(catalog){
+    // Small account-specific snapshot: prevents full 60k-item localStorage writes.
+    var key=cacheKey()+'_ids',newKey=cacheKey()+'_new',previous=null;
+    try{previous=JSON.parse(localStorage.getItem(key)||'null');}catch(e){}
+    var movies=(catalog.vodStreams||[]).slice(0,1800),series=(catalog.seriesList||[]).slice(0,1000);
+    var current={movie:[],series:[]},fresh={movie:[],series:[]},i,id,oldMap={};
+    for(i=0;i<movies.length;i++)current.movie.push(String(movies[i].stream_id));
+    for(i=0;i<series.length;i++)current.series.push(String(series[i].series_id));
+    if(previous&&previous.movie&&previous.series){
+      for(i=0;i<previous.movie.length;i++)oldMap['m:'+previous.movie[i]]=true;
+      for(i=0;i<current.movie.length&&fresh.movie.length<40;i++)if(!oldMap['m:'+current.movie[i]])fresh.movie.push(current.movie[i]);
+      oldMap={};for(i=0;i<previous.series.length;i++)oldMap['s:'+previous.series[i]]=true;
+      for(i=0;i<current.series.length&&fresh.series.length<40;i++)if(!oldMap['s:'+current.series[i]])fresh.series.push(current.series[i]);
+    }else{try{fresh=JSON.parse(localStorage.getItem(newKey)||'null')||fresh;}catch(e){}}
+    try{localStorage.setItem(key,JSON.stringify(current));localStorage.setItem(newKey,JSON.stringify(fresh));}catch(e){}
+    if(window.XIPTVTVHome)window.XIPTVTVHome.newItemIds=fresh;
+  }
   function cacheHome(catalog){
     try{
       if(!window.XIPTVTVHome||!window.XIPTVTVHome.preview)return;
@@ -573,6 +590,7 @@
         connecting=false;
         if(error){show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Katalog hatası: '+error.message);return;}
         catalogData=catalog;sortedCache={};categoryCache={};focusCache=null;currentPage=0;
+        trackNewCatalogItems(catalog);
         cacheHome(catalog);
         try{localStorage.setItem('xiptv_webos2_last_catalog_refresh',new Date().toISOString());}catch(e){}
         var updated=document.getElementById('tv-last-catalog-update');if(updated)updated.textContent='Son katalog yenileme: '+new Date().toLocaleString('tr-TR');

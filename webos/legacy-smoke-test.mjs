@@ -61,6 +61,11 @@ assert(html.includes('id="stitch-hero"'));
 assert(html.includes('id="stitch-kids-movies"'));
 assert(html.includes('id="stitch-kids-series"'));
 assert(html.includes('id="stitch-family"'));
+assert(html.includes('id="stitch-new-movies"'));
+assert(html.includes('id="stitch-new-series"'));
+assert(homeScript.includes('newItemIds'));
+assert(homeScript.includes('newSeries'));
+
 assert(html.includes('id="stitch-age-6-9"'));
 assert(html.includes('id="stitch-age-10-12"'));
 assert(html.includes('id="tv-metadata-modal"'));

@@ -99,6 +99,9 @@ function limitedPreview(catalog){
 window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(this.catalog)this.render(this.catalog);},render:function(catalog){
  this.catalog=catalog;
  var movies=catalog.vodStreams||[],series=catalog.seriesList||[],channels=catalog.liveStreams||[];
+ var newIds=window.XIPTVTVHome.newItemIds||{movie:[],series:[]},newMovieMap={},newSeriesMap={},n;
+ for(n=0;n<(newIds.movie||[]).length;n++)newMovieMap[String(newIds.movie[n])]=true;
+ for(n=0;n<(newIds.series||[]).length;n++)newSeriesMap[String(newIds.series[n])]=true;
  var child=!!(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile());
  home.className=home.className.replace(/\s*tv-kids-screen/g,'')+(child?' tv-kids-screen':'');
  var childHidden=['stitch-recent','stitch-series'];for(var hi=0;hi<childHidden.length;hi++){var hiddenNode=document.getElementById(childHidden[hi]);if(hiddenNode){hiddenNode.style.display=child?'none':'';if(hiddenNode.previousElementSibling)hiddenNode.previousElementSibling.style.display=child?'none':'';}}
@@ -131,6 +134,11 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  shelf(document.getElementById('stitch-family'),familyMovies,'films',12);
  shelf(document.getElementById('stitch-kids-series'),childShows,'series',12);
  shelf(document.getElementById('stitch-recent'),child?childMovies:movies,'films',9);
+ var newMovies=[],newSeries=[];
+ for(var ni=0;ni<movies.length&&newMovies.length<12;ni++)if(newMovieMap[String(movies[ni].stream_id)]&&(!child||window.XIPTVTV.isChildApproved('movie',movies[ni])))newMovies.push(movies[ni]);
+ for(ni=0;ni<series.length&&newSeries.length<12;ni++)if(newSeriesMap[String(series[ni].series_id)]&&(!child||window.XIPTVTV.isChildApproved('series',series[ni])))newSeries.push(series[ni]);
+ shelf(document.getElementById('stitch-new-movies'),newMovies,'films',12);
+ shelf(document.getElementById('stitch-new-series'),newSeries,'series',12);
  var favorites=[],recent=[];
  var childChannels=child?channels.filter(function(item){return window.XIPTVTV&&window.XIPTVTV.isChildApproved&&window.XIPTVTV.isChildApproved('live',item);}):channels;
  for(var c=0;c<childChannels.length&&favorites.length<50;c++)if(window.XIPTVTV.isFavorite('live',childChannels[c]))favorites.push(childChannels[c]);
