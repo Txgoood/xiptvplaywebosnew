@@ -3,6 +3,11 @@
 var video=document.getElementById('video'),currentKey='',scope='default',playingItem=null,playingMode='live',childProfile=false;
 var favButton=document.getElementById('tv-video-favorite');
 var prefix='xiptv_webos2_media_v1_',favoriteCache=null;
+var CHILD_APPROVALS='xiptv_webos2_parent_approved_v1',approvedCache=null;
+function approvals(){if(!approvedCache)try{approvedCache=JSON.parse(localStorage.getItem(CHILD_APPROVALS)||'{}')||{};}catch(e){approvedCache={};}return approvedCache;}
+function isChildApproved(mode,item){return !!approvals()[key(mode,item)];}
+function setChildApproved(mode,item,enabled){var map=approvals(),k=key(mode,item);if(enabled)map[k]=true;else delete map[k];try{localStorage.setItem(CHILD_APPROVALS,JSON.stringify(map));}catch(e){}if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();if(window.XIPTVTV&&window.XIPTVTV.refresh)window.XIPTVTV.refresh();}
+
 function read(k,fallback){try{return JSON.parse(localStorage.getItem(prefix+scope+'_'+k))||fallback;}catch(e){return fallback;}}
 function save(k,value){try{localStorage.setItem(prefix+scope+'_'+k,JSON.stringify(value));}catch(e){}}
 function key(mode,item){return mode+':'+String(item.stream_id||item.series_id||item.id||'');}
@@ -21,6 +26,7 @@ function decorateItem(button,mode,item){
  star.title='Favori değiştir';
  star.onclick=function(e){if(e&&e.stopPropagation)e.stopPropagation();toggleFavorite(mode,item);};
  wrapper.appendChild(star);
+ if(!childProfile){var approve=document.createElement('button');approve.type='button';approve.className='tv-card-child-approve';approve.textContent=isChildApproved(mode,item)?'✓ Çocuk izni':'＋ Çocuğa izin';approve.title='Çocuk profilinde erişime izin ver/kaldır';approve.onclick=function(e){if(e&&e.stopPropagation)e.stopPropagation();setChildApproved(mode,item,!isChildApproved(mode,item));};wrapper.appendChild(approve);}
 }
 function updateHeart(){
  if(!playingItem){favButton.style.display='none';return;}
@@ -198,6 +204,9 @@ window.XIPTVTV={
  if(mode!=='series')document.getElementById('tv-season-tools').style.display='none';
  },
  isChildProfile:function(){return childProfile;},
+ isChildApproved:isChildApproved,
+ setChildApproved:setChildApproved,
+ canShowItem:function(mode,item){return !childProfile||isChildApproved(mode,item);},
  setProfile:function(id,child){childProfile=!!child;scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
  isFavorite:isFavorite,
  getResume:function(){return read('positions',{});},
