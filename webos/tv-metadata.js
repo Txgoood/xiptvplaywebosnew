@@ -50,11 +50,20 @@ function usePoster(image,item,type){
  var url=String(image.getAttribute('src')||'');
  if(!url)missing();
 }
+function normalizedTitle(value){return String(value||'').toLowerCase().replace(/[ıİ]/g,'i').replace(/\\b(19|20)\\d{2}\\b/g,'').replace(/\\b(4k|uhd|1080p|720p|tr dublaj)\\b/g,'').replace(/[^a-z0-9çğıöşü]+/gi,' ').replace(/^\\s+|\\s+$/g,'');}
+function collectionParts(collectionId,callback){
+ var id=Number(collectionId);if(!id||id<1){callback(null);return;}
+ var xhr=new XMLHttpRequest();xhr.open('GET',BASE+'/api/tmdb/details?collectionId='+encodeURIComponent(id),true);xhr.timeout=14000;
+ xhr.onload=function(){callback(xhr.status>=200&&xhr.status<300?parse(xhr):null);};xhr.onerror=function(){callback(null);};xhr.ontimeout=function(){callback(null);};
+ try{xhr.send();}catch(e){callback(null);}
+}
 function showDetails(item,type,play){
  var modal=document.getElementById('tv-metadata-modal');
  if(!modal)return;
  var title=document.getElementById('tv-metadata-title'),summary=document.getElementById('tv-metadata-summary'),facts=document.getElementById('tv-metadata-facts'),poster=document.getElementById('tv-metadata-poster');
  var name=String(item.name||item.title||'İçerik');
+ var related=document.getElementById('tv-metadata-related'),collectionButton=document.getElementById('tv-metadata-collection'),actors=document.getElementById('tv-metadata-actors');
+ while(related.firstChild)related.removeChild(related.firstChild);collectionButton.style.display='none';actors.style.display='none';
  title.textContent=name;summary.textContent=String(item.plot||item.description||'İçerik bilgileri yükleniyor…');
  facts.textContent=String(item.year||'')+' '+String(item.rating||'');poster.style.display='none';
  var nativePoster=item.stream_icon||item.cover||item.cover_big;
@@ -69,6 +78,11 @@ function showDetails(item,type,play){
   facts.textContent=(meta.releaseDate||'')+'  ★ '+(meta.rating||'—')+'  '+(meta.runtimeMinutes?meta.runtimeMinutes+' dk  ':'')+
   (genres.length?genres.join(', ')+'  ':'')+(cast.length?'Oyuncular: '+cast.join(', '):'');
   if(hasPoster(meta.poster)){poster.src=meta.poster;poster.style.display='block';}
+  var available=window.XIPTVTVHome&&window.XIPTVTVHome.data?window.XIPTVTVHome.data.movies||[]:[];
+  function addVideo(choice,label){if(window.XIPTVTV&&window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem('movie',choice))return;var b=document.createElement('button');b.textContent=label;b.onclick=function(){modal.style.display='none';window.XIPTVTV.openSection('movie');window.XIPTVTV.openItem('movie',choice);};related.appendChild(b);}
+  var similar=0;for(var k=0;k<available.length&&similar<6;k++){var sameCategory=String(available[k].category_id)===String(item.category_id)&&String(available[k].stream_id)!==String(item.stream_id);if(sameCategory){addVideo(available[k],'Aynı kategoriden: '+String(available[k].name||''));similar++;}}
+  if(meta.collection&&meta.collection.id&&type!=='series'){collectionButton.style.display='inline-block';collectionButton.textContent='Serinin filmleri';collectionButton.onclick=function(){collectionButton.disabled=true;collectionParts(meta.collection.id,function(info){collectionButton.disabled=false;if(!info||!info.parts){related.textContent='Film serisi bilgisi alınamadı.';return;}related.textContent='';var count=0;for(var i=0;i<info.parts.length;i++){var titleKey=normalizedTitle(info.parts[i].title);for(var j=0;j<available.length;j++){if(normalizedTitle(available[j].name)===titleKey&&count<20){addVideo(available[j],String(info.parts[i].releaseDate||'')+' · '+String(info.parts[i].title));count++;break;}}}if(!count)related.textContent='Bu serinin diğer filmleri IPTV kataloğunda bulunamadı.';});};}
+  if((meta.cast||[]).length){actors.style.display='inline-block';actors.innerHTML='';var option=document.createElement('option');option.text='Oyuncuya göre keşfet';option.value='';actors.appendChild(option);for(var ac=0;ac<meta.cast.length&&ac<12;ac++){var opt=document.createElement('option');opt.value=meta.cast[ac].name;opt.text=meta.cast[ac].name;actors.appendChild(opt);}actors.onchange=function(){var wanted=String(this.value||'').toLowerCase(),count=0;related.textContent='';if(!wanted)return;for(var c=0;c<available.length&&count<12;c++){var castText=String(available[c].cast||available[c].actors||'').toLowerCase();if(castText.indexOf(wanted)>=0&&String(available[c].stream_id)!==String(item.stream_id)){addVideo(available[c],String(available[c].name||'Film'));count++;}}if(!count)related.textContent='Bu oyuncuya ait başka yapım, sağlayıcının oyuncu verilerinde bulunamadı.';};}
  });
  document.getElementById('tv-metadata-watch').focus();
 }

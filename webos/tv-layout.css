@@ -423,3 +423,8 @@ body.tv-mode #tv-lg-subtitle-overlay.tv-sub-position-high{bottom:32%!important}
 body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay.tv-sub-position-low{bottom:13%!important}
 body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay.tv-sub-position-middle{bottom:22%!important}
 body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay.tv-sub-position-high{bottom:35%!important}
+
+/* v1.0.45 optional TMDb collection and actor discovery in details */
+#tv-metadata-modal #tv-metadata-collection,#tv-metadata-modal #tv-metadata-actors{font-size:19px;color:#fff;background:#173847;border:2px solid #00aabe;border-radius:8px;padding:10px;margin:8px}
+#tv-metadata-modal #tv-metadata-related{clear:both;margin:12px 0;max-height:180px;overflow-y:auto}
+#tv-metadata-modal #tv-metadata-related button{font-size:16px!important;padding:8px 11px!important;margin:5px!important}
