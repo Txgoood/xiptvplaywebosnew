@@ -342,3 +342,16 @@ body.tv-mode #tv-player-toast.tv-toast-error{border-color:#ff6572!important;back
 body.tv-mode #tv-player-toast.tv-toast-warning{border-color:#f9c24a!important;background:rgba(58,48,20,.96)!important}
 body.tv-mode.tv-fullscreen #tv-controls{display:none}
 body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay{bottom:27%!important}
+
+/* v1.0.37 - Six large portrait posters per TV shelf, webOS 2 friendly. */
+#tv-home .stitch-scroll{overflow-y:auto!important;overflow-x:hidden!important;padding:14px 32px 72px!important}
+#tv-home .stitch-heading{margin-top:26px!important;margin-bottom:11px!important;min-height:32px}
+#tv-home .stitch-heading strong{font-size:27px!important;line-height:1.2!important}
+#tv-home .stitch-heading span{font-size:17px!important;line-height:1.2!important}
+#tv-home .stitch-tiles{height:300px!important;white-space:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;-webkit-overflow-scrolling:touch;padding:6px 4px 9px!important;box-sizing:border-box!important}
+#tv-home .stitch-movie-tile{display:inline-block!important;vertical-align:top!important;position:relative!important;width:15.55%!important;height:280px!important;margin:0 .9% 0 0!important;padding:0!important;box-sizing:border-box!important;background:#172736!important;border:2px solid #365564!important;border-radius:13px!important;overflow:hidden!important;white-space:normal!important;color:#fff!important}
+#tv-home .stitch-movie-tile img{display:block!important;width:100%!important;height:226px!important;object-fit:cover!important}
+#tv-home .stitch-movie-tile span{display:block!important;position:absolute!important;bottom:0!important;left:0!important;right:0!important;min-height:48px!important;max-height:55px!important;box-sizing:border-box!important;padding:7px 8px!important;background:rgba(8,18,29,.97)!important;color:#f4fbff!important;font-size:18px!important;font-weight:bold!important;line-height:20px!important;white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;text-align:left!important}
+#tv-home .stitch-movie-tile:focus{outline:4px solid #00eff5!important;outline-offset:1px!important;border-color:#fff!important;box-shadow:0 0 17px #00d4ff!important;z-index:3!important}
+#tv-home .stitch-empty{font-size:21px!important;min-width:52%!important;padding:45px 24px!important;max-height:265px!important}
+#tv-home .stitch-footer{font-size:17px!important}
