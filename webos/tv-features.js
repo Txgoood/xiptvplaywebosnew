@@ -1,6 +1,6 @@
 /* XIPTV TV companion controls, ES5-safe. User data stays on this television. */
 (function(){
-var video=document.getElementById('video'),currentKey='',scope='default',playingItem=null,playingMode='live';
+var video=document.getElementById('video'),currentKey='',scope='default',playingItem=null,playingMode='live',childProfile=false;
 var favButton=document.getElementById('tv-video-favorite');
 var prefix='xiptv_webos2_media_v1_',favoriteCache=null;
 function read(k,fallback){try{return JSON.parse(localStorage.getItem(prefix+scope+'_'+k))||fallback;}catch(e){return fallback;}}
@@ -197,7 +197,8 @@ window.XIPTVTV={
  document.getElementById('tv-detail-summary').textContent=info.textContent;
  if(mode!=='series')document.getElementById('tv-season-tools').style.display='none';
  },
- setProfile:function(id,child){scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
+ isChildProfile:function(){return childProfile;},
+ setProfile:function(id,child){childProfile=!!child;scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
  isFavorite:isFavorite,
  getResume:function(){return read('positions',{});},
  decorateItem:decorateItem,
