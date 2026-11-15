@@ -23,6 +23,17 @@ function open(section){
  window.XIPTVTV.openSection(window.XIPTVTV.startMode);
 }
 function clear(node){while(node.firstChild)node.removeChild(node.firstChild);}
+var SIZE_KEY='xiptv_webos2_poster_size_v1',ORDER_KEY='xiptv_webos2_shelf_order_v1';
+function savedValue(k,f){try{return localStorage.getItem(k)||f;}catch(e){return f;}}
+function saveValue(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+var posterSize=savedValue(SIZE_KEY,'large');
+function applyPosterSize(){home.className=home.className.replace(/\btv-poster-size-(small|medium|large)\b/g,'').replace(/^\s+|\s+$/g,'')+' tv-poster-size-'+posterSize;}
+function shelfPairs(){var rows=home.querySelectorAll('.stitch-tiles'),out=[];for(var i=0;i<rows.length;i++){var heading=rows[i].previousElementSibling;if(heading&&heading.className.indexOf('stitch-heading')>=0)out.push({id:rows[i].id,heading:heading,row:rows[i]});}return out;}
+function applyShelfOrder(){var pairs=shelfPairs(),saved=[];try{saved=JSON.parse(savedValue(ORDER_KEY,'[]'));}catch(e){}if(!saved||!saved.length)return;var mapped={};for(var i=0;i<pairs.length;i++)mapped[pairs[i].id]=pairs[i];var ordered=[];for(i=0;i<saved.length;i++)if(mapped[saved[i]]){ordered.push(mapped[saved[i]]);delete mapped[saved[i]];}for(i=0;i<pairs.length;i++)if(mapped[pairs[i].id]){ordered.push(pairs[i]);delete mapped[pairs[i].id];}if(!ordered.length)return;var parent=ordered[0].heading.parentNode,footer=home.querySelector('.stitch-footer');for(i=0;i<ordered.length;i++){parent.insertBefore(ordered[i].heading,footer);parent.insertBefore(ordered[i].row,footer);}}
+function renderShelfControls(){var box=document.getElementById('tv-home-shelf-order');if(!box)return;clear(box);var pairs=shelfPairs();for(var i=0;i<pairs.length;i++){(function(pos,pair){var line=document.createElement('div');line.className='tv-shelf-order-row';var label=document.createElement('span');label.textContent=pair.heading.getElementsByTagName('strong')[0].textContent;line.appendChild(label);function move(delta){var next=pos+delta;if(next<0||next>=pairs.length)return;var order=pairs.map(function(x){return x.id;});var hold=order[next];order[next]=order[pos];order[pos]=hold;saveValue(ORDER_KEY,JSON.stringify(order));applyShelfOrder();renderShelfControls();}var up=document.createElement('button');up.textContent='▲';up.title='Rafı yukarı taşı';up.onclick=function(){move(-1);};line.appendChild(up);var down=document.createElement('button');down.textContent='▼';down.title='Rafı aşağı taşı';down.onclick=function(){move(1);};line.appendChild(down);box.appendChild(line);})(i,pairs[i]);}}
+applyPosterSize();applyShelfOrder();
+var sizeControl=document.getElementById('tv-home-poster-size');if(sizeControl){sizeControl.value=posterSize;sizeControl.onchange=function(){posterSize=this.value;saveValue(SIZE_KEY,posterSize);applyPosterSize();};}
+renderShelfControls();
 function decorateProgress(button,mode,item){
  if(!window.XIPTVTV||!window.XIPTVTV.getMediaProgress)return;
  var progress=window.XIPTVTV.getMediaProgress(mode,item);
@@ -124,6 +135,7 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
 }};
 document.getElementById('tv-nav-home').onclick=function(){favoritesPanel.style.display='none';markActive('tv-nav-home');window.XIPTVTVHome.refresh();document.getElementById('iptv-panel').style.display='none';document.body.className='';home.style.display='block';};
 document.getElementById('tv-home-live').onclick=function(){open('live');};
+var kidShortcut=document.getElementById('tv-kids-shortcut');if(kidShortcut)kidShortcut.onclick=function(){open('live');};
 document.getElementById('tv-home-films').onclick=function(){open('films');};
 document.getElementById('tv-home-series').onclick=function(){open('series');};
 document.getElementById('tv-feature-play').onclick=function(){open('films');var d=window.XIPTVTVHome.data;if(d&&d.movies.length)window.XIPTVTV.openItem('movie',d.movies[0]);};
