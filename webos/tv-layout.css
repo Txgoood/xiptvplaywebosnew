@@ -366,3 +366,16 @@ body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-child-approve:focus{outline:3
 #tv-home .stitch-movie-tile .tv-poster-progress{position:absolute!important;display:block!important;left:0!important;right:0!important;bottom:49px!important;height:6px!important;min-height:0!important;padding:0!important;background:#243c42!important;z-index:5!important}
 #tv-home .stitch-movie-tile .tv-poster-progress i{display:block;height:6px;background:#00e2cf}
 #tv-home .stitch-movie-tile .tv-watched-tag,#tv-home .stitch-movie-tile .tv-progress-tag{position:absolute!important;display:block!important;left:5px!important;top:6px!important;right:auto!important;bottom:auto!important;background:rgba(0,35,39,.92)!important;color:#b7fff3!important;font-size:14px!important;border-radius:5px!important;padding:4px 7px!important;z-index:6!important}
+
+/* v1.0.38 configurable home poster size and shelf-order settings */
+#tv-home.tv-poster-size-medium .stitch-movie-tile{width:13%!important;height:335px!important}
+#tv-home.tv-poster-size-medium .stitch-movie-tile img{height:282px!important}
+#tv-home.tv-poster-size-medium .stitch-tiles{height:355px!important}
+#tv-home.tv-poster-size-small .stitch-movie-tile{width:11%!important;height:298px!important}
+#tv-home.tv-poster-size-small .stitch-movie-tile img{height:245px!important}
+#tv-home.tv-poster-size-small .stitch-tiles{height:318px!important}
+#tv-settings-panel #tv-home-poster-size{display:block;width:95%;font-size:18px;margin:8px 0;background:#193641;color:#fff;border:1px solid #00daf3;padding:9px}
+#tv-settings-panel .tv-shelf-order-row{display:-webkit-flex;display:flex;align-items:center;gap:6px;border-bottom:1px solid #314953;padding:3px 0}
+#tv-settings-panel .tv-shelf-order-row span{font-size:15px;flex:1}
+#tv-settings-panel .tv-shelf-order-row button{display:inline-block!important;width:39px!important;min-width:39px!important;text-align:center!important;padding:6px 4px!important;margin:3px!important}
+#tv-home #tv-kids-shortcut{background:#086b6f!important;border-color:#1af6ee!important}
