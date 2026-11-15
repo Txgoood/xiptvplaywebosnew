@@ -342,19 +342,20 @@
             if(sources.length){var image=document.createElement('img'),sourceIndex=0;
               image.alt='';image.style.display='none';
               image.onload=function(){fallback.style.display='none';image.style.display='block';};
-              image.onerror=function(){sourceIndex++;if(sourceIndex<sources.length)image.src=sources[sourceIndex];else{image.style.display='none';fallback.style.display='block';}};
+              image.onerror=function(){sourceIndex++;if(sourceIndex<sources.length)image.src=sources[sourceIndex];else{image.style.display='none';fallback.style.display='block';if(window.XIPTVMetadata){image.removeAttribute('src');window.XIPTVMetadata.usePoster(image,item,'series');}}};
               image.src=sources[0];line.appendChild(image);
             }
           }else if(/^https?:\/\//i.test(picture)){
             var img=document.createElement('img');img.src=picture;
             img.alt='';img.loading='lazy';
-            img.onerror=function(){this.style.display='none';};
+            img.onerror=function(){this.style.display='none';if(window.XIPTVMetadata){this.removeAttribute('src');window.XIPTVMetadata.usePoster(this,item,'movie');}};
             line.appendChild(img);
           }else{
             var placeholder=document.createElement('span');
             placeholder.className='tv-poster-placeholder';
             placeholder.textContent='FİLM';
             line.appendChild(placeholder);
+            if(window.XIPTVMetadata){var recoveredImage=document.createElement('img');recoveredImage.alt='';recoveredImage.style.display='none';recoveredImage.onload=function(){placeholder.style.display='none';recoveredImage.style.display='block';};line.appendChild(recoveredImage);window.XIPTVMetadata.usePoster(recoveredImage,item,'movie');}
           }
           var caption=document.createElement('span');caption.className='tv-card-title';
           caption.textContent=title;line.appendChild(caption);
