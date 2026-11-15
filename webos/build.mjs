@@ -5,7 +5,7 @@ const nativeVariant=process.env.WEBOS_VARIANT==='native';
 const root=process.cwd(), out=path.join(root,nativeVariant?'webos-package-native':'webos-package');
 fs.rmSync(out,{recursive:true,force:true});
 fs.cpSync(path.join(root,'dist'),out,{recursive:true});
-const VERSION='1.0.35';
+const VERSION='1.0.36';
 // Main package: trustLevel netcast (CORS validation off, but NO PalmServiceBridge / luna access).
 // Native test package: default trust level, separate app id; luna is available, CORS is enforced.
 const info=nativeVariant
@@ -20,6 +20,7 @@ fs.copyFileSync(path.join(root,'webos/tv-posters.js'),path.join(out,'tv-posters.
 fs.copyFileSync(path.join(root,'webos/tv-home.js'),path.join(out,'tv-home.js'));
 fs.copyFileSync(path.join(root,'webos/tv-keyboard.js'),path.join(out,'tv-keyboard.js'));
 fs.copyFileSync(path.join(root,'webos/tv-alt-player.js'),path.join(out,'tv-alt-player.js'));
+fs.copyFileSync(path.join(root,'webos/tv-player-ui.js'),path.join(out,'tv-player-ui.js'));
 fs.copyFileSync(path.join(root,'webos/tv-mkv-tracks.js'),path.join(out,'tv-mkv-tracks.js'));
 fs.copyFileSync(path.join(root,'webos/tv-lg-media.js'),path.join(out,'tv-lg-media.js'));
 fs.copyFileSync(path.join(root,'webos/lg-media-config.js'),path.join(out,'lg-media-config.js'));
