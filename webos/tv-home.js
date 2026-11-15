@@ -56,10 +56,16 @@ function previewItem(item){
    container_extension:item.container_extension,stream_icon:item.stream_icon||'',cover:item.cover||'',cover_big:item.cover_big||''};
 }
 function limitedPreview(catalog){
- function compact(list){var out=[];for(var i=0;i<list.length&&i<45;i++)out.push(previewItem(list[i]));return out;}
- return {vodStreams:compact(catalog.vodStreams||[]),seriesList:compact(catalog.seriesList||[]),
-  liveStreams:compact(catalog.liveStreams||[]),vodCategories:catalog.vodCategories||[],
-  seriesCategories:catalog.seriesCategories||[],liveCategories:catalog.liveCategories||[]};
+ function compact(list,categories){
+  var out=[],seen={},candidate=recommendations(list,categories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|disney|pixar|çizgi|cizgi|nick|baby/i,24,true),i,item,key;
+  for(i=0;i<list.length&&out.length<24;i++){item=list[i];key=String(item.stream_id||item.series_id||item.id);if(!seen[key]){seen[key]=true;out.push(previewItem(item));}}
+  for(i=0;i<candidate.length&&out.length<48;i++){item=candidate[i];key=String(item.stream_id||item.series_id||item.id);if(!seen[key]){seen[key]=true;out.push(previewItem(item));}}
+  return out;
+ }
+ function slimCategories(cats){var out=[];for(var i=0;i<(cats||[]).length&&i<400;i++)out.push({category_id:cats[i].category_id,category_name:cats[i].category_name});return out;}
+ return {vodStreams:compact(catalog.vodStreams||[],catalog.vodCategories),seriesList:compact(catalog.seriesList||[],catalog.seriesCategories),
+  liveStreams:compact(catalog.liveStreams||[],catalog.liveCategories),vodCategories:slimCategories(catalog.vodCategories),
+  seriesCategories:slimCategories(catalog.seriesCategories),liveCategories:slimCategories(catalog.liveCategories)};
 }
 window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(this.catalog)this.render(this.catalog);},render:function(catalog){
  this.catalog=catalog;
@@ -73,11 +79,13 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  shelf(document.getElementById('stitch-kids-series'),childShows,'series',12);
  shelf(document.getElementById('stitch-recent'),child?childMovies:movies,'films',9);
  var favorites=[],recent=[];
- for(var c=0;c<channels.length&&favorites.length<8;c++)if(window.XIPTVTV.isFavorite('live',channels[c]))favorites.push(channels[c]);
+ var childChannels=child?recommendations(channels,catalog.liveCategories,/çocuk|cocuk|kids|cartoon|çizgi|cizgi|disney|nick|baby/i,30,true):channels;
+ for(var c=0;c<childChannels.length&&favorites.length<8;c++)if(window.XIPTVTV.isFavorite('live',childChannels[c]))favorites.push(childChannels[c]);
  shelf(document.getElementById('stitch-favorites'),favorites,'live',8);
  var resume=window.XIPTVTV.getResume(),continuing=[];
- for(var r=0;r<movies.length&&continuing.length<8;r++)if(Number(resume['movie:'+String(movies[r].stream_id)]||0)>20)continuing.push({item:movies[r],type:'films'});
- for(var k=0;k<series.length&&continuing.length<8;k++)if(Number(resume['series:'+String(series[k].series_id)]||0)>20)continuing.push({item:series[k],type:'series'});
+ var resumeMovies=child?childMovies:movies,resumeSeries=child?childShows:series;
+ for(var r=0;r<resumeMovies.length&&continuing.length<8;r++)if(Number(resume['movie:'+String(resumeMovies[r].stream_id)]||0)>20)continuing.push({item:resumeMovies[r],type:'films'});
+ for(var k=0;k<resumeSeries.length&&continuing.length<8;k++)if(Number(resume['series:'+String(resumeSeries[k].series_id)]||0)>20)continuing.push({item:resumeSeries[k],type:'series'});
  var node=document.getElementById('stitch-continue');clear(node);
  if(!continuing.length){var empty=document.createElement('div');empty.className='stitch-empty';empty.textContent='İzlemeye başladığın filmler ve diziler burada görünecek.';node.appendChild(empty);}
  for(var z=0;z<continuing.length;z++){(function(record){
@@ -89,8 +97,8 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
   node.appendChild(b);
  })(continuing[z]);}
  shelf(document.getElementById('stitch-series'),child?childShows:series,'series',8);
- shelf(document.getElementById('stitch-live'),child?recommendations(channels,catalog.liveCategories,/çocuk|cocuk|kids|cartoon|çizgi|cizgi|disney|nick|baby/i,8,true):channels,'live',8);
- window.XIPTVTVHome.data={movies:movies,series:series,channels:channels};
+ shelf(document.getElementById('stitch-live'),child?childChannels:channels,'live',8);
+ window.XIPTVTVHome.data={movies:child?childMovies:movies,series:child?childShows:series,channels:child?childChannels:channels};
  var lead=(child?childMovies:movies)[0];if(!lead)return;
  var cover=String(lead.stream_icon||lead.cover||'');
  var hero=document.getElementById('stitch-hero');
