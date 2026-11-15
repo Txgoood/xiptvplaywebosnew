@@ -5,6 +5,20 @@
  var seek=document.getElementById('tv-progress'),elapsed=document.getElementById('tv-elapsed'),duration=document.getElementById('tv-duration');
  var title=document.getElementById('tv-player-title'),speed=document.getElementById('tv-speed');
  var lastNotice='',noticeTimer=null,menuKind='',hideTimer=null,lastErrorAt=0;
+ var SUB_SETTINGS_KEY='xiptv_webos2_subtitle_appearance_v1';
+ function applySubtitleStyle(){
+  var layer=document.getElementById('tv-lg-subtitle-overlay');if(!layer)return;
+  var size=document.getElementById('tv-subtitle-size'),pos=document.getElementById('tv-subtitle-position'),bg=document.getElementById('tv-subtitle-background');
+  if(!size||!pos||!bg)return;
+  layer.style.fontSize=size.value+'px';layer.className='tv-sub-position-'+pos.value;
+  layer.style.background=bg.checked?'rgba(0,0,0,.62)':'transparent';layer.style.borderRadius=bg.checked?'10px':'0';
+  try{localStorage.setItem(SUB_SETTINGS_KEY,JSON.stringify({size:size.value,position:pos.value,background:bg.checked}));}catch(e){}
+ }
+ try{var remembered=JSON.parse(localStorage.getItem(SUB_SETTINGS_KEY)||'{}');document.getElementById('tv-subtitle-size').value=remembered.size||'32';document.getElementById('tv-subtitle-position').value=remembered.position||'middle';document.getElementById('tv-subtitle-background').checked=!!remembered.background;}catch(e){}
+ document.getElementById('tv-subtitle-size').onchange=applySubtitleStyle;
+ document.getElementById('tv-subtitle-position').onchange=applySubtitleStyle;
+ document.getElementById('tv-subtitle-background').onchange=applySubtitleStyle;
+ applySubtitleStyle();
  function byId(id){return document.getElementById(id);}
  function hasFull(){return (' '+document.body.className+' ').indexOf(' tv-fullscreen ')>=0;}
  function finite(n){return typeof n==='number'&&isFinite(n)&&n>=0;}

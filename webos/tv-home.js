@@ -100,6 +100,8 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  this.catalog=catalog;
  var movies=catalog.vodStreams||[],series=catalog.seriesList||[],channels=catalog.liveStreams||[];
  var child=!!(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile());
+ home.className=home.className.replace(/\s*tv-kids-screen/g,'')+(child?' tv-kids-screen':'');
+ var childHidden=['stitch-recent','stitch-series'];for(var hi=0;hi<childHidden.length;hi++){var hiddenNode=document.getElementById(childHidden[hi]);if(hiddenNode){hiddenNode.style.display=child?'none':'';if(hiddenNode.previousElementSibling)hiddenNode.previousElementSibling.style.display=child?'none':'';}}
  var childMovies=recommendations(movies,catalog.vodCategories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|disney|pixar|çizgi|cizgi/i,12,true);
  var familyMovies=recommendations(movies,catalog.vodCategories,/family|aile|animasyon|animation|çocuk|cocuk|kids|disney|pixar/i,12,true);
  var ageYoung=[],ageOlder=[],c;
@@ -154,7 +156,10 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  shelf(document.getElementById('stitch-series'),child?childShows:series,'series',8);
  shelf(document.getElementById('stitch-live'),child?childChannels:channels,'live',8);
  window.XIPTVTVHome.data={movies:child?childMovies:movies,series:child?childShows:series,channels:child?childChannels:channels};
- var lead=(child?childMovies:movies)[0];if(!lead)return;
+ // Weekly rotation makes family cinema recommendations change without random reshuffling per launch.
+ if(familyMovies.length>1){var shift=Math.floor(new Date().getTime()/604800000)%familyMovies.length;familyMovies=familyMovies.slice(shift).concat(familyMovies.slice(0,shift));shelf(document.getElementById('stitch-family'),familyMovies,'films',12);}
+ var lead=(child?childMovies:movies)[0];
+ if(!lead){var emptyHero=document.getElementById('stitch-hero');emptyHero.style.backgroundImage='none';document.getElementById('stitch-feature-title').textContent=child?'Ebeveyn Onaylı Çocuk Ekranı':'Kataloğu Keşfet';document.getElementById('stitch-feature-description').textContent=child?'Yalnızca ebeveynin izin verdiği içerikler burada görünecek.':'İçerik yükleniyor.';return;}
  var cover=String(lead.stream_icon||lead.cover||'');
  var hero=document.getElementById('stitch-hero');
  if(/^https?:\/\//i.test(cover)){hero.style.backgroundImage='linear-gradient(90deg,#10151d 0%,rgba(16,21,29,.97) 28%,rgba(16,21,29,.55) 72%),url("'+cover.replace(/["'()\\]/g,'')+'")';}
@@ -192,7 +197,7 @@ document.getElementById('tv-settings-diagnostics').onclick=function(){settings(f
 document.getElementById('tv-show-diagnostics').onclick=function(){diag.style.display='block';home.style.display='none';document.getElementById('system').focus();};
 document.getElementById('iptv-hide').addEventListener('click',function(){home.style.display='block';document.body.className='';document.getElementById('tv-nav-home').focus();},false);
 function posterRows(){return document.querySelectorAll('#tv-home .stitch-tiles');}
-function rowButtons(row){return row.querySelectorAll('.stitch-movie-tile');}
+function rowButtons(row){return row.style.display==='none'?[]:row.querySelectorAll('.stitch-movie-tile');}
 function revealPoster(button){
  if(!button)return;
  var row=button.parentNode,visibleLeft=row.scrollLeft,visibleRight=visibleLeft+row.clientWidth;

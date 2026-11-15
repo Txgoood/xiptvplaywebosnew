@@ -413,3 +413,13 @@ body.tv-mode #tv-channel-panel button:focus{outline:3px solid #00f2df;background
 body.tv-mode #tv-advanced-filters{padding:7px 9px;background:#142431;border:1px solid #2e6978;border-radius:8px;margin:8px 0}
 body.tv-mode #tv-advanced-filters label{display:inline-block;color:#d1f0f5;font-size:16px;margin:6px}
 body.tv-mode #tv-advanced-filters input{width:125px!important;max-width:125px!important;background:#172935;color:#fff;border:1px solid #4a96a5;padding:7px;font-size:17px}
+
+/* v1.0.43 parent-approved child homepage and subtitle overlay position. */
+#tv-home.tv-kids-screen .stitch-hero{height:255px!important}
+#tv-home.tv-kids-screen .stitch-heading strong{font-size:29px!important}
+body.tv-mode #tv-lg-subtitle-overlay.tv-sub-position-low{bottom:12%!important}
+body.tv-mode #tv-lg-subtitle-overlay.tv-sub-position-middle{bottom:20%!important}
+body.tv-mode #tv-lg-subtitle-overlay.tv-sub-position-high{bottom:32%!important}
+body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay.tv-sub-position-low{bottom:13%!important}
+body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay.tv-sub-position-middle{bottom:22%!important}
+body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay.tv-sub-position-high{bottom:35%!important}
