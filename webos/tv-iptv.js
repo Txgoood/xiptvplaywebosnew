@@ -154,6 +154,7 @@
         for(var gi=0;gi<group.length;gi++)episodes.push({season:season,item:group[gi]});
       }
       activeEpisodeQueue=episodes;activeEpisodeIndex=-1;
+      if(window.XIPTVTV.registerEpisodeCount)window.XIPTVTV.registerEpisodeCount(id,episodes.length);
       if(!episodes.length){say('Bu dizi için bölüm bulunamadı');return;}
       var popup=document.getElementById('tv-episodes'),list=document.getElementById('tv-episodes-list');
       focusCache=null;
