@@ -1,11 +1,15 @@
 # XIPTV Play — LG webOS (ayrı proje)
 
+## Güncel çalışma — v1.0.45 (15 Kasım 2026)
+Geliştirmenin ana sürümü **v1.0.45**. Eski v1.0.21 bölümleri tarihsel teknik kayıt olarak aşağıda tutulur. 6 büyük dikey poster, kumanda kısayolları, aile/çocuk önerileri, ebeveyn onay listesi, izleme ilerlemesi, bölüm takibi, TMDb isteğe bağlı metadata servisi ve katalog hızlandırma geliştirmeleri eklendi. IPK'nın TV'deki oynatıcı/altyazı performansı gerçek cihaz testi gerektirir. Güncel teknik ayrıntılar: [AI_HANDOFF.md](AI_HANDOFF.md).
+
+
 Bu depo yalnızca LG webOS Smart TV uygulaması ve onun opsiyonel FFprobe/FFmpeg medya analiz servisi içindir. Android APK projesi bu depoda yer almaz.
 
 ## Derleme
 GitHub Actions → **Build LG webOS IPK** → Run workflow. Başarılı çalıştırmanın artifact'i `xiptvplay-lg-webos-ipk` içindeki `.ipk` dosyasıdır.
 
-Sürüm: **1.0.21**. Mevcut oynatıcı varsayılandır; Shaka yalnızca HLS/DASH için isteğe bağlıdır.
+Sürüm (güncel): **1.0.45**. Önceki 1.0.21 açıklamaları tarihçedir. Mevcut oynatıcı varsayılandır; Shaka yalnızca HLS/DASH için isteğe bağlıdır.
 
 ## 1.0.21 — Paket kimliği ve TV teşhisi
 TV'de köprü hatası aynı metinle göründüğü için hangi paketin çalıştığı ayırt edilemiyordu. Artık hata satırı `paket=netcast|native`, `PalmSystem` (eski webOS'ta köprü yerine bu olabilir), `window` üzerindeki palm/webos/luna/netcast benzeri anahtarlar ve UA'yı gösterir. Native pakette de köprü yoksa mesaj bunu açıkça söyler.
