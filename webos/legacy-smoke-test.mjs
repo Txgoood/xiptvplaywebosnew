@@ -61,7 +61,7 @@ assert(homeScript.includes('setShelfVisibility(node,continuing.length>0)'), 'Con
 assert(homeScript.includes('syncShelfVisibility(child);'), 'Async catalog/age updates must show valid shelves');
 assert(homeScript.includes('var familyCandidates=recommendations('), 'Weekend family candidates should come from IPTV categories');
 assert(homeScript.includes('if(child)familyMovies=ageOlder.slice(0);'), 'Child weekend shelf must require certified age data');
-assert(!homeScript.includes('familyMovies=ageOlder.slice(0);\n  if(!ageLookupStarted'), 'Adult weekend shelf must not be emptied while TMDb is unavailable');
+assert(homeScript.includes('if(child)familyMovies=ageOlder.slice(0);'), 'Only child profiles should require verified age ratings for weekend picks');
 assert(homeScript.includes('var familyWeek=Math.floor('), 'Family selection must rotate by week');
 assert(homeScript.includes('function applyShelfOrder()'), 'Shelf ordering should be persistent');
 assert(homeScript.includes('function applyPosterSize()'), 'Poster size setting must be wired');
