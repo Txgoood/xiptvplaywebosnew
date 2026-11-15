@@ -138,7 +138,7 @@ function rowButtons(row){return row.querySelectorAll('.stitch-movie-tile');}
 function revealPoster(button){
  if(!button)return;
  var row=button.parentNode,visibleLeft=row.scrollLeft,visibleRight=visibleLeft+row.clientWidth;
- var left=button.offsetLeft-row.offsetLeft, right=left+button.offsetWidth;
+ var left=button.getBoundingClientRect().left-row.getBoundingClientRect().left+row.scrollLeft, right=left+button.offsetWidth;
  if(left<visibleLeft)row.scrollLeft=Math.max(0,left-12);
  else if(right>visibleRight)row.scrollLeft=right-row.clientWidth+12;
  // Keep the selected category visible without relying on smooth-scrolling support.
