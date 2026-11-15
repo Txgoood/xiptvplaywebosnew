@@ -380,6 +380,13 @@
     if(document.getElementById('tv-home').style.display!=='none')return;
     if(document.getElementById('iptv-keyboard').style.display!=='none')return;
     var key=e.keyCode||e.which;
+    // Blue remote key: toggle fullscreen without changing the selected channel.
+    // Keep OK, Back and the other color keys on their existing paths.
+    if(key===406 && (video.currentSrc||video.getAttribute('src'))){
+      setClass('tv-fullscreen',!hasClass('tv-fullscreen'));
+      updatePlayerButtons();
+      e.preventDefault();e.stopImmediatePropagation();return;
+    }
     // LG webOS 2 may report P+/P- as 33/34 or 427/428. On some firmware
     // these keys are reserved by the OS; D-pad up/down is the fallback.
     if(hasClass('tv-fullscreen')&&lastLive&&liveChannelOrder.length&&
