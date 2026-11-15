@@ -6,7 +6,7 @@ var prefix='xiptv_webos2_media_v1_',favoriteCache=null;
 var CHILD_APPROVALS='xiptv_webos2_parent_approved_v1',approvedCache=null;
 function approvals(){if(!approvedCache)try{approvedCache=JSON.parse(localStorage.getItem(CHILD_APPROVALS)||'{}')||{};}catch(e){approvedCache={};}return approvedCache;}
 function isChildApproved(mode,item){return !!approvals()[key(mode,item)];}
-function setChildApproved(mode,item,enabled){var map=approvals(),k=key(mode,item);if(enabled)map[k]=true;else delete map[k];try{localStorage.setItem(CHILD_APPROVALS,JSON.stringify(map));}catch(e){}if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();if(window.XIPTVTV&&window.XIPTVTV.refresh)window.XIPTVTV.refresh();}
+function setChildApproved(mode,item,enabled){var map=approvals(),k=key(mode,item);if(enabled)map[k]=true;else delete map[k];try{localStorage.setItem(CHILD_APPROVALS,JSON.stringify(map));}catch(e){}/* Profile switch already rebuilds the child catalog; avoid repainting thousands of cards per toggle. */}
 
 function read(k,fallback){try{return JSON.parse(localStorage.getItem(prefix+scope+'_'+k))||fallback;}catch(e){return fallback;}}
 function save(k,value){try{localStorage.setItem(prefix+scope+'_'+k,JSON.stringify(value));}catch(e){}}
@@ -29,7 +29,45 @@ function decorateItem(button,mode,item){
  star.title='Favori değiştir';
  star.onclick=function(e){if(e&&e.stopPropagation)e.stopPropagation();toggleFavorite(mode,item);};
  wrapper.appendChild(star);
- if(!childProfile){var approve=document.createElement('button');approve.type='button';approve.className='tv-card-child-approve';approve.textContent=isChildApproved(mode,item)?'✓ Çocuk izni':'＋ Çocuğa izin';approve.title='Çocuk profilinde erişime izin ver/kaldır';approve.onclick=function(e){if(e&&e.stopPropagation)e.stopPropagation();setChildApproved(mode,item,!isChildApproved(mode,item));};wrapper.appendChild(approve);}
+ if(!childProfile){
+   var approve=document.createElement('button');approve.type='button';
+   approve.className='tv-card-child-approve';
+   function drawPermission(){
+     var allowed=isChildApproved(mode,item);
+     approve.className='tv-card-child-approve '+(allowed?'tv-child-allowed':'tv-child-denied');
+     approve.title=allowed?'Çocuk erişimi açık — kapatmak için OK':'Çocuk erişimi kapalı — izin vermek için OK';
+     approve.setAttribute('aria-label',allowed?'Çocuk için izin verildi, izni kaldır':'Çocuk için izin yok, izin ver');
+     while(approve.firstChild)approve.removeChild(approve.firstChild);
+     // Draw the icon locally: old LG webOS does not reliably support emoji glyphs.
+     var ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+     svg.setAttribute('viewBox','0 0 28 28');
+     svg.setAttribute('width','24');svg.setAttribute('height','24');
+     svg.setAttribute('aria-hidden','true');
+     var head=document.createElementNS(ns,'circle');
+     head.setAttribute('cx','14');head.setAttribute('cy','8');head.setAttribute('r','4');
+     head.setAttribute('fill','none');head.setAttribute('stroke','currentColor');head.setAttribute('stroke-width','2.5');
+     svg.appendChild(head);
+     var torso=document.createElementNS(ns,'path');
+     torso.setAttribute('d','M5 25v-4c0-5 4-8 9-8s9 3 9 8v4');
+     torso.setAttribute('fill','none');torso.setAttribute('stroke','currentColor');
+     torso.setAttribute('stroke-width','2.5');torso.setAttribute('stroke-linecap','round');svg.appendChild(torso);
+     if(!allowed){
+       var cross=document.createElementNS(ns,'path');cross.setAttribute('d','M3 3L25 25 M25 3L3 25');
+       cross.setAttribute('stroke','#ff737a');cross.setAttribute('stroke-width','2.8');
+       cross.setAttribute('stroke-linecap','round');svg.appendChild(cross);
+     }
+     approve.appendChild(svg);
+   }
+   drawPermission();
+   approve.onclick=function(e){
+     if(e&&e.preventDefault)e.preventDefault();
+     if(e&&e.stopImmediatePropagation)e.stopImmediatePropagation();
+     if(e&&e.stopPropagation)e.stopPropagation();
+     setChildApproved(mode,item,!isChildApproved(mode,item));
+     drawPermission();
+   };
+   wrapper.appendChild(approve);
+ }
 }
 function updateHeart(){
  if(!playingItem){favButton.style.display='none';return;}

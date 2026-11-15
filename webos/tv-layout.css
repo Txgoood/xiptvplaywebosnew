@@ -432,3 +432,38 @@ body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay.tv-sub-position-high{bottom:3
 /* v1.0.46 cached-first home while verifying safely */
 #tv-boot-mask{position:fixed;left:0;right:0;top:0;bottom:0;z-index:9999;background:rgba(5,12,22,.25)}
 #tv-boot-message{position:absolute;left:18%;right:9%;bottom:6%;background:rgba(7,30,39,.97);color:white;border:2px solid #00deed;border-radius:10px;text-align:center;padding:18px;font-size:22px}
+
+/* v1.0.48: compact, non-obscuring child-access icon in top-left of every catalog card.
+   Native TV WebKit: explicit dimensions; no emoji fonts, animations, or filters. */
+body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-child-approve{
+ display:block!important;position:absolute!important;left:5px!important;top:5px!important;
+ right:auto!important;bottom:auto!important;width:32px!important;height:32px!important;
+ min-width:32px!important;max-width:32px!important;min-height:32px!important;
+ padding:3px!important;margin:0!important;line-height:0!important;font-size:0!important;
+ border:1px solid #80b6c5!important;border-radius:7px!important;z-index:5!important;
+ background:rgba(8,22,33,.94)!important;color:#bceff0!important;text-align:center!important;
+ overflow:hidden!important;box-sizing:border-box!important;
+}
+body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-child-approve.tv-child-denied{
+ background:rgba(35,18,26,.94)!important;border-color:#ee8891!important;color:#e8eaf0!important;
+}
+body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-child-approve.tv-child-allowed{
+ background:rgba(9,57,48,.95)!important;border-color:#47e6c0!important;color:#b3ffde!important;
+}
+body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-child-approve svg{
+ display:block!important;width:24px!important;height:24px!important;margin:0!important;
+}
+body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-child-approve:focus{
+ outline:3px solid white!important;outline-offset:1px!important;
+}
+/* Live rows have text again: reserve space for the small icon instead of covering labels. */
+body.tv-mode #iptv-channels.tv-live-list>.tv-item-wrap>button:first-child{
+ display:block!important;padding-left:45px!important;padding-right:48px!important;
+ box-sizing:border-box!important;min-height:44px!important;text-align:left!important;
+ color:#edf5fc!important;font-size:17px!important;
+}
+/* Movies and series retain their posters and the bottom title strip. */
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap>.tv-card-child-approve{top:6px!important;left:6px!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap .tv-card-title{
+ display:block!important;color:#f4f7fa!important;
+}
