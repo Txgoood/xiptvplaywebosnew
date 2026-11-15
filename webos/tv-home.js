@@ -35,10 +35,43 @@ function shelf(node,items,type,limit){
   node.appendChild(b);
  })(items[n]);}
 }
-window.XIPTVTVHome={catalog:null,refresh:function(){if(this.catalog)this.render(this.catalog);},render:function(catalog){
+// Suggestions use only the user's IPTV catalogue; a title/category match is not an age rating.
+function safeText(v){return String(v||'').toLowerCase().replace(/[İI]/g,'i');}
+function categoryMap(cats){var out={},i;for(i=0;i<(cats||[]).length;i++)out[String(cats[i].category_id)]=String(cats[i].category_name||'');return out;}
+function recommendations(items,categories,pattern,limit,strict){
+ var result=[],seen={},map=categoryMap(categories),i,item,key,name,cat,text;
+ for(i=0;i<items.length&&result.length<limit;i++){
+  item=items[i];name=safeText(item.name||item.title);cat=safeText(map[String(item.category_id)]||'');
+  text=name+' '+cat;
+  if(/xxx|adult|erotik|porno|18\+|yetişkin|horror|korku|gerilim|şiddet/i.test(text))continue;
+  if(strict&&!/çocuk|cocuk|kids|kid|animation|animasyon|cartoon|çizgi|cizgi|family|aile|disney|pixar/i.test(cat))continue;
+  if(!pattern.test(text))continue;
+  key=String(item.stream_id||item.series_id||item.id||name);
+  if(seen[key])continue;seen[key]=true;result.push(item);
+ }
+ return result;
+}
+function previewItem(item){
+ return {name:item.name||item.title||'',stream_id:item.stream_id,series_id:item.series_id,category_id:item.category_id,
+   container_extension:item.container_extension,stream_icon:item.stream_icon||'',cover:item.cover||'',cover_big:item.cover_big||''};
+}
+function limitedPreview(catalog){
+ function compact(list){var out=[];for(var i=0;i<list.length&&i<45;i++)out.push(previewItem(list[i]));return out;}
+ return {vodStreams:compact(catalog.vodStreams||[]),seriesList:compact(catalog.seriesList||[]),
+  liveStreams:compact(catalog.liveStreams||[]),vodCategories:catalog.vodCategories||[],
+  seriesCategories:catalog.seriesCategories||[],liveCategories:catalog.liveCategories||[]};
+}
+window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(this.catalog)this.render(this.catalog);},render:function(catalog){
  this.catalog=catalog;
  var movies=catalog.vodStreams||[],series=catalog.seriesList||[],channels=catalog.liveStreams||[];
- shelf(document.getElementById('stitch-recent'),movies,'films',9);
+ var child=!!(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile());
+ var childMovies=recommendations(movies,catalog.vodCategories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|disney|pixar|çizgi|cizgi/i,12,true);
+ var familyMovies=recommendations(movies,catalog.vodCategories,/family|aile|animasyon|animation|çocuk|cocuk|kids|disney|pixar/i,12,true);
+ var childShows=recommendations(series,catalog.seriesCategories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|çizgi|cizgi/i,12,true);
+ shelf(document.getElementById('stitch-kids-movies'),childMovies,'films',12);
+ shelf(document.getElementById('stitch-family'),familyMovies,'films',12);
+ shelf(document.getElementById('stitch-kids-series'),childShows,'series',12);
+ shelf(document.getElementById('stitch-recent'),child?childMovies:movies,'films',9);
  var favorites=[],recent=[];
  for(var c=0;c<channels.length&&favorites.length<8;c++)if(window.XIPTVTV.isFavorite('live',channels[c]))favorites.push(channels[c]);
  shelf(document.getElementById('stitch-favorites'),favorites,'live',8);
@@ -55,10 +88,10 @@ window.XIPTVTVHome={catalog:null,refresh:function(){if(this.catalog)this.render(
   b.onclick=function(){open(record.type);if(record.type==='series')window.XIPTVTV.resumeSeriesFromHome=true;window.XIPTVTV.openItem(record.type==='films'?'movie':'series',record.item);};
   node.appendChild(b);
  })(continuing[z]);}
- shelf(document.getElementById('stitch-series'),series,'series',8);
- shelf(document.getElementById('stitch-live'),channels,'live',8);
+ shelf(document.getElementById('stitch-series'),child?childShows:series,'series',8);
+ shelf(document.getElementById('stitch-live'),child?recommendations(channels,catalog.liveCategories,/çocuk|cocuk|kids|cartoon|çizgi|cizgi|disney|nick|baby/i,8,true):channels,'live',8);
  window.XIPTVTVHome.data={movies:movies,series:series,channels:channels};
- var lead=movies[0];if(!lead)return;
+ var lead=(child?childMovies:movies)[0];if(!lead)return;
  var cover=String(lead.stream_icon||lead.cover||'');
  var hero=document.getElementById('stitch-hero');
  if(/^https?:\/\//i.test(cover)){hero.style.backgroundImage='linear-gradient(90deg,#10151d 0%,rgba(16,21,29,.97) 28%,rgba(16,21,29,.55) 72%),url("'+cover.replace(/["'()\\]/g,'')+'")';}
