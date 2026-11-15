@@ -56,7 +56,7 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <button id="tv-show-diagnostics" type="button">Tanılama</button>
 </section>
 <div id="tv-diagnostics" style="display:none">
-<p>Video oynatma tanılama sürümü <b>v1.0.35</b></p>
+<p>Video oynatma tanılama sürümü <b>v1.0.36</b></p>
 <button id="system">Sistem Kontrolü</button>
 <button id="local">Yerel Video</button>
 <button id="remote">İnternet Video</button>
@@ -72,7 +72,7 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <button id="iptv-open" type="button">Canlı TV (Xtream)</button>
 </div>
 <section id="iptv-panel" style="display:none;background:#1c2b38;padding:20px;margin:16px 0;border:2px solid #497082">
-<div id="tv-favorites-panel" style="display:none"><h2>Favoriler</h2><button id="tv-fav-live" type="button">Canlı TV</button><button id="tv-fav-movie" type="button">Filmler</button><button id="tv-fav-series" type="button">Diziler</button></div><div id="tv-settings-panel" style="display:none"><h2>Ayarlar</h2><button id="tv-settings-close" type="button">Kapat</button><p id="tv-settings-version">XIPTV Play LG webOS v1.0.35</p><button id="tv-settings-player" type="button">Oynatıcı Ayarları</button><button id="tv-settings-profiles" type="button">Profiller</button><button id="tv-settings-connection" type="button">Bağlantı Ayarları</button><button id="tv-settings-diagnostics" type="button">Geliştirici Araçları</button><label><input id="tv-settings-tr" type="checkbox"> TR kategorileri</label><label><input id="tv-settings-adult" type="checkbox"> Yetişkin kategorilerini gizle</label></div><button id="iptv-hide" type="button" style="display:none">TV Menüsünü Kapat</button>
+<div id="tv-favorites-panel" style="display:none"><h2>Favoriler</h2><button id="tv-fav-live" type="button">Canlı TV</button><button id="tv-fav-movie" type="button">Filmler</button><button id="tv-fav-series" type="button">Diziler</button></div><div id="tv-settings-panel" style="display:none"><h2>Ayarlar</h2><button id="tv-settings-close" type="button">Kapat</button><p id="tv-settings-version">XIPTV Play LG webOS v1.0.36</p><button id="tv-settings-player" type="button">Oynatıcı Ayarları</button><button id="tv-settings-profiles" type="button">Profiller</button><button id="tv-settings-connection" type="button">Bağlantı Ayarları</button><button id="tv-settings-diagnostics" type="button">Geliştirici Araçları</button><label><input id="tv-settings-tr" type="checkbox"> TR kategorileri</label><label><input id="tv-settings-adult" type="checkbox"> Yetişkin kategorilerini gizle</label></div><button id="iptv-hide" type="button" style="display:none">TV Menüsünü Kapat</button>
 <div id="iptv-login">
 <p>Xtream Codes bağlantısı — giriş bilgileriniz hatırlanabilir. Bağlantı başarısız olursa bu ekran açılır.</p>
 <p><label>Sunucu adresi <input id="iptv-server" type="url" placeholder="http://sunucu:port" autocomplete="off" style="font-size:22px;padding:10px;width:55%" /> <button id="iptv-server-keyboard" type="button">Klavye Aç</button></label></p>
@@ -102,7 +102,23 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 </div>
 <div id="tv-mode-tabs"><button id="tv-tab-live" type="button">Canlı TV</button><button id="tv-tab-movie" type="button">Filmler</button><button id="tv-tab-series" type="button">Diziler</button></div>
 <div id="tv-episodes" style="display:none"><button id="tv-episodes-close" type="button">Bölümleri Kapat</button><strong id="tv-episodes-title">Dizi Bölümleri</strong><div id="tv-episodes-list"></div></div>
-<div id="tv-player-controls"><button id="tv-alt-player" type="button">Alternatif Oynatıcı (Shaka)</button><button id="tv-alt-return" type="button" style="display:none">Eski Oynatıcıya Dön</button><span id="tv-alt-player-status" role="status"></span><button id="tv-fullscreen" type="button">Tam Ekran</button><button id="tv-player-playpause" type="button" aria-label="Oynat veya duraklat">⏸ Duraklat</button><button id="tv-aspect" type="button">Ekrana Doldur</button><button id="tv-player-rewind" type="button">◀◀ 10 sn</button><button id="tv-player-forward" type="button">10 sn ▶▶</button><button id="tv-player-tracks" type="button">Altyazı / Ses</button><button id="tv-try-ts-inplayer" type="button">4K TS</button><button id="tv-try-hls-inplayer" type="button">HLS</button></div><div id="tv-media-info" style="display:none"><button id="tv-media-info-close" type="button">Kapat</button><p id="tv-media-info-text"></p></div><div id="tv-detail-below"><strong>İçerik Bilgileri</strong><p id="tv-detail-summary">İçerik seçildiğinde açıklaması burada görünür.</p><div id="tv-season-tools" style="display:none"><label>Sezon <select id="tv-season-select"></select></label><div id="tv-season-episodes"></div></div></div><div id="tv-4k-options" style="display:none"><button id="tv-try-ts" type="button">4K: TS dene</button><button id="tv-try-hls" type="button">HLS dene</button></div><div id="tv-now-playing">Kanal seçilmedi</div>
+<div id="tv-player-controls" class="tv-custom-player">
+ <div class="tv-player-top"><strong id="tv-player-title">Oynatılıyor</strong><span id="tv-player-live-label">XIPTV Play</span></div>
+ <div class="tv-progress-row"><span id="tv-elapsed">--:--</span><input id="tv-progress" type="range" min="0" max="100" value="0" aria-label="Video ilerleme çubuğu"><span id="tv-duration">--:--</span></div>
+ <div class="tv-player-actions">
+ <button id="tv-player-favorite" type="button" aria-label="Favori">♡ Favori</button>
+ <button id="tv-alt-player" type="button">Alternatif Oynatıcı</button><button id="tv-alt-return" type="button" style="display:none">Eski Oynatıcıya Dön</button><span id="tv-alt-player-status" role="status"></span>
+ <button id="tv-fullscreen" type="button">⛶ Tam Ekran</button>
+ <button id="tv-player-rewind" type="button">◀◀ 10 sn</button>
+ <button id="tv-player-playpause" type="button" aria-label="Oynat veya duraklat">⏸ Duraklat</button>
+ <button id="tv-player-forward" type="button">10 sn ▶▶</button>
+ <button id="tv-aspect" type="button">Ekrana Doldur</button>
+ <button id="tv-player-tracks" type="button" style="display:none">Altyazı / Ses</button>
+ <button id="tv-try-ts-inplayer" type="button">4K TS</button><button id="tv-try-hls-inplayer" type="button">HLS</button>
+ <button id="tv-player-settings" type="button">⚙ Araçlar</button>
+ </div>
+ <div class="tv-player-languages"><button id="tv-open-audio" type="button">♫ Ses Parçası</button><button id="tv-open-subtitle" type="button">▣ Altyazı</button><button id="tv-open-speed" type="button">◷ Oynatma Hızı</button></div>
+ </div><div id="tv-player-menu" class="tv-player-menu" style="display:none"></div><div id="tv-player-toast" class="tv-toast" style="display:none" role="status" aria-live="polite"></div><div id="tv-media-info" style="display:none"><button id="tv-media-info-close" type="button">Kapat</button><p id="tv-media-info-text"></p></div><div id="tv-detail-below"><strong>İçerik Bilgileri</strong><p id="tv-detail-summary">İçerik seçildiğinde açıklaması burada görünür.</p><div id="tv-season-tools" style="display:none"><label>Sezon <select id="tv-season-select"></select></label><div id="tv-season-episodes"></div></div></div><div id="tv-4k-options" style="display:none"><button id="tv-try-ts" type="button">4K: TS dene</button><button id="tv-try-hls" type="button">HLS dene</button></div><div id="tv-now-playing">Kanal seçilmedi</div>
 <p>Canlı TV Kategorileri</p><div id="iptv-categories" style="max-height:160px;overflow:auto"></div>
 <p>Kanallar</p><div id="iptv-channels" style="max-height:230px;overflow:auto"></div>
 </div>
@@ -110,7 +126,7 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <p id="iptv-message" style="color:#89eaf9"></p>
 </section>
 <div id="status">Uygulama başlatılıyor...</div>
-<video id="video" controls preload="none"></video><div id="tv-lg-subtitle-overlay" style="display:none"></div>
+<video id="video" preload="none"></video><div id="tv-lg-subtitle-overlay" style="display:none"></div>
 <button id="tv-video-favorite" type="button" title="Favorilere ekle/kaldır" style="display:none">♡</button>
 <div id="events"></div>
 <p><small>Önce Yerel Video düğmesini dene. Test videosu uygulamanın içinde, internete ihtiyaç duymaz. Ardından HLS Source, MP4 Source ve Blob MP4 seçeneklerini deneyebilirsin. Blob testi yalnızca kısa test videosu içindir. MDN çiçek videosu sessiz olabilir; ses doğrulaması için AAC Sesli MP4 düğmesini dene. Bu sürüm henüz playlist/profil içermez.</small></p>
@@ -185,4 +201,4 @@ video.addEventListener('error',function(){var code=video.error?video.error.code:
 video.addEventListener('ended',function(){message('Video başarıyla sona erdi.');update();},false);
 focus(0);system();update();
 })();
-</script><script src="./tv-features.js"></script><script src="./tv-iptv.js"></script><script src="./tv-profiles.js"></script><script src="./tv-keyboard.js"></script><script src="./tv-mkv-tracks.js"></script><script src="./lg-media-config.js"></script><script src="./tv-lg-media.js"></script><script src="./tv-posters.js"></script><script src="./tv-home.js"></script><script src="./tv-alt-player.js"></script></body></html>
+</script><script src="./tv-features.js"></script><script src="./tv-iptv.js"></script><script src="./tv-profiles.js"></script><script src="./tv-keyboard.js"></script><script src="./tv-mkv-tracks.js"></script><script src="./lg-media-config.js"></script><script src="./tv-lg-media.js"></script><script src="./tv-posters.js"></script><script src="./tv-home.js"></script><script src="./tv-alt-player.js"></script><script src="./tv-player-ui.js"></script></body></html>
