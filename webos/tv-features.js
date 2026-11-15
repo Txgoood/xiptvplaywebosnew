@@ -210,6 +210,9 @@ window.XIPTVTV={
  setProfile:function(id,child){childProfile=!!child;scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
  isFavorite:isFavorite,
  getResume:function(){return read('positions',{});},
+ getResumeEpisodeMap:function(){return read('seriesEpisodes',{});},
+ getNewEpisodeCount:function(seriesId){return Number(read('newEpisodes',{})[String(seriesId)]||0);},
+ registerEpisodeCount:function(seriesId,count){var k=String(seriesId),counts=read('episodeCounts',{}),news=read('newEpisodes',{}),old=Number(counts[k]||0);if(old>0&&count>old)news[k]=count-old;counts[k]=count;save('episodeCounts',counts);save('newEpisodes',news);},
  isEpisodeWatched:function(seriesId,episodeId){var watched=read('watched',{});return !!watched['episode:'+String(seriesId)+':'+String(episodeId)];},
  getMediaProgress:function(mode,item){var k=key(mode,item),positions=read('positions',{}),durations=read('durations',{}),watched=read('watched',{}),pos=Number(positions[k]||0),duration=Number(durations[k]||0);return {position:pos,duration:duration,percent:duration>0?Math.min(100,Math.round(100*pos/duration)):0,watched:mode==='series'?false:!!watched[k]};},
  decorateItem:decorateItem,
@@ -219,6 +222,7 @@ window.XIPTVTV={
      ? 'series:'+String(playingItem.series_id) : kind+':'+String(id);
    currentEpisodeKey=kind==='series'&&playingItem&&playingItem.series_id?'episode:'+String(playingItem.series_id)+':'+String(id):'';
    if(kind==='series'&&playingItem&&playingItem.series_id){
+     var news=read('newEpisodes',{});delete news[String(playingItem.series_id)];save('newEpisodes',news);
      var episodeMap=read('seriesEpisodes',{});
      episodeMap['series:'+String(playingItem.series_id)]=String(id);
      save('seriesEpisodes',episodeMap);
