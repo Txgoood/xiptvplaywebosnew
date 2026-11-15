@@ -42,14 +42,20 @@ function decorateProgress(button,mode,item){
  var track=document.createElement('span');track.className='tv-poster-progress';var bar=document.createElement('i');bar.style.width=progress.percent+'%';track.appendChild(bar);button.appendChild(track);
  var tag=document.createElement('strong');tag.className='tv-progress-tag';tag.textContent=progress.percent+'% izlendi';button.appendChild(tag);
 }
+var ageLookupStarted=false;
 function shelf(node,items,type,limit){
  clear(node);
  if(!items.length){var empty=document.createElement('div');empty.className='stitch-empty';empty.textContent=(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile())?'Ebeveyn onaylı içerik bulunamadı. Yetişkin profilinden Çocuğa izin ver seçeneğini kullanın.':'Henüz içerik bulunamadı.';node.appendChild(empty);return;}
  for(var n=0;n<items.length&&n<limit;n++){(function(item){
   var b=document.createElement('button');b.type='button';b.className='stitch-movie-tile';
   b.setAttribute('aria-label',String(item.name||item.title||'İçerik'));
+  b._xiptvItem=item;b._xiptvType=type;
   var cover=String(item.stream_icon||item.cover_big||item.cover||'');
-  if(/^https?:\/\//i.test(cover)){var img=document.createElement('img');img.src=cover;img.alt='';img.onerror=function(){this.style.display='none';};b.appendChild(img);}
+  if(type!=='live'){
+   var img=document.createElement('img');img.alt='';if(/^https?:\/\//i.test(cover))img.src=cover;else img.style.display='none';
+   if(window.XIPTVMetadata)window.XIPTVMetadata.usePoster(img,item,type==='films'?'movie':'series');
+   else img.onerror=function(){this.style.display='none';};b.appendChild(img);
+  }else if(/^https?:\/\//i.test(cover)){var img=document.createElement('img');img.src=cover;img.alt='';img.onerror=function(){this.style.display='none';};b.appendChild(img);}
   var title=document.createElement('span');title.textContent=String(item.name||item.title||'İçerik');b.appendChild(title);
   if(type==='films'||type==='series')decorateProgress(b,type==='films'?'movie':'series',item);
   b.onclick=function(){open(type==='films'?'films':type==='series'?'series':'live');window.XIPTVTV.openItem(type==='films'?'movie':type==='series'?'series':'live',item);};
@@ -94,6 +100,21 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  var child=!!(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile());
  var childMovies=recommendations(movies,catalog.vodCategories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|disney|pixar|çizgi|cizgi/i,12,true);
  var familyMovies=recommendations(movies,catalog.vodCategories,/family|aile|animasyon|animation|çocuk|cocuk|kids|disney|pixar/i,12,true);
+ var ageYoung=[],ageOlder=[],c;
+ if(window.XIPTVMetadata){
+  for(c=0;c<familyMovies.length;c++){
+   var verified=window.XIPTVMetadata.knownAge(familyMovies[c],'movie');
+   if(verified!==null&&verified<=9)ageYoung.push(familyMovies[c]);
+   if(verified!==null&&verified<=12)ageOlder.push(familyMovies[c]);
+  }
+  // Until certification succeeds, the family row fails closed rather than show adult films.
+  familyMovies=ageOlder.slice(0);
+  if(!ageLookupStarted&&movies.length>30){
+   ageLookupStarted=true;
+   var candidates=recommendations(movies,catalog.vodCategories,/family|aile|animasyon|animation|çocuk|cocuk|kids|disney|pixar/i,12,true);
+   setTimeout(function(){window.XIPTVMetadata.checkAge(candidates,'movie',function(){if(window.XIPTVTVHome)window.XIPTVTVHome.refresh();});},2000);
+  }
+ }
  var childShows=recommendations(series,catalog.seriesCategories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|çizgi|cizgi/i,12,true);
  // Child mode uses an explicit allowlist, never category labels as age certification.
  if(child&&window.XIPTVTV&&window.XIPTVTV.isChildApproved){
@@ -101,6 +122,8 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
   childMovies=approvedOnly(movies,'movie');childShows=approvedOnly(series,'series');familyMovies=approvedOnly(familyMovies,'movie');
  }
  shelf(document.getElementById('stitch-kids-movies'),childMovies,'films',12);
+ shelf(document.getElementById('stitch-age-6-9'),child?ageYoung.filter(function(x){return window.XIPTVTV.isChildApproved('movie',x);}):ageYoung,'films',12);
+ shelf(document.getElementById('stitch-age-10-12'),child?ageOlder.filter(function(x){return window.XIPTVTV.isChildApproved('movie',x);}):ageOlder,'films',12);
  shelf(document.getElementById('stitch-family'),familyMovies,'films',12);
  shelf(document.getElementById('stitch-kids-series'),childShows,'series',12);
  shelf(document.getElementById('stitch-recent'),child?childMovies:movies,'films',9);
@@ -139,7 +162,7 @@ var kidShortcut=document.getElementById('tv-kids-shortcut');if(kidShortcut)kidSh
 document.getElementById('tv-home-films').onclick=function(){open('films');};
 document.getElementById('tv-home-series').onclick=function(){open('series');};
 document.getElementById('tv-feature-play').onclick=function(){open('films');var d=window.XIPTVTVHome.data;if(d&&d.movies.length)window.XIPTVTV.openItem('movie',d.movies[0]);};
-document.getElementById('tv-feature-detail').onclick=function(){open('films');};
+document.getElementById('tv-feature-detail').onclick=function(){var d=window.XIPTVTVHome.data,items=d&&d.movies;if(!items||!items.length||!window.XIPTVMetadata){open('films');return;}var item=items[0];window.XIPTVMetadata.showDetails(item,'movie',function(){open('films');window.XIPTVTV.openItem('movie',item);});};
 document.getElementById('tv-nav-fav').onclick=function(){var p=favoritesPanel;var show=p.style.display==='none';p.style.display=show?'block':'none';if(show){document.getElementById('tv-settings-panel').style.display='none';markActive('tv-nav-fav');}};
 function favMode(mode){document.getElementById('tv-favorites-panel').style.display='none';open(mode==='movie'?'films':mode==='series'?'series':'live');document.getElementById('tv-favorite-only').checked=true;if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();markActive('tv-nav-fav');}
 document.getElementById('tv-fav-live').onclick=function(){favMode('live');};document.getElementById('tv-fav-movie').onclick=function(){favMode('movie');};document.getElementById('tv-fav-series').onclick=function(){favMode('series');};
@@ -179,7 +202,13 @@ function firstPoster(){var rows=posterRows();for(var i=0;i<rows.length;i++){var 
 document.addEventListener('keydown',function(e){
  if(document.getElementById('tv-settings-panel').style.display!=='none')return;
  if(home.style.display==='none')return;
- var k=e.keyCode||e.which;if(k!==37&&k!==38&&k!==39&&k!==40&&k!==13)return;
+ var k=e.keyCode||e.which;
+ if(k===457&&document.activeElement&&document.activeElement._xiptvItem&&window.XIPTVMetadata){
+  var tile=document.activeElement,item=tile._xiptvItem,type=tile._xiptvType;
+  window.XIPTVMetadata.showDetails(item,type==='films'?'movie':type==='series'?'series':'movie',function(){open(type==='films'?'films':type==='series'?'series':'live');window.XIPTVTV.openItem(type==='films'?'movie':type==='series'?'series':'live',item);});
+  e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();return;
+ }
+ if(k!==37&&k!==38&&k!==39&&k!==40&&k!==13)return;
  var active=document.activeElement,rows=posterRows(),rowIndex=-1,col=-1,r,j,buttons;
  for(r=0;r<rows.length;r++){buttons=rowButtons(rows[r]);for(j=0;j<buttons.length;j++)if(buttons[j]===active){rowIndex=r;col=j;break;}if(rowIndex>=0)break;}
  if(rowIndex>=0){
