@@ -30,6 +30,7 @@ const file=path.join(out,'index.html');let html=fs.readFileSync(file,'utf8');htm
 const diagnostic = `<script>(function(){var status='Başlatılıyor';function show(msg){var el=document.getElementById('webos-startup-error');if(!el){el=document.createElement('div');el.id='webos-startup-error';el.style.cssText='position:fixed;z-index:2147483647;inset:0;background:#12171f;color:white;padding:8vw;font:24px sans-serif;overflow:auto';document.body.appendChild(el);}el.textContent='XIPTV Play TV v0.1.1 — Açılış hatası: '+msg;}window.addEventListener('error',function(e){status=(e.message||'Kaynak yükleme hatası')+' '+(e.filename||'');show(status);});window.addEventListener('unhandledrejection',function(e){status=String(e.reason||'Bilinmeyen hata');show(status);});setTimeout(function(){var root=document.getElementById('root');if(!root||!root.children.length)show(status==='Başlatılıyor'?'Uygulama ekranı oluşmadı; TV tarayıcı uyumluluğu veya JS yükleme hatası':status);},9000);})();</script>`;
 html=html.replace('<script type="module"', diagnostic+'<script type="module"');
 if(process.env.WEBOS_LEGACY === 'true') html=fs.readFileSync(path.join(root,'webos/legacy-index.html'),'utf8');
+html=html.replace(/__BUILD_NUMBER__/g,String(process.env.GITHUB_RUN_NUMBER||'yerel'));
 html=html.replace('</head>','<script src="./pkg-info.js"></script></head>');
 fs.writeFileSync(path.join(out,'pkg-info.js'),"window.XIPTV_PKG='"+(nativeVariant?'native':'netcast')+"';");
 fs.writeFileSync(file,html);
