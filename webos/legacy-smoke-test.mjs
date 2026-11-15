@@ -18,6 +18,9 @@ assert(layout.includes('body.tv-mode #video'));
 assert(html.includes('id="tv-now-playing"'));
 assert(html.includes('id="tv-player-tracks"'));
 assert(html.includes('id="tv-season-select"'));
+assert(html.includes('id="tv-next-episode"'));
+assert(html.includes('id="tv-next-episode-play"'));
+assert(html.includes('id="tv-next-episode-close"'));
 
 assert.equal(metadata.trustLevel,'netcast');
 assert.equal(metadata.vendorExtension?.allowCrossDomain,true);
