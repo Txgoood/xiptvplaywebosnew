@@ -170,7 +170,7 @@ var playerbar=document.getElementById('tv-player-controls'),hideTimer=null;
 function showPlayerBar(){
  playerbar.style.opacity='1';playerbar.style.pointerEvents='auto';
  if(hideTimer)clearTimeout(hideTimer);
- hideTimer=setTimeout(function(){if(document.getElementById('tv-controls').style.display==='none'&&document.getElementById('tv-media-info').style.display==='none'){playerbar.style.opacity='0';playerbar.style.pointerEvents='none';}},6000);
+ hideTimer=setTimeout(function(){if(document.getElementById('tv-controls').style.display==='none'&&document.getElementById('tv-media-info').style.display==='none'&&!(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.menuOpen())){playerbar.style.opacity='0';playerbar.style.pointerEvents='none';}},6000);
 }
 var pp=document.getElementById('tv-player-playpause');
 function updatePlayPause(){if(pp)pp.textContent=video.paused?'▶ Oynat':'⏸ Duraklat';}
