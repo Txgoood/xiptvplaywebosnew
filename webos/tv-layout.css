@@ -396,3 +396,5 @@ body.tv-mode #tv-episodes-list button{font-size:19px!important;padding:11px!impo
 body.tv-mode #tv-next-episode{position:fixed;left:25%;right:25%;bottom:17%;background:rgba(8,28,33,.97);border:2px solid #00d6e6;color:#fff;padding:20px;border-radius:15px;z-index:155;text-align:center;font-size:25px}
 body.tv-mode #tv-next-episode button{font-size:20px;padding:13px;margin:14px 10px 0;background:#15535c;color:white;border:2px solid #00d6e6;border-radius:8px}
 body.tv-mode #tv-next-episode button:focus{outline:3px solid white}
+
+#tv-home .stitch-movie-tile .tv-new-episode-tag{position:absolute!important;top:6px!important;right:5px!important;left:auto!important;bottom:auto!important;background:#004d58!important;color:#fff!important;font-size:13px!important;padding:4px 6px!important;border-radius:5px!important;z-index:7!important}
