@@ -11,7 +11,8 @@
   var categories=document.getElementById('iptv-categories');
   var channels=document.getElementById('iptv-channels');
   var categoryList=[], channelList=[], selectedCategory='all', mode='live';
-  var catalogData=null, lastLive=null, connecting=false, startup=true, lastSeries=null, seriesCache={}, liveRetryCount=0, liveRetryPending=false;
+  var liveChannelOrder=[], lastChannelSwitchAt=0;
+   var catalogData=null, lastLive=null, connecting=false, startup=true, lastSeries=null, seriesCache={}, liveRetryCount=0, liveRetryPending=false;
   var PAGE_SIZE=60, currentPage=0, searchTimer=null, sortedCache={}, focusCache=null, categoryCache={};
   var server='',username='',password='';
   var SAVE_KEY='xiptv_webos2_xtream_local_v1';
@@ -244,6 +245,9 @@
       if(document.getElementById('tv-hide-adult').checked && /^(XXX|18\+|ADULT|🔞|❤)/i.test(catLabel))continue;
       matches.push(ch);
     }
+    // Preserve the category/filter/sort order for fullscreen channel zapping.
+    // Only a live list becomes a channel-change source; films and series never do.
+    if(mode==='live')liveChannelOrder=matches.slice(0);
     var totalPages=Math.max(1,Math.ceil(matches.length/PAGE_SIZE));
     if(currentPage>=totalPages)currentPage=totalPages-1;
     if(currentPage>0)action(channels,'◀ Önceki sayfa',function(){currentPage--;renderChannels();channels.scrollTop=0;});
@@ -316,6 +320,19 @@
     }
     renderChannels();
   }
+  function changeLiveChannel(step){
+    if(!lastLive||!liveChannelOrder.length)return;
+    var now=new Date().getTime();
+    if(now-lastChannelSwitchAt<650)return; // Do not open multiple streams on held keys.
+    var index=-1;
+    for(var i=0;i<liveChannelOrder.length;i++){
+      if(String(liveChannelOrder[i].stream_id)===String(lastLive.stream_id)){index=i;break;}
+    }
+    var next=index<0?(step>0?0:liveChannelOrder.length-1):(index+step+liveChannelOrder.length)%liveChannelOrder.length;
+    if(index===next)return;
+    lastChannelSwitchAt=now;
+    playChannel(liveChannelOrder[next]);
+  }
   function playChannel(item){
     lastLive=item;
     window.XIPTVTV.setPlayingItem('live',item);
@@ -363,6 +380,13 @@
     if(document.getElementById('tv-home').style.display!=='none')return;
     if(document.getElementById('iptv-keyboard').style.display!=='none')return;
     var key=e.keyCode||e.which;
+    // LG webOS 2 may report P+/P- as 33/34 or 427/428. On some firmware
+    // these keys are reserved by the OS; D-pad up/down is the fallback.
+    if(hasClass('tv-fullscreen')&&lastLive&&liveChannelOrder.length&&
+       (key===33||key===34||key===427||key===428||key===38||key===40)){
+      changeLiveChannel((key===33||key===427||key===38)?1:-1);
+      e.preventDefault();e.stopImmediatePropagation();return;
+    }
     if(key!==37&&key!==38&&key!==39&&key!==40&&key!==13&&key!==461&&key!==27)return;
     if((key===461||key===27)&&hasClass('tv-fullscreen')){setClass('tv-fullscreen',false);updatePlayerButtons();fullBtn.focus();e.preventDefault();e.stopImmediatePropagation();return;}
     var list=focusCache,i,el;
