@@ -13,8 +13,11 @@ function save(k,value){try{localStorage.setItem(prefix+scope+'_'+k,JSON.stringif
 function key(mode,item){return mode+':'+String(item.stream_id||item.series_id||item.id||'');}
 function favs(){if(!favoriteCache)favoriteCache=read('favorites',{});return favoriteCache;}
 function isFavorite(mode,item){return !!favs()[key(mode,item)];}
+function getFavoriteOrder(){var saved=read('liveFavoriteOrder',[]),favorites=favs(),out=saved.slice(0);for(var k in favorites)if(Object.prototype.hasOwnProperty.call(favorites,k)&&k.indexOf('live:')===0&&out.indexOf(k)<0)out.push(k);return out;}
+function moveFavoriteChannel(item,step){var k=key('live',item),order=getFavoriteOrder(),index=order.indexOf(k);if(index<0)return;var target=index+step;if(target<0||target>=order.length)return;var hold=order[target];order[target]=order[index];order[index]=hold;save('liveFavoriteOrder',order);if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();}
 function toggleFavorite(mode,item){
- var f=favs(),k=key(mode,item);if(f[k])delete f[k];else f[k]={name:String(item.name||''),type:mode};save('favorites',f);
+ var f=favs(),k=key(mode,item),adding=!f[k];if(f[k])delete f[k];else f[k]={name:String(item.name||''),type:mode};save('favorites',f);
+ if(mode==='live'){var order=getFavoriteOrder(),at=order.indexOf(k);if(adding&&at<0)order.push(k);else if(!adding&&at>=0)order.splice(at,1);save('liveFavoriteOrder',order);}
  if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();
  if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();
 }
@@ -209,6 +212,8 @@ window.XIPTVTV={
  canShowItem:function(mode,item){return !childProfile||isChildApproved(mode,item);},
  setProfile:function(id,child){childProfile=!!child;scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
  isFavorite:isFavorite,
+ getFavoriteOrder:getFavoriteOrder,
+ moveFavoriteChannel:moveFavoriteChannel,
  getResume:function(){return read('positions',{});},
  getResumeEpisodeMap:function(){return read('seriesEpisodes',{});},
  getNewEpisodeCount:function(seriesId){return Number(read('newEpisodes',{})[String(seriesId)]||0);},

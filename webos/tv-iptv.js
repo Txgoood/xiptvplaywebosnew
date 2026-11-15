@@ -258,9 +258,12 @@
     var sorting=document.getElementById('tv-sort').value;
     var cacheKey=mode+'|'+sorting;
     var list=sortedCache[cacheKey];
-    if(!list){list=channelList.slice(0);if(sorting==='old'||sorting==='new')list.sort(function(a,b){var x=Number(a.added||a.release_date||a.year||0),y=Number(b.added||b.release_date||b.year||0);return sorting==='old'?x-y:y-x;});if(sorting==='az')list.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''));});if(sorting==='za')list.sort(function(a,b){return String(b.name||'').localeCompare(String(a.name||''));});sortedCache[cacheKey]=list;}
+    if(!list){list=channelList.slice(0);if(sorting==='old'||sorting==='new')list.sort(function(a,b){var x=Number(a.added||a.release_date||a.year||0),y=Number(b.added||b.release_date||b.year||0);return sorting==='old'?x-y:y-x;});if(sorting==='az')list.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''));});if(sorting==='za')list.sort(function(a,b){return String(b.name||'').localeCompare(String(a.name||''));});if(sorting==='rating')list.sort(function(a,b){return Number(b.rating||b.vote_average||0)-Number(a.rating||a.vote_average||0);});sortedCache[cacheKey]=list;}
     var matches=[];
     var totalStreams=channelList.length;
+    var yearMin=Number(document.getElementById('tv-filter-year-min').value)||0;
+    var genreQuery=String(document.getElementById('tv-filter-genre').value||'').toLowerCase();
+    var ratingMin=Number(document.getElementById('tv-filter-min-rating').value)||0;
     var categoryNames={};for(var ca=0;ca<categoryList.length;ca++)categoryNames[String(categoryList[ca].category_id)]=String(categoryList[ca].category_name||'');
     var batch=document.createDocumentFragment();
     if(selectedCategory!=='all'){
@@ -279,6 +282,12 @@
       if(!window.XIPTVTV.filterFavorite(mode,ch))continue;
       if(window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(mode,ch))continue;
       var catLabel=categoryNames[String(ch.category_id)]||'';
+      if(mode!=='live'){
+        var year=Number(ch.year||String(ch.release_date||'').slice(0,4))||0;
+        if(yearMin&&(!year||year<yearMin))continue;
+        var rating=Number(ch.rating||ch.vote_average||0);if(ratingMin&&rating<ratingMin)continue;
+        if(genreQuery&&String(ch.genre||ch.genre_names||catLabel).toLowerCase().indexOf(genreQuery)<0)continue;
+      }
       if(document.getElementById('tv-tr-only').checked && catLabel.toUpperCase().indexOf('TR')!==0)continue;
       if(document.getElementById('tv-hide-adult').checked && /^(XXX|18\+|ADULT|🔞|❤)/i.test(catLabel))continue;
       matches.push(ch);
@@ -406,7 +415,8 @@
     playStream('live',lastLive.stream_id,'m3u8',lastLive.name);
   };
   document.getElementById('tv-search-scope').onchange=function(){currentPage=0;renderChannels();};
-  document.getElementById('tv-advanced-search').onclick=function(){var x=document.getElementById('tv-search-scope');x.style.display=x.style.display==='none'?'inline-block':'none';};
+  document.getElementById('tv-advanced-search').onclick=function(){var x=document.getElementById('tv-search-scope'),advanced=document.getElementById('tv-advanced-filters'),show=x.style.display==='none';x.style.display=show?'inline-block':'none';advanced.style.display=show?'block':'none';};
+  var filterIds=['tv-filter-year-min','tv-filter-genre','tv-filter-min-rating'];for(var fi=0;fi<filterIds.length;fi++){document.getElementById(filterIds[fi]).onkeyup=function(){clearTimeout(searchTimer);searchTimer=setTimeout(function(){currentPage=0;renderChannels();},250);};document.getElementById(filterIds[fi]).onchange=function(){currentPage=0;renderChannels();};}
   document.getElementById('tv-search').onkeyup=function(){clearTimeout(searchTimer);searchTimer=setTimeout(function(){currentPage=0;renderChannels();},250);};
   document.getElementById('tv-favorite-type').onchange=function(){document.getElementById('tv-favorite-only').checked=true;chooseMode(this.value);};
   document.getElementById('tv-sort').onchange=function(){currentPage=0;renderChannels();};

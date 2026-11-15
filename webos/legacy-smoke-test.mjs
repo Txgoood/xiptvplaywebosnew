@@ -97,6 +97,12 @@ new vm.Script(fs.readFileSync('webos-package/tv-lg-media.js','utf8'),{filename:'
 assert(featureScript.includes('scanNativeTracks'));
 assert(html.includes('id="tv-favorite-only"'));
 assert(html.includes('id="tv-search"'));
+assert(html.includes('id="tv-filter-year-min"'));
+assert(html.includes('id="tv-filter-genre"'));
+assert(html.includes('id="tv-filter-min-rating"'));
+assert(html.includes('id="tv-home-favorite-order"'));
+assert(featureScript.includes('moveFavoriteChannel'));
+assert(homeScript.includes('renderFavoriteControls'));
 assert(html.includes('id="tv-tr-only"'));
 assert(html.includes('id="tv-hide-adult"'));
 assert(html.includes('id="tv-speed"'));
