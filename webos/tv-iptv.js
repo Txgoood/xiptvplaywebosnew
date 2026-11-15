@@ -16,6 +16,23 @@
   var PAGE_SIZE=60, currentPage=0, searchTimer=null, sortedCache={}, focusCache=null, categoryCache={};
   var server='',username='',password='';
   var SAVE_KEY='xiptv_webos2_xtream_local_v1';
+  var HOME_CACHE_PREFIX='xiptv_webos2_home_preview_v1_';
+  function cacheKey(){var input=server+'|'+username,hash=0;for(var j=0;j<input.length;j++)hash=((hash<<5)-hash+input.charCodeAt(j))|0;return HOME_CACHE_PREFIX+String(hash);}
+  function displayCachedHome(){
+    try{
+      var cached=JSON.parse(localStorage.getItem(cacheKey())||'null');
+      if(!cached||!cached.time||new Date().getTime()-cached.time>48*3600000||!cached.data)return false;
+      if(window.XIPTVTVHome&&window.XIPTVTVHome.render)window.XIPTVTVHome.render(cached.data);
+      return true;
+    }catch(e){return false;}
+  }
+  function cacheHome(catalog){
+    try{
+      if(!window.XIPTVTVHome||!window.XIPTVTVHome.preview)return;
+      var preview=window.XIPTVTVHome.preview(catalog);
+      localStorage.setItem(cacheKey(),JSON.stringify({time:new Date().getTime(),data:preview}));
+    }catch(e){/* Full storage must never block IPTV playback. */}
+  }
   function savedCredentials(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'null');}catch(e){return null;}}
   function persistCredentials(){try{
     if(document.getElementById('iptv-remember').checked){
@@ -471,17 +488,26 @@
       if(err||!data.success){connecting=false;show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Doğrulama başarısız: '+(err?err.message:data.error||'Hesap reddedildi'));return;}
       server=data.effectiveServerUrl||server;
       persistCredentials();
-      say('Bağlantı başarılı, canlı TV kataloğu alınıyor...');
+      // A previously verified account can immediately browse a small local home preview,
+      // while the complete catalogue is refreshed from the provider.
+      if(startup&&displayCachedHome()){
+        startup=false;hide(panel);document.body.className='';
+        document.getElementById('tv-home').style.display='block';
+        document.getElementById('tv-nav-home').focus();
+        say('Önizleme hazır; tam katalog güncelleniyor...');
+      }else say('Bağlantı başarılı, canlı TV kataloğu alınıyor...');
       request('/api/iptv/xtream/catalog',{serverUrl:server,username:username,password:password},function(error,catalog){
         connecting=false;
         if(error){show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Katalog hatası: '+error.message);return;}
         catalogData=catalog;sortedCache={};categoryCache={};focusCache=null;currentPage=0;
+        cacheHome(catalog);
         if(!liveCategoryMatches(catalog))setTimeout(retryLiveCatalog,900);
         if(window.XIPTVTVHome&&window.XIPTVTVHome.render)window.XIPTVTVHome.render(catalog);
         window.XIPTVTV.catalogReady();
         hide(login);show(browser);
         if(startup){startup=false;hide(panel);document.body.className='';document.getElementById('tv-home').style.display='block';document.getElementById('tv-nav-home').focus();}
-        else chooseMode(window.XIPTVTV.startMode||'live');
+        else if(document.getElementById('tv-home').style.display==='none')chooseMode(window.XIPTVTV.startMode||'live');
+        else {hide(panel);document.body.className='';}
       });
     });
   };
