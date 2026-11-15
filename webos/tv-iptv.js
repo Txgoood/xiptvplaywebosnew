@@ -17,12 +17,24 @@
   var server='',username='',password='';
   var SAVE_KEY='xiptv_webos2_xtream_local_v1';
   var HOME_CACHE_PREFIX='xiptv_webos2_home_preview_v1_';
+  var bootAt=new Date().getTime(),verifyAt=0,catalogAt=0,previewReady=false,previewLocked=false;
+  var bootLayer=document.getElementById('tv-boot-mask');
+  function bootLock(on){previewLocked=on;if(bootLayer)bootLayer.style.display=on?'block':'none';}
+  function bootMetric(stage,ms){try{
+   var data=JSON.parse(localStorage.getItem('xiptv_webos_boot_timings_v1')||'{}');
+   data[stage]=Math.max(0,Math.floor(ms));data.updatedAt=new Date().toISOString();
+   localStorage.setItem('xiptv_webos_boot_timings_v1',JSON.stringify(data));
+   var label=document.getElementById('tv-boot-diagnostics');
+   if(label)label.textContent='Açılış ms · önizleme: '+(data.preview||'—')+' · giriş: '+(data.verify||'—')+' · katalog: '+(data.catalog||'—')+' · çizim: '+(data.render||'—');
+  }catch(e){}}
+  document.addEventListener('keydown',function(e){if(!previewLocked)return;if(e.preventDefault)e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();},true);
   function cacheKey(){var input=server+'|'+username,hash=0;for(var j=0;j<input.length;j++)hash=((hash<<5)-hash+input.charCodeAt(j))|0;return HOME_CACHE_PREFIX+String(hash);}
   function displayCachedHome(){
     try{
       var cached=JSON.parse(localStorage.getItem(cacheKey())||'null');
       if(!cached||!cached.time||new Date().getTime()-cached.time>48*3600000||!cached.data)return false;
       if(window.XIPTVTVHome&&window.XIPTVTVHome.render)window.XIPTVTVHome.render(cached.data);
+      previewReady=true;bootMetric('preview',new Date().getTime()-bootAt);
       return true;
     }catch(e){return false;}
   }
@@ -572,43 +584,52 @@
     password=document.getElementById('iptv-pass').value;
     if(!server||!username||!password){say('Sunucu, kullanıcı ve şifre zorunludur');show(login);hide(browser);return;}
     if(connecting)return;
-    connecting=true;
+    connecting=true;verifyAt=new Date().getTime();
     if(server.indexOf('http://')!==0 && server.indexOf('https://')!==0)server='http://'+server;
     say('Xtream bağlantısı doğrulanıyor...');
     request('/api/iptv/xtream/verify',{serverUrl:server,username:username,password:password},function(err,data){
-      if(err||!data.success){connecting=false;show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Doğrulama başarısız: '+(err?err.message:data.error||'Hesap reddedildi'));return;}
+      if(err||!data.success){connecting=false;bootLock(false);previewReady=false;show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Doğrulama başarısız: '+(err?err.message:data.error||'Hesap reddedildi'));return;}
+      bootMetric('verify',new Date().getTime()-verifyAt);bootLock(false);
       server=data.effectiveServerUrl||server;
       persistCredentials();
       // A previously verified account can immediately browse a small local home preview,
       // while the complete catalogue is refreshed from the provider.
-      if(startup&&displayCachedHome()){
-        startup=false;hide(panel);document.body.className='';
-        document.getElementById('tv-home').style.display='block';
-        document.getElementById('tv-nav-home').focus();
-        say('Önizleme hazır; tam katalog güncelleniyor...');
-      }else say('Bağlantı başarılı, canlı TV kataloğu alınıyor...');
+      if(startup&&!previewReady&&displayCachedHome()){startup=false;hide(panel);document.body.className='';document.getElementById('tv-home').style.display='block';document.getElementById('tv-nav-home').focus();}
+      if(previewReady){startup=false;hide(panel);document.getElementById('tv-home').style.display='block';}
+      say('Bağlantı doğrulandı; katalog güncelleniyor...');
+      catalogAt=new Date().getTime();
       request('/api/iptv/xtream/catalog',{serverUrl:server,username:username,password:password},function(error,catalog){
         connecting=false;
-        if(error){show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Katalog hatası: '+error.message);return;}
+        if(error){if(!previewReady){show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';}say('Katalog güncellenemedi: '+error.message);return;}
+        bootMetric('catalog',new Date().getTime()-catalogAt);
         catalogData=catalog;sortedCache={};categoryCache={};focusCache=null;currentPage=0;
         trackNewCatalogItems(catalog);
         cacheHome(catalog);
         try{localStorage.setItem('xiptv_webos2_last_catalog_refresh',new Date().toISOString());}catch(e){}
         var updated=document.getElementById('tv-last-catalog-update');if(updated)updated.textContent='Son katalog yenileme: '+new Date().toLocaleString('tr-TR');
         if(!liveCategoryMatches(catalog))setTimeout(retryLiveCatalog,900);
-        if(window.XIPTVTVHome&&window.XIPTVTVHome.render)window.XIPTVTVHome.render(catalog);
-        window.XIPTVTV.catalogReady();
         hide(login);show(browser);
         if(startup){startup=false;hide(panel);document.body.className='';document.getElementById('tv-home').style.display='block';document.getElementById('tv-nav-home').focus();}
-        else if(document.getElementById('tv-home').style.display==='none')chooseMode(window.XIPTVTV.startMode||'live');
-        else {hide(panel);document.body.className='';}
+        else if(document.getElementById('tv-home').style.display!=='none'){hide(panel);document.body.className='';}
+        var paintAt=new Date().getTime();
+        setTimeout(function(){
+          if(window.XIPTVTVHome&&window.XIPTVTVHome.render)window.XIPTVTVHome.render(catalog);
+          window.XIPTVTV.catalogReady();
+          if(document.getElementById('tv-home').style.display==='none')chooseMode(window.XIPTVTV.startMode||'live');
+          bootMetric('render',new Date().getTime()-paintAt);
+        },30);
       });
     });
   };
   var manualRefresh=document.getElementById('tv-manual-catalog-refresh');if(manualRefresh)manualRefresh.onclick=function(){document.getElementById('iptv-connect').click();};
   // Startup: connect silently with saved credentials; show login only on failure.
   if(hydrate()){
-    show(panel);hide(login);hide(browser);say('Katalog otomatik yükleniyor...');document.getElementById('iptv-connect').click();
+    server=document.getElementById('iptv-server').value.trim().replace(/\/+$/,'');
+    username=document.getElementById('iptv-user').value.trim();
+    password=document.getElementById('iptv-pass').value;
+    if(displayCachedHome()){document.getElementById('tv-home').style.display='block';hide(panel);hide(login);hide(browser);bootLock(true);}
+    else{show(panel);hide(login);hide(browser);say('İlk katalog alınıyor; sonraki açılış daha hızlı olacak...');}
+    document.getElementById('iptv-connect').click();
   }else{
     show(panel);show(login);hide(browser);
     document.getElementById('tv-home').style.display='none';

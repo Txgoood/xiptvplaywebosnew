@@ -428,3 +428,7 @@ body.tv-mode.tv-fullscreen #tv-lg-subtitle-overlay.tv-sub-position-high{bottom:3
 #tv-metadata-modal #tv-metadata-collection,#tv-metadata-modal #tv-metadata-actors{font-size:19px;color:#fff;background:#173847;border:2px solid #00aabe;border-radius:8px;padding:10px;margin:8px}
 #tv-metadata-modal #tv-metadata-related{clear:both;margin:12px 0;max-height:180px;overflow-y:auto}
 #tv-metadata-modal #tv-metadata-related button{font-size:16px!important;padding:8px 11px!important;margin:5px!important}
+
+/* v1.0.46 cached-first home while verifying safely */
+#tv-boot-mask{position:fixed;left:0;right:0;top:0;bottom:0;z-index:9999;background:rgba(5,12,22,.25)}
+#tv-boot-message{position:absolute;left:18%;right:9%;bottom:6%;background:rgba(7,30,39,.97);color:white;border:2px solid #00deed;border-radius:10px;text-align:center;padding:18px;font-size:22px}
