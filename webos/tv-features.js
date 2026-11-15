@@ -1,6 +1,6 @@
 /* XIPTV TV companion controls, ES5-safe. User data stays on this television. */
 (function(){
-var video=document.getElementById('video'),currentKey='',scope='default',playingItem=null,playingMode='live',childProfile=false;
+var video=document.getElementById('video'),currentKey='',currentEpisodeKey='',scope='default',playingItem=null,playingMode='live',childProfile=false;
 var favButton=document.getElementById('tv-video-favorite');
 var prefix='xiptv_webos2_media_v1_',favoriteCache=null;
 var CHILD_APPROVALS='xiptv_webos2_parent_approved_v1',approvedCache=null;
@@ -210,12 +210,13 @@ window.XIPTVTV={
  setProfile:function(id,child){childProfile=!!child;scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
  isFavorite:isFavorite,
  getResume:function(){return read('positions',{});},
- getMediaProgress:function(mode,item){var k=key(mode,item),positions=read('positions',{}),durations=read('durations',{}),watched=read('watched',{}),pos=Number(positions[k]||0),duration=Number(durations[k]||0);return {position:pos,duration:duration,percent:duration>0?Math.min(100,Math.round(100*pos/duration)):0,watched:!!watched[k]};},
+ getMediaProgress:function(mode,item){var k=key(mode,item),positions=read('positions',{}),durations=read('durations',{}),watched=read('watched',{}),pos=Number(positions[k]||0),duration=Number(durations[k]||0);return {position:pos,duration:duration,percent:duration>0?Math.min(100,Math.round(100*pos/duration)):0,watched:mode==='series'?false:!!watched[k]};},
  decorateItem:decorateItem,
  beforePlay:function(kind,id,url,name){
    // Bölüm kimliği yerine ana dizinin kimliğini kullan: ana sayfa doğru diziyi bulur.
    currentKey=kind==='series'&&playingItem&&playingItem.series_id
      ? 'series:'+String(playingItem.series_id) : kind+':'+String(id);
+   currentEpisodeKey=kind==='series'&&playingItem&&playingItem.series_id?'episode:'+String(playingItem.series_id)+':'+String(id):'';
    if(kind==='series'&&playingItem&&playingItem.series_id){
      var episodeMap=read('seriesEpisodes',{});
      episodeMap['series:'+String(playingItem.series_id)]=String(id);
@@ -240,12 +241,12 @@ video.addEventListener('timeupdate',function(){
  if(!currentKey||!video.duration||video.currentTime<5)return;
  var now=Date.now();if(now-(window.XIPTVTV.lastSave||0)<10000)return;
  window.XIPTVTV.lastSave=now;
- var positions=read('positions',{});positions[currentKey]=Math.floor(video.currentTime);save('positions',positions);
- if(isFinite(video.duration)&&video.duration>0){var durations=read('durations',{});durations[currentKey]=Math.floor(video.duration);save('durations',durations);}
+ var positions=read('positions',{});positions[currentKey]=Math.floor(video.currentTime);if(currentEpisodeKey)positions[currentEpisodeKey]=Math.floor(video.currentTime);save('positions',positions);
+ if(isFinite(video.duration)&&video.duration>0){var durations=read('durations',{});durations[currentKey]=Math.floor(video.duration);if(currentEpisodeKey)durations[currentEpisodeKey]=Math.floor(video.duration);save('durations',durations);}
 },false);
 video.addEventListener('ended',function(){
- if(!currentKey)return;var positions=read('positions',{});delete positions[currentKey];save('positions',positions);
- var watched=read('watched',{});watched[currentKey]=true;save('watched',watched);
+ if(!currentKey)return;var positions=read('positions',{});delete positions[currentKey];if(currentEpisodeKey)delete positions[currentEpisodeKey];save('positions',positions);
+ var watched=read('watched',{});if(currentEpisodeKey)watched[currentEpisodeKey]=true;else watched[currentKey]=true;save('watched',watched);
  if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();
 },false);
 })();
