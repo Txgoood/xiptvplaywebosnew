@@ -23,6 +23,14 @@ function open(section){
  window.XIPTVTV.openSection(window.XIPTVTV.startMode);
 }
 function clear(node){while(node.firstChild)node.removeChild(node.firstChild);}
+function decorateProgress(button,mode,item){
+ if(!window.XIPTVTV||!window.XIPTVTV.getMediaProgress)return;
+ var progress=window.XIPTVTV.getMediaProgress(mode,item);
+ if(progress.watched){var tag=document.createElement('strong');tag.className='tv-watched-tag';tag.textContent='✓ İzlendi';button.appendChild(tag);return;}
+ if(progress.percent<=0||progress.percent>=100)return;
+ var track=document.createElement('span');track.className='tv-poster-progress';var bar=document.createElement('i');bar.style.width=progress.percent+'%';track.appendChild(bar);button.appendChild(track);
+ var tag=document.createElement('strong');tag.className='tv-progress-tag';tag.textContent=progress.percent+'% izlendi';button.appendChild(tag);
+}
 function shelf(node,items,type,limit){
  clear(node);
  if(!items.length){var empty=document.createElement('div');empty.className='stitch-empty';empty.textContent=(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile())?'Ebeveyn onaylı içerik bulunamadı. Yetişkin profilinden Çocuğa izin ver seçeneğini kullanın.':'Henüz içerik bulunamadı.';node.appendChild(empty);return;}
@@ -32,6 +40,7 @@ function shelf(node,items,type,limit){
   var cover=String(item.stream_icon||item.cover_big||item.cover||'');
   if(/^https?:\/\//i.test(cover)){var img=document.createElement('img');img.src=cover;img.alt='';img.onerror=function(){this.style.display='none';};b.appendChild(img);}
   var title=document.createElement('span');title.textContent=String(item.name||item.title||'İçerik');b.appendChild(title);
+  if(type==='films'||type==='series')decorateProgress(b,type==='films'?'movie':'series',item);
   b.onclick=function(){open(type==='films'?'films':type==='series'?'series':'live');window.XIPTVTV.openItem(type==='films'?'movie':type==='series'?'series':'live',item);};
   node.appendChild(b);
  })(items[n]);}
@@ -99,6 +108,7 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
   var im=String(record.item.stream_icon||record.item.cover||'');
   if(/^https?:\/\//i.test(im)){var pic=document.createElement('img');pic.src=im;pic.alt='';pic.onerror=function(){this.style.display='none';};b.appendChild(pic);}
   var title=document.createElement('span');title.textContent=String(record.item.name||record.item.title||'İçerik');b.appendChild(title);
+  decorateProgress(b,record.type==='films'?'movie':'series',record.item);
   b.onclick=function(){open(record.type);if(record.type==='series')window.XIPTVTV.resumeSeriesFromHome=true;window.XIPTVTV.openItem(record.type==='films'?'movie':'series',record.item);};
   node.appendChild(b);
  })(continuing[z]);}
