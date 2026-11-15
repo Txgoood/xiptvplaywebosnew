@@ -50,7 +50,7 @@ function usePoster(image,item,type){
  var url=String(image.getAttribute('src')||'');
  if(!url)missing();
 }
-function normalizedTitle(value){return String(value||'').toLowerCase().replace(/[ıİ]/g,'i').replace(/\\b(19|20)\\d{2}\\b/g,'').replace(/\\b(4k|uhd|1080p|720p|tr dublaj)\\b/g,'').replace(/[^a-z0-9çğıöşü]+/gi,' ').replace(/^\\s+|\\s+$/g,'');}
+function normalizedTitle(value){return String(value||'').toLowerCase().replace(/[ıİ]/g,'i').replace(/\b(19|20)\d{2}\b/g,'').replace(/\b(4k|uhd|1080p|720p|tr dublaj)\b/g,'').replace(/[^a-z0-9çğıöşü]+/gi,' ').replace(/^\s+|\s+$/g,'');}
 function collectionParts(collectionId,callback){
  var id=Number(collectionId);if(!id||id<1){callback(null);return;}
  var xhr=new XMLHttpRequest();xhr.open('GET',BASE+'/api/tmdb/details?collectionId='+encodeURIComponent(id),true);xhr.timeout=14000;
