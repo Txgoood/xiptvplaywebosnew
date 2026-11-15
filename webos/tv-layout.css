@@ -379,3 +379,12 @@ body.tv-mode #iptv-channels .tv-item-wrap>.tv-card-child-approve:focus{outline:3
 #tv-settings-panel .tv-shelf-order-row span{font-size:15px;flex:1}
 #tv-settings-panel .tv-shelf-order-row button{display:inline-block!important;width:39px!important;min-width:39px!important;text-align:center!important;padding:6px 4px!important;margin:3px!important}
 #tv-home #tv-kids-shortcut{background:#086b6f!important;border-color:#1af6ee!important}
+
+/* v1.0.39: lightweight metadata dialog. */
+#tv-metadata-modal{position:fixed;z-index:210;left:14%;right:14%;top:12%;bottom:11%;box-sizing:border-box;overflow-y:auto;padding:30px 34px;background:rgba(8,21,29,.98);color:#fff;border:2px solid #00dbe7;border-radius:18px;box-shadow:0 8px 40px #000}
+#tv-metadata-modal h2{font-size:35px;line-height:1.2;margin:5px 0 20px;color:#efffff}
+#tv-metadata-modal #tv-metadata-poster{float:left;width:22%;max-height:55%;object-fit:cover;margin:0 25px 16px 0;border-radius:8px}
+#tv-metadata-modal p{font-size:20px;line-height:1.5;white-space:pre-wrap}
+#tv-metadata-modal #tv-metadata-facts{font-size:18px;color:#a5eff4}
+#tv-metadata-modal button{background:#12545e;color:white;border:2px solid #00dbe7;border-radius:9px;font-size:21px;padding:13px 23px;margin:15px 15px 0 0}
+#tv-metadata-modal button:focus{outline:4px solid white}
