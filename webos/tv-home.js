@@ -25,7 +25,7 @@ function open(section){
 function clear(node){while(node.firstChild)node.removeChild(node.firstChild);}
 function shelf(node,items,type,limit){
  clear(node);
- if(!items.length){var empty=document.createElement('div');empty.className='stitch-empty';empty.textContent='Henüz içerik bulunamadı.';node.appendChild(empty);return;}
+ if(!items.length){var empty=document.createElement('div');empty.className='stitch-empty';empty.textContent=(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile())?'Ebeveyn onaylı içerik bulunamadı. Yetişkin profilinden Çocuğa izin ver seçeneğini kullanın.':'Henüz içerik bulunamadı.';node.appendChild(empty);return;}
  for(var n=0;n<items.length&&n<limit;n++){(function(item){
   var b=document.createElement('button');b.type='button';b.className='stitch-movie-tile';
   b.setAttribute('aria-label',String(item.name||item.title||'İçerik'));
@@ -75,12 +75,17 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  var childMovies=recommendations(movies,catalog.vodCategories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|disney|pixar|çizgi|cizgi/i,12,true);
  var familyMovies=recommendations(movies,catalog.vodCategories,/family|aile|animasyon|animation|çocuk|cocuk|kids|disney|pixar/i,12,true);
  var childShows=recommendations(series,catalog.seriesCategories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|çizgi|cizgi/i,12,true);
+ // Child mode uses an explicit allowlist, never category labels as age certification.
+ if(child&&window.XIPTVTV&&window.XIPTVTV.isChildApproved){
+  function approvedOnly(items,mode){var out=[];for(var i=0;i<items.length;i++)if(window.XIPTVTV.isChildApproved(mode,items[i]))out.push(items[i]);return out;}
+  childMovies=approvedOnly(movies,'movie');childShows=approvedOnly(series,'series');familyMovies=approvedOnly(familyMovies,'movie');
+ }
  shelf(document.getElementById('stitch-kids-movies'),childMovies,'films',12);
  shelf(document.getElementById('stitch-family'),familyMovies,'films',12);
  shelf(document.getElementById('stitch-kids-series'),childShows,'series',12);
  shelf(document.getElementById('stitch-recent'),child?childMovies:movies,'films',9);
  var favorites=[],recent=[];
- var childChannels=child?recommendations(channels,catalog.liveCategories,/çocuk|cocuk|kids|cartoon|çizgi|cizgi|disney|nick|baby/i,30,true):channels;
+ var childChannels=child?channels.filter(function(item){return window.XIPTVTV&&window.XIPTVTV.isChildApproved&&window.XIPTVTV.isChildApproved('live',item);}):channels;
  for(var c=0;c<childChannels.length&&favorites.length<8;c++)if(window.XIPTVTV.isFavorite('live',childChannels[c]))favorites.push(childChannels[c]);
  shelf(document.getElementById('stitch-favorites'),favorites,'live',8);
  var resume=window.XIPTVTV.getResume(),continuing=[];
