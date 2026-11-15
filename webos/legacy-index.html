@@ -44,6 +44,9 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <div id="stitch-continue" class="stitch-tiles"><div class="stitch-empty">Filmler ve diziler oynatıldıkça burada görünecek.</div></div>
 <div class="stitch-heading"><strong>Favori Kanallar</strong><span>Canlı yayınlara hızlı erişim</span></div>
 <div id="stitch-favorites" class="stitch-tiles"><div class="stitch-empty">Favori kanallarını burada bulacaksın.</div></div>
+<div class="stitch-heading"><strong>Çocuklara Özel Filmler</strong><span>Katalogdaki çocuk ve animasyon kategorileri</span></div><div id="stitch-kids-movies" class="stitch-tiles"></div>
+<div class="stitch-heading"><strong>Çocuk Dizileri ve Çizgi Filmler</strong><span>Küçük izleyiciler için keşfet</span></div><div id="stitch-kids-series" class="stitch-tiles"></div>
+<div class="stitch-heading"><strong>Hafta Sonu Aile Sineması</strong><span>Aile ve animasyon kategorilerinden seçmeler</span></div><div id="stitch-family" class="stitch-tiles"></div>
 <div class="stitch-heading"><strong>Filmler ve Diziler</strong><span>Xtream kataloğun</span></div>
 <div id="stitch-recent" class="stitch-tiles"><div class="stitch-empty">Kataloğu açarak içerikleri görüntüleyebilirsin.</div></div>
 <div class="stitch-heading"><strong>Diziler</strong><span>Tüm diziler kataloğu</span></div><div id="stitch-series" class="stitch-tiles"></div>
@@ -53,7 +56,7 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <button id="tv-show-diagnostics" type="button">Tanılama</button>
 </section>
 <div id="tv-diagnostics" style="display:none">
-<p>Video oynatma tanılama sürümü <b>v1.0.34</b></p>
+<p>Video oynatma tanılama sürümü <b>v1.0.35</b></p>
 <button id="system">Sistem Kontrolü</button>
 <button id="local">Yerel Video</button>
 <button id="remote">İnternet Video</button>
@@ -69,7 +72,7 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <button id="iptv-open" type="button">Canlı TV (Xtream)</button>
 </div>
 <section id="iptv-panel" style="display:none;background:#1c2b38;padding:20px;margin:16px 0;border:2px solid #497082">
-<div id="tv-favorites-panel" style="display:none"><h2>Favoriler</h2><button id="tv-fav-live" type="button">Canlı TV</button><button id="tv-fav-movie" type="button">Filmler</button><button id="tv-fav-series" type="button">Diziler</button></div><div id="tv-settings-panel" style="display:none"><h2>Ayarlar</h2><button id="tv-settings-close" type="button">Kapat</button><p id="tv-settings-version">XIPTV Play LG webOS v1.0.34</p><button id="tv-settings-player" type="button">Oynatıcı Ayarları</button><button id="tv-settings-profiles" type="button">Profiller</button><button id="tv-settings-connection" type="button">Bağlantı Ayarları</button><button id="tv-settings-diagnostics" type="button">Geliştirici Araçları</button><label><input id="tv-settings-tr" type="checkbox"> TR kategorileri</label><label><input id="tv-settings-adult" type="checkbox"> Yetişkin kategorilerini gizle</label></div><button id="iptv-hide" type="button" style="display:none">TV Menüsünü Kapat</button>
+<div id="tv-favorites-panel" style="display:none"><h2>Favoriler</h2><button id="tv-fav-live" type="button">Canlı TV</button><button id="tv-fav-movie" type="button">Filmler</button><button id="tv-fav-series" type="button">Diziler</button></div><div id="tv-settings-panel" style="display:none"><h2>Ayarlar</h2><button id="tv-settings-close" type="button">Kapat</button><p id="tv-settings-version">XIPTV Play LG webOS v1.0.35</p><button id="tv-settings-player" type="button">Oynatıcı Ayarları</button><button id="tv-settings-profiles" type="button">Profiller</button><button id="tv-settings-connection" type="button">Bağlantı Ayarları</button><button id="tv-settings-diagnostics" type="button">Geliştirici Araçları</button><label><input id="tv-settings-tr" type="checkbox"> TR kategorileri</label><label><input id="tv-settings-adult" type="checkbox"> Yetişkin kategorilerini gizle</label></div><button id="iptv-hide" type="button" style="display:none">TV Menüsünü Kapat</button>
 <div id="iptv-login">
 <p>Xtream Codes bağlantısı — giriş bilgileriniz hatırlanabilir. Bağlantı başarısız olursa bu ekran açılır.</p>
 <p><label>Sunucu adresi <input id="iptv-server" type="url" placeholder="http://sunucu:port" autocomplete="off" style="font-size:22px;padding:10px;width:55%" /> <button id="iptv-server-keyboard" type="button">Klavye Aç</button></label></p>
