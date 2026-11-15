@@ -126,7 +126,7 @@ try{var savedFilters=JSON.parse(localStorage.getItem(FILTER_KEY)||'{}');document
 document.getElementById('tv-settings-tr').onchange=syncFilters;
 document.getElementById('tv-settings-adult').onchange=syncFilters;
 document.getElementById('tv-settings-close').onclick=function(){settings(false);document.getElementById('tv-nav-settings').focus();};
-document.getElementById('tv-settings-player').onclick=function(){settings(false);open('live');document.getElementById('tv-controls-toggle').click();};
+document.getElementById('tv-settings-player').onclick=function(){settings(false);open('live');var tools=document.getElementById('tv-player-settings');if(tools)tools.click();else document.getElementById('tv-controls-toggle').click();};
 document.getElementById('tv-settings-profiles').onclick=function(){settings(false);open('live');document.getElementById('tv-profile-switch').click();};
 document.getElementById('tv-settings-connection').onclick=function(){settings(false);open('live');document.getElementById('iptv-login').style.display='block';document.getElementById('iptv-browser').style.display='none';};
 document.getElementById('tv-settings-diagnostics').onclick=function(){settings(false);document.getElementById('tv-show-diagnostics').click();};
