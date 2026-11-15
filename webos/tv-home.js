@@ -129,19 +129,29 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  home.className=home.className.replace(/\s*tv-kids-screen/g,'')+(child?' tv-kids-screen':'');
  var childHidden=['stitch-recent','stitch-series'];for(var hi=0;hi<childHidden.length;hi++){var hiddenNode=document.getElementById(childHidden[hi]);if(hiddenNode){hiddenNode.style.display=child?'none':'';if(hiddenNode.previousElementSibling)hiddenNode.previousElementSibling.style.display=child?'none':'';}}
  var childMovies=recommendations(movies,catalog.vodCategories,/çocuk|cocuk|kids|animasyon|animation|cartoon|family|aile|disney|pixar|çizgi|cizgi/i,12,true);
- var familyMovies=recommendations(movies,catalog.vodCategories,/family|aile|animasyon|animation|çocuk|cocuk|kids|disney|pixar/i,12,true);
+ // Weekend picks are catalog-based suggestions, not certified age ratings.
+ // Keep a larger pool so the row can rotate weekly without changing the film's ID.
+ var familyCandidates=recommendations(movies,catalog.vodCategories,/family|aile|animasyon|animation|çocuk|cocuk|kids|disney|pixar|çizgi|cizgi/i,48,true);
+ var familyMovies=familyCandidates.slice(0);
+ var familyWeek=Math.floor(new Date().getTime()/604800000);
+ if(familyMovies.length>1){
+  var familyShift=familyWeek%familyMovies.length;
+  familyMovies=familyMovies.slice(familyShift).concat(familyMovies.slice(0,familyShift));
+ }
  var ageYoung=[],ageOlder=[],c;
  if(window.XIPTVMetadata){
-  for(c=0;c<familyMovies.length;c++){
-   var verified=window.XIPTVMetadata.knownAge(familyMovies[c],'movie');
-   if(verified!==null&&verified<=9)ageYoung.push(familyMovies[c]);
-   if(verified!==null&&verified<=12)ageOlder.push(familyMovies[c]);
+  for(c=0;c<familyCandidates.length;c++){
+   var verified=window.XIPTVMetadata.knownAge(familyCandidates[c],'movie');
+   if(verified!==null&&verified<=9)ageYoung.push(familyCandidates[c]);
+   if(verified!==null&&verified<=12)ageOlder.push(familyCandidates[c]);
   }
-  // Until certification succeeds, the family row fails closed rather than show adult films.
-  familyMovies=ageOlder.slice(0);
+  // Keep the adults' weekend recommendations independent of TMDb availability.
+  // On a child profile, only explicitly parent-approved and age-verified
+  // family titles may appear in the weekend row.
+  if(child)familyMovies=ageOlder.slice(0);
   if(!ageLookupStarted&&movies.length>30){
    ageLookupStarted=true;
-   var candidates=recommendations(movies,catalog.vodCategories,/family|aile|animasyon|animation|çocuk|cocuk|kids|disney|pixar/i,12,true);
+   var candidates=familyCandidates.slice(0,12);
    setTimeout(function(){window.XIPTVMetadata.checkAge(candidates,'movie',function(){if(window.XIPTVTVHome)window.XIPTVTVHome.refresh();});},2000);
   }
  }
@@ -188,8 +198,7 @@ window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(th
  shelf(document.getElementById('stitch-series'),child?childShows:series,'series',8);
  shelf(document.getElementById('stitch-live'),child?childChannels:channels,'live',8);
  window.XIPTVTVHome.data={movies:child?childMovies:movies,series:child?childShows:series,channels:child?childChannels:channels};
- // Weekly rotation makes family cinema recommendations change without random reshuffling per launch.
- if(familyMovies.length>1){var shift=Math.floor(new Date().getTime()/604800000)%familyMovies.length;familyMovies=familyMovies.slice(shift).concat(familyMovies.slice(0,shift));shelf(document.getElementById('stitch-family'),familyMovies,'films',12);}
+ // Weekend shelf is pre-rotated, and is refreshed when the age check completes.
  // Enforce the final result after every render, including age-check and catalog refresh.
  syncShelfVisibility(child);
  var lead=(child?childMovies:movies)[0];
