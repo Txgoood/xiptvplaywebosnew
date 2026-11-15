@@ -122,6 +122,15 @@
     document.getElementById('tv-now-playing').textContent=mode==='live'?'Canlı TV':mode==='movie'?'Filmler':'Diziler';
     renderCategories();
   }
+  var activeEpisodeQueue=[],activeEpisodeIndex=-1;
+  function startEpisode(entry,index){
+    if(!entry||!entry.item)return;
+    activeEpisodeIndex=index;
+    var ep=entry.item,ext=String(ep.container_extension||'mp4').replace(/[^a-zA-Z0-9]/g,'');
+    document.getElementById('tv-episodes').style.display='none';
+    document.getElementById('tv-next-episode').style.display='none';
+    playStream('series',ep.id,ext,ep.title||'Dizi Bölümü');
+  }
   function showSeries(item){
     var id=item.series_id;
     if(!id){say('Dizi bilgisi eksik');return;}
@@ -136,26 +145,26 @@
       var description=metadata.plot||metadata.description||metadata.storyline||'';
       if(description)document.getElementById('tv-media-info-text').textContent=String(item.name||'Dizi')+' — '+String(description);
       var seasons=data.episodes||{}, episodes=[],selector=document.getElementById('tv-season-select'),seasonTools=document.getElementById('tv-season-tools');
+      var seasonKeys=Object.keys(seasons).sort(function(a,b){return Number(a)-Number(b);});
       while(selector.firstChild)selector.removeChild(selector.firstChild);
-      for(var sn in seasons)if(Object.prototype.hasOwnProperty.call(seasons,sn)){var option=document.createElement('option');option.value=sn;option.text='Sezon '+sn;selector.appendChild(option);}
+      for(var snIndex=0;snIndex<seasonKeys.length;snIndex++){var sn=seasonKeys[snIndex],option=document.createElement('option');option.value=sn;option.text='Sezon '+sn;selector.appendChild(option);}
       seasonTools.style.display='block';
-      for(var season in seasons){if(Object.prototype.hasOwnProperty.call(seasons,season)){
-        var group=seasons[season];
-        if(group&&group.length)for(var i=0;i<group.length;i++)episodes.push({season:season,item:group[i]});
-      }}
+      for(var sk=0;sk<seasonKeys.length;sk++){
+        var season=seasonKeys[sk],group=(seasons[season]||[]).slice(0).sort(function(a,b){return Number(a.episode_num||0)-Number(b.episode_num||0);});
+        for(var gi=0;gi<group.length;gi++)episodes.push({season:season,item:group[gi]});
+      }
+      activeEpisodeQueue=episodes;activeEpisodeIndex=-1;
       if(!episodes.length){say('Bu dizi için bölüm bulunamadı');return;}
       var popup=document.getElementById('tv-episodes'),list=document.getElementById('tv-episodes-list');
       focusCache=null;
       clear(list);popup.style.display='block';
       document.getElementById('tv-episodes-title').textContent=item.name||'Dizi Bölümleri';
       for(var x=0;x<episodes.length&&x<250;x++){(function(ep){
-        action(list,'Sezon '+ep.season+' • '+String(ep.item.title||ep.item.episode_num||'Bölüm'),function(){
-          popup.style.display='none';
-          var ext=String(ep.item.container_extension||'mp4').replace(/[^a-zA-Z0-9]/g,'');
-          playStream('series',ep.item.id,ext,ep.item.title||'Dizi Bölümü');
+        action(list,(window.XIPTVTV.isEpisodeWatched&&window.XIPTVTV.isEpisodeWatched(id,ep.item.id)?'✓ İzlenen · ':'')+'Sezon '+ep.season+' • '+String(ep.item.title||ep.item.episode_num||'Bölüm'),function(){
+          startEpisode(ep,episodes.indexOf(ep));
         });
       })(episodes[x]);}
-      function paintSeason(){var target=document.getElementById('tv-season-episodes');clear(target);var chosen=seasons[selector.value]||[];for(var z=0;z<chosen.length;z++)(function(ep){action(target,String(ep.title||ep.episode_num||'Bölüm'),function(){var ext=String(ep.container_extension||'mp4').replace(/[^a-zA-Z0-9]/g,'');playStream('series',ep.id,ext,ep.title||'Dizi Bölümü');});})(chosen[z]);}
+      function paintSeason(){var target=document.getElementById('tv-season-episodes');clear(target);var chosen=(seasons[selector.value]||[]).slice(0).sort(function(a,b){return Number(a.episode_num||0)-Number(b.episode_num||0);});for(var z=0;z<chosen.length;z++)(function(ep){action(target,(window.XIPTVTV.isEpisodeWatched&&window.XIPTVTV.isEpisodeWatched(id,ep.id)?'✓ ':'')+String(ep.title||ep.episode_num||'Bölüm'),function(){for(var j=0;j<episodes.length;j++)if(String(episodes[j].item.id)===String(ep.id)){startEpisode(episodes[j],j);return;}});})(chosen[z]);}
       selector.onchange=paintSeason;paintSeason();
       if(window.XIPTVTV.resumeSeriesFromHome){
         window.XIPTVTV.resumeSeriesFromHome=false;
@@ -163,7 +172,7 @@
         var wanted=map['series:'+String(id)];
         for(var q=0;q<episodes.length;q++)if(String(episodes[q].item.id)===String(wanted)){
           var ep=episodes[q].item,ext=String(ep.container_extension||'mp4').replace(/[^a-zA-Z0-9]/g,'');
-          popup.style.display='none';playStream('series',ep.id,ext,ep.title||'Dizi Bölümü');return;
+          popup.style.display='none';startEpisode(episodes[q],q);return;
         }
       }
       say(episodes.length+' bölüm bulundu. Bölüm seç.');
@@ -171,7 +180,16 @@
     if(cached)onSeries(null,cached);
     else request('/api/iptv/xtream/series_info',{serverUrl:server,username:username,password:password,seriesId:id},onSeries);
   }
+  video.addEventListener('ended',function(){
+    if(!lastSeries||activeEpisodeIndex<0||activeEpisodeIndex+1>=activeEpisodeQueue.length)return;
+    var next=document.getElementById('tv-next-episode'),entry=activeEpisodeQueue[activeEpisodeIndex+1];
+    document.getElementById('tv-next-episode-label').textContent='Sıradaki: Sezon '+entry.season+' · '+String(entry.item.title||entry.item.episode_num||'Bölüm');
+    next.style.display='block';document.getElementById('tv-next-episode-play').focus();
+  },false);
+  document.getElementById('tv-next-episode-play').onclick=function(){startEpisode(activeEpisodeQueue[activeEpisodeIndex+1],activeEpisodeIndex+1);};
+  document.getElementById('tv-next-episode-close').onclick=function(){document.getElementById('tv-next-episode').style.display='none';};
   function playStream(kind,id,ext,name){
+    if(kind!=='series'){activeEpisodeIndex=-1;document.getElementById('tv-next-episode').style.display='none';}
     if(id===null||typeof id==='undefined'){say('Yayın kimliği eksik');return;}
     var suffix=ext|| (kind==='live'?'m3u8':'mp4');
     var url=server.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
