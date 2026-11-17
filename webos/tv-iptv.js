@@ -295,6 +295,24 @@
     if(deferred)say('MKV ses/altyazı listesi okunuyor: '+String(name||'Video')+' …');
     else startPlayback();
   }
+  var posterLoadTimer=null;
+  function loadPostersNearby(){
+    if(channels.className.indexOf('tv-poster-list')<0)return;
+    var images=channels.getElementsByTagName('img');
+    var min=Math.max(0,channels.scrollTop-260),max=channels.scrollTop+channels.clientHeight+380;
+    for(var li=0;li<images.length;li++){
+      var img=images[li],src=img.getAttribute('data-iptv-src');
+      if(!src)continue;
+      var wrapper=img.parentNode&&img.parentNode.parentNode;
+      if(!wrapper)continue;
+      var top=wrapper.offsetTop;
+      if(top>=min&&top<=max){img.removeAttribute('data-iptv-src');img.src=src;}
+    }
+  }
+  channels.addEventListener('scroll',function(){
+    if(posterLoadTimer)clearTimeout(posterLoadTimer);
+    posterLoadTimer=setTimeout(loadPostersNearby,75);
+  },false);
   function renderChannels(){
     focusCache=null;
     clear(channels);
@@ -371,10 +389,10 @@
               image.alt='';image.style.display='none';
               image.onload=function(){fallback.style.display='none';image.style.display='block';};
               image.onerror=function(){sourceIndex++;if(sourceIndex<sources.length)image.src=sources[sourceIndex];else{image.style.display='none';fallback.style.display='block';if(window.XIPTVMetadata){image.removeAttribute('src');window.XIPTVMetadata.usePoster(image,item,'series');}}};
-              image.setAttribute('loading','lazy');image.src=sources[0];line.appendChild(image);
+              image.setAttribute('loading','lazy');image.setAttribute('data-iptv-src',sources[0]);line.appendChild(image);
             }
           }else if(/^https?:\/\//i.test(picture)){
-            var img=document.createElement('img');img.alt='';img.setAttribute('loading','lazy');img.src=picture;
+            var img=document.createElement('img');img.alt='';img.setAttribute('loading','lazy');img.setAttribute('data-iptv-src',picture);
             img.alt='';img.loading='lazy';
             img.onerror=function(){this.style.display='none';if(window.XIPTVMetadata){this.removeAttribute('src');window.XIPTVMetadata.usePoster(this,item,'movie');}};
             line.appendChild(img);
@@ -394,6 +412,7 @@
       if(channels.lastChild)batch.appendChild(channels.lastChild);
     }
     channels.appendChild(batch);
+    if(mode!=='live')loadPostersNearby();
     if(currentPage+1<totalPages)action(channels,'Sonraki sayfa ▶ ('+(currentPage+2)+'/'+totalPages+')',function(){currentPage++;renderChannels();channels.scrollTop=0;});
     if(!matches.length){
       if(mode==='live' && !document.getElementById('tv-search').value && !document.getElementById('tv-favorite-only').checked && liveRetryCount<2) setTimeout(retryLiveCatalog,700);
