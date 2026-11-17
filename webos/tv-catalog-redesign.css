@@ -1,0 +1,136 @@
+/* XIPTV Play v1.0.52 - full-width top-nav catalogue; WebKit 538 compatible. */
+#stitch-side{
+ position:fixed!important;left:0!important;top:0!important;bottom:auto!important;
+ width:100%!important;height:92px!important;z-index:95!important;
+ border:0!important;border-bottom:2px solid #155772!important;
+ background:linear-gradient(180deg,#061326,#091c35)!important;
+ display:-webkit-box!important;display:flex!important;
+ -webkit-box-align:center;align-items:center;justify-content:space-around!important;
+ box-sizing:border-box!important;padding:5px 20px!important;
+}
+#stitch-side .stitch-logo{position:relative!important;flex:0 0 220px!important;width:220px!important;
+ height:58px!important;line-height:58px!important;margin:0!important;
+ background:transparent!important;text-align:left!important;font-size:27px!important;color:#09d8f2!important}
+#stitch-side .stitch-logo .stitch-playmark{display:inline-block;background:#00d5f7;color:#062137;border-radius:11px;padding:0 13px;font-size:29px}
+#stitch-side .stitch-logo:after{content:'XIPTV Play TV';color:#f7fbff;font-size:23px;font-weight:bold;margin-left:10px}
+#stitch-side button{display:inline-block!important;flex:1 1 0!important;width:auto!important;
+ max-width:170px!important;min-width:85px!important;height:79px!important;
+ margin:0 2px!important;padding:8px 5px!important;border-radius:13px!important;
+ background:transparent!important;color:#eaf6ff!important;box-sizing:border-box!important}
+#stitch-side button svg{display:block!important;margin:0 auto!important;width:30px!important;height:30px!important}
+#stitch-side .stitch-nav-label{font-size:19px!important;line-height:25px!important;
+ color:#e2effc!important;margin-top:4px!important}
+#stitch-side button.selected,#stitch-side button:focus{border:2px solid #0de2ff!important;
+ background:linear-gradient(#164467,#009ce7)!important;outline:0!important;
+ box-shadow:0 0 16px rgba(6,192,246,.65)!important}
+#stitch-side button.selected .stitch-nav-label,#stitch-side button:focus .stitch-nav-label{color:#fff!important}
+#tv-home{top:92px!important;background:#071426!important}
+#tv-home .stitch-main{left:0!important;width:100%!important}
+#tv-home .stitch-top{display:none!important}
+#tv-home .stitch-scroll{top:0!important}
+body.tv-mode h1{display:none!important}
+body.tv-mode #iptv-panel{position:fixed!important;top:92px!important;bottom:0!important;
+ left:0!important;right:0!important;width:100%!important;padding:8px 2%!important;
+ background:#071426!important}
+body.tv-mode #iptv-browser{top:0!important;bottom:28px!important;left:1%!important;right:1%!important}
+body.tv-mode #tv-mode-tabs{display:none!important}
+body.tv-mode #tv-filter-panel{position:absolute!important;top:0!important;left:45%!important;
+ right:0!important;width:55%!important;height:54px!important;background:transparent!important;
+ border:0!important;overflow:hidden!important;text-align:right!important;z-index:7!important}
+body.tv-mode #tv-filter-panel #tv-search{max-width:35%!important;width:35%!important}
+body.tv-mode #tv-filter-panel #tv-profile-switch{display:none!important}
+body.tv-mode #tv-filter-panel select,body.tv-mode #tv-filter-panel input{font-size:18px!important}
+body.tv-mode #tv-filter-panel #tv-advanced-search{font-size:15px!important}
+body.tv-mode #tv-filter-panel #tv-advanced-filters{position:fixed!important;right:4%!important;top:160px!important;
+ width:520px!important;max-width:84vw!important;background:#1a2b44!important;padding:16px!important;
+ box-shadow:0 12px 25px #020913!important;z-index:105!important;white-space:normal!important}
+#tv-catalog-header{position:absolute;top:0;left:0;width:44%;height:56px;z-index:7;
+ display:-webkit-box;display:flex;align-items:center;gap:12px;white-space:nowrap;overflow:hidden;color:#f0f8ff}
+#tv-catalog-current{font-size:26px;display:inline-block;overflow:hidden;text-overflow:ellipsis}
+#tv-catalog-back{font-size:21px!important;padding:9px!important;color:#a8f4ff!important;
+ background:#172e49!important;border:1px solid #229cca!important;border-radius:9px!important}
+body.tv-mode #iptv-categories{position:absolute!important;top:65px!important;left:0!important;
+ right:260px!important;bottom:auto!important;width:auto!important;height:60px!important;
+ max-height:60px!important;overflow-x:auto!important;overflow-y:hidden!important;
+ white-space:nowrap!important;border:0!important;background:transparent!important;
+ padding:2px!important;box-sizing:border-box!important;z-index:6!important}
+body.tv-mode #iptv-categories button{display:inline-block!important;width:auto!important;max-width:280px!important;
+ height:50px!important;padding:8px 17px!important;margin:0 8px 0 0!important;
+ font-size:19px!important;line-height:29px!important;border:1px solid #41698d!important;
+ border-radius:15px!important;background:#17273c!important;color:#f4faff!important;text-align:center!important}
+body.tv-mode #iptv-categories button.active,body.tv-mode #iptv-categories button:focus{
+ border:2px solid #80efff!important;background:#008ed4!important;box-shadow:0 0 10px #02bff0!important}
+#tv-category-tools{position:absolute;top:65px;right:0;width:255px;height:57px;z-index:7;
+ display:-webkit-box;display:flex;justify-content:flex-end;align-items:center;gap:5px}
+#tv-category-tools button{border:1px solid #39a6cf;border-radius:10px;background:#12304b;color:#f7fbff;
+ height:48px;padding:5px 10px;font-size:20px;white-space:nowrap}
+#tv-category-tools #tv-category-open{background:#0786b9;font-size:18px}
+#tv-category-drawer{position:fixed;top:15%;left:16%;width:68%;height:72%;box-sizing:border-box;z-index:150;
+ border:2px solid #12dcfd;border-radius:17px;background:#0c1c32;box-shadow:0 0 0 999px rgba(0,5,12,.75),0 0 23px #007ca4;
+ padding:18px 22px;color:#f6faff;overflow:hidden}
+#tv-category-drawer-heading{display:-webkit-box;display:flex;align-items:center;justify-content:space-between;
+ border-bottom:1px solid #31536c;padding-bottom:12px;font-size:30px}
+#tv-category-drawer-heading button{font-size:21px;background:#253c56;color:white;padding:9px 20px;border-radius:9px}
+#tv-category-drawer-items{height:86%;overflow-y:auto;padding:18px 5px}
+#tv-category-drawer-items button{display:inline-block;vertical-align:top;box-sizing:border-box;width:31.8%;
+ margin:6px .7%;padding:15px 8px;border-radius:12px;border:1px solid #3e7096;background:#1c314c;
+ color:#eafaff;font-size:19px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#tv-category-drawer-items button.active,#tv-category-drawer-items button:focus{
+ background:#078fc4;border:2px solid #84edff;outline:2px solid white}
+body.tv-mode #iptv-channels,body.tv-mode #iptv-channels.tv-poster-list,
+body.tv-mode #iptv-channels.tv-live-list{position:absolute!important;top:132px!important;left:0!important;
+ right:0!important;bottom:0!important;width:100%!important;max-height:none!important;height:auto!important;
+ overflow-y:auto!important;overflow-x:hidden!important;border:0!important;background:transparent!important;
+ box-sizing:border-box!important;padding:3px 4px 14px!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap{display:inline-block!important;vertical-align:top!important;
+ width:15.7%!important;height:35vh!important;min-height:260px!important;margin:0 .46% 12px!important;
+ box-sizing:border-box!important;font-size:0!important;position:relative!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap>button:first-child{display:block!important;
+ width:100%!important;height:100%!important;padding:0!important;margin:0!important;
+ border:2px solid #315d7d!important;border-radius:15px!important;overflow:hidden!important;
+ background:#192b44!important;position:relative!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap img{
+ display:block;width:100%!important;height:100%!important;object-fit:cover!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap .tv-card-title{position:absolute!important;
+ left:0!important;right:0!important;bottom:0!important;top:auto!important;height:auto!important;
+ min-height:58px!important;max-height:86px!important;padding:25px 12px 12px!important;
+ background:linear-gradient(0deg,rgba(2,11,24,.99),rgba(2,11,24,.80) 66%,rgba(2,11,24,0))!important;
+ font-size:21px!important;font-weight:bold!important;line-height:25px!important;
+ text-shadow:0 2px 4px #000!important;color:#fff!important;white-space:normal!important;
+ overflow:hidden!important;box-sizing:border-box!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap>button:first-child:focus{
+ border:4px solid #00d7ff!important;outline:2px solid #adfaff!important;
+ box-shadow:0 0 17px #01b7e6!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap>.tv-card-favorite{
+ width:42px!important;height:42px!important;font-size:26px!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap>.tv-card-child-approve{left:7px!important;top:7px!important}
+body.tv-mode #iptv-channels.tv-live-list>.tv-item-wrap{
+ display:inline-block!important;vertical-align:top!important;width:23.7%!important;height:99px!important;
+ margin:0 .53% 12px!important;box-sizing:border-box!important;min-height:99px!important}
+body.tv-mode #iptv-channels.tv-live-list>.tv-item-wrap>button:first-child{
+ display:block!important;height:100%!important;width:100%!important;
+ border:2px solid #315b7c!important;border-radius:14px!important;
+ background:#152b45!important;color:#fff!important;text-align:left!important;
+ font-size:21px!important;line-height:27px!important;white-space:normal!important;
+ padding:20px 45px!important;margin:0!important;overflow:hidden!important}
+body.tv-mode #iptv-channels.tv-live-list>.tv-item-wrap>button:first-child:focus{
+ border:3px solid #00ddff!important;background:#0878a8!important;outline:0!important}
+body.tv-mode #video{visibility:hidden!important;pointer-events:none!important}
+body.tv-mode:not(.tv-fullscreen) #tv-detail-below{display:none!important}
+body.tv-mode:not(.tv-fullscreen) #tv-now-playing{display:none!important}
+body.tv-mode:not(.tv-fullscreen) #tv-player-controls{visibility:hidden!important;pointer-events:none!important}
+body.tv-mode:not(.tv-fullscreen) #tv-video-favorite{display:none!important}
+body.tv-mode.tv-fullscreen #video{visibility:visible!important;pointer-events:auto!important}
+body.tv-mode.tv-fullscreen #tv-player-controls{visibility:visible!important;pointer-events:auto!important}
+body.tv-mode.tv-fullscreen #tv-category-drawer{display:none!important}
+body.tv-mode #tv-episodes{position:fixed!important;top:16%!important;left:14%!important;right:14%!important;
+ bottom:10%!important;z-index:130!important;border-radius:16px!important}
+body.tv-mode #iptv-message{bottom:0!important;left:2%!important;right:2%!important;height:23px!important;
+ background:transparent!important;font-size:14px!important}
+@media(max-width:1350px){
+ #stitch-side .stitch-logo{flex-basis:150px!important;width:150px!important}
+ #stitch-side .stitch-logo:after{font-size:17px}
+ #stitch-side .stitch-nav-label{font-size:15px!important}
+ body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap{width:23.7%!important}
+ body.tv-mode #iptv-channels.tv-live-list>.tv-item-wrap{width:31.8%!important}
+}
