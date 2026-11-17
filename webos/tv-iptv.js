@@ -139,6 +139,7 @@
     focusCache=null;
     // Always repaint the selected mode: a previously active favorites filter may have emptied it.
     mode=next;selectedCategory='all';currentPage=0;
+    if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.clearSeriesPoster)window.XIPTVCatalogLayout.clearSeriesPoster();
     document.getElementById('tv-episodes').style.display='none';
     channels.className=mode==='live'?'tv-live-list':'tv-poster-list';
     var tabNames=['live','movie','series'];
@@ -164,6 +165,7 @@
     playStream('series',ep.id,ext,ep.title||'Dizi Bölümü');
   }
   function showSeries(item){
+    if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.rememberSeriesPoster)window.XIPTVCatalogLayout.rememberSeriesPoster();
     var id=item.series_id;
     if(!id){say('Dizi bilgisi eksik');return;}
     window.XIPTVTV.setPlayingItem('series',item);
@@ -232,7 +234,7 @@
   document.getElementById('tv-next-episode-play').onclick=function(){cancelEpisodeCountdown();startEpisode(activeEpisodeQueue[activeEpisodeIndex+1],activeEpisodeIndex+1);};
   document.getElementById('tv-next-episode-close').onclick=cancelEpisodeCountdown;
   function playStream(kind,id,ext,name){
-    if(kind!=='series'){cancelEpisodeCountdown();activeEpisodeIndex=-1;}
+    if(kind!=='series'){cancelEpisodeCountdown();activeEpisodeIndex=-1;if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.clearSeriesPoster)window.XIPTVCatalogLayout.clearSeriesPoster();}
     if(id===null||typeof id==='undefined'){say('Yayın kimliği eksik');return;}
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.beforePlay)window.XIPTVCatalogLayout.beforePlay();
     var suffix=ext|| (kind==='live'?'m3u8':'mp4');
