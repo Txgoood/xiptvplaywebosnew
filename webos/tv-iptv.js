@@ -392,9 +392,9 @@
   function renderCategories(){
     focusCache=null;
     clear(categories);
-    action(categories,'Tümü',function(){selectedCategory='all';currentPage=0;renderChannels();});
+    action(categories,'Tümü',function(){selectedCategory='all';currentPage=0;if(window.XIPTVCatalogLayout)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);renderChannels();});
     for(var i=0;i<categoryList.length;i++){
-      (function(c){var label=String(c.category_name||'Kategori');if(document.getElementById('tv-tr-only').checked&&label.toUpperCase().indexOf('TR')!==0)return;if(document.getElementById('tv-hide-adult').checked&&/^(XXX|18\\+|ADULT|🔞|❤)/i.test(label))return;action(categories,label,function(){selectedCategory=String(c.category_id);currentPage=0;renderChannels();});})(categoryList[i]);
+      (function(c){var label=String(c.category_name||'Kategori');if(document.getElementById('tv-tr-only').checked&&label.toUpperCase().indexOf('TR')!==0)return;if(document.getElementById('tv-hide-adult').checked&&/^(XXX|18\\+|ADULT|🔞|❤)/i.test(label))return;action(categories,label,function(){selectedCategory=String(c.category_id);currentPage=0;if(window.XIPTVCatalogLayout)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);renderChannels();});})(categoryList[i]);
     }
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.sync)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);
     renderChannels();
