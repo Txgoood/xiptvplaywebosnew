@@ -563,7 +563,10 @@
     }
     var active=document.activeElement,idx=-1;
     for(i=0;i<list.length;i++)if(list[i]===active){idx=i;break;}
-    if(key===461 && panel.style.display!=='none'){hide(panel);document.body.className='';document.getElementById('tv-home').style.display='block';updatePlayerButtons();document.getElementById('tv-nav-home').focus();e.preventDefault();e.stopImmediatePropagation();return;}
+    if((key===461||key===27)&&document.getElementById('tv-next-episode').style.display!=='none'){cancelEpisodeCountdown();e.preventDefault();e.stopImmediatePropagation();return;}
+    if((key===461||key===27)&&document.getElementById('tv-episodes').style.display!=='none'){document.getElementById('tv-episodes').style.display='none';e.preventDefault();e.stopImmediatePropagation();return;}
+    if((key===461||key===27)&&window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.goBack&&window.XIPTVCatalogLayout.goBack()){e.preventDefault();e.stopImmediatePropagation();return;}
+    if((key===461||key===27)&&panel.style.display!=='none'){hide(panel);document.body.className='';document.getElementById('tv-home').style.display='block';updatePlayerButtons();document.getElementById('tv-nav-home').focus();e.preventDefault();e.stopImmediatePropagation();return;}
     if(key===13 && active && active.tagName==='BUTTON'){
       active.click();e.preventDefault();e.stopImmediatePropagation();return;
     }
