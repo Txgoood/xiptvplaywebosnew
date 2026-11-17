@@ -221,6 +221,7 @@
   function playStream(kind,id,ext,name){
     if(kind!=='series'){activeEpisodeIndex=-1;document.getElementById('tv-next-episode').style.display='none';}
     if(id===null||typeof id==='undefined'){say('Yayın kimliği eksik');return;}
+    if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.beforePlay)window.XIPTVCatalogLayout.beforePlay();
     var suffix=ext|| (kind==='live'?'m3u8':'mp4');
     var url=server.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
@@ -395,6 +396,7 @@
     for(var i=0;i<categoryList.length;i++){
       (function(c){var label=String(c.category_name||'Kategori');if(document.getElementById('tv-tr-only').checked&&label.toUpperCase().indexOf('TR')!==0)return;if(document.getElementById('tv-hide-adult').checked&&/^(XXX|18\\+|ADULT|🔞|❤)/i.test(label))return;action(categories,label,function(){selectedCategory=String(c.category_id);currentPage=0;renderChannels();});})(categoryList[i]);
     }
+    if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.sync)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);
     renderChannels();
   }
   var previousChannel=null,numberBuffer='',numberTimer=null;
