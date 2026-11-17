@@ -529,6 +529,7 @@
       changeLiveChannel((key===33||key===427||key===38)?1:-1);
       e.preventDefault();e.stopImmediatePropagation();return;
     }
+    if(hasClass('tv-fullscreen')&&key===13){var controls=document.getElementById('tv-player-controls');if(controls&&controls.style.opacity==='0'){if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.show)window.XIPTVPlayerUI.show();document.getElementById('tv-player-back').focus();e.preventDefault();e.stopImmediatePropagation();return;}}
     if(key!==37&&key!==38&&key!==39&&key!==40&&key!==13&&key!==461&&key!==27)return;
     if((key===461||key===27)&&hasClass('tv-fullscreen')){if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.exitPlayer)window.XIPTVCatalogLayout.exitPlayer();else setClass('tv-fullscreen',false);updatePlayerButtons();e.preventDefault();e.stopImmediatePropagation();return;}
     var list=focusCache,i,el;
