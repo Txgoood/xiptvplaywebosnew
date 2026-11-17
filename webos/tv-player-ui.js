@@ -88,6 +88,13 @@
  byId('tv-open-subtitle').onclick=function(){openMenu('subtitle');};
  byId('tv-open-speed').onclick=function(){openMenu('speed');};
  byId('tv-player-settings').onclick=function(){openMenu('tools');};
+ byId('tv-player-back').onclick=function(){
+  if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.exitPlayer){
+   window.XIPTVCatalogLayout.exitPlayer();closeMenu();
+  }else{
+   notice('Geri dönüş yöneticisi yüklenmedi.','error');
+  }
+ };
  byId('tv-player-favorite').onclick=function(){byId('tv-video-favorite').click();show();};
  seek.oninput=function(){if(!isLive())elapsed.textContent=format(Number(seek.value));};
  seek.onchange=function(){if(!isLive())try{video.currentTime=Number(seek.value);}catch(e){notice('Bu akışta ileri sarma desteklenmiyor.','warning');}show();};
