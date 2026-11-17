@@ -6,7 +6,7 @@
  background:linear-gradient(180deg,#061326,#091c35)!important;
  display:-webkit-box!important;display:flex!important;
  -webkit-box-align:center;align-items:center;justify-content:space-around!important;
- box-sizing:border-box!important;padding:5px 20px!important;
+ box-sizing:border-box!important;padding:5px 130px 5px 20px!important;
 }
 #stitch-side .stitch-logo{position:relative!important;flex:0 0 220px!important;width:220px!important;
  height:58px!important;line-height:58px!important;margin:0!important;
@@ -155,3 +155,13 @@ body.tv-mode #tv-player-controls.tv-custom-player #tv-player-back:focus{
  background:#05b9ed!important;outline:3px solid #fff!important}
 body.tv-mode #tv-next-episode #tv-next-episode-countdown{
  display:block;margin:13px auto 3px;color:#8eefff;font-size:23px;font-weight:bold}
+
+/* v1.0.57: reserve the header's right edge; override obsolete sidebar anchors. */
+#stitch-side #tv-nav-settings{
+ position:absolute!important;top:5px!important;right:20px!important;
+ left:auto!important;bottom:auto!important;width:100px!important;margin:0!important;
+}
+#tv-settings-panel{
+ left:auto;right:20px;top:104px;bottom:auto;
+ max-height:76%;box-sizing:border-box;
+}

@@ -70,3 +70,8 @@ Bu depo, eski dalın 1.0.16 anlık görüntüsünün webOS'a ait dosyalarından 
 - TMDb film serisi ve oyuncu keşfi ancak doğrulanabilir başlık/oyuncu eşleşmesinde sonuç verir; benzer içerik şu an aynı IPTV kategorisine dayanır, TMDb tabanlı tam benzerlik algoritması değildir.
 - Gerçek LG TV üzerinde doğrulama öncelikleri: açılış/katalog, çocuk onay seçimi, poster kaydırma, ses/sub menüsü, P+/P-, mavi/yeşil/sarı tuş, numara tuşları, dizi bölüm seçimi/sonraki bölüm, yeni afişler ve altyazı konumu.
 - GitHub Actions'ı başarılı görmek **TV'de çalıştı** demek değildir; test edilmemiş özellikleri test edildi diye bildirme.
+
+## 2026-11-18 — v1.0.57 ayarlar konumu
+- `webos/tv-catalog-redesign.css`: eski sidebar left/bottom kuralları üst menüdeki Ayarlar düğmesini logoya bindiriyordu. Düğme sağ üst köşeye sabitlendi, menüde 130 px sağ boşluk ayrıldı. Ayarlar paneli sağda düğmenin altında açılır.
+- Sürüm build.mjs, legacy-index.html ve Actions doğrulamalarında 1.0.57 olarak eşleştirildi.
+- Oynatma/katalog mantığı değiştirilmedi. CI sonucu ayrıca kontrol edilmeli; gerçek LG TV'de yerleşim ve kumandayla Ayarlar aç/kapat doğrulanmalı.
