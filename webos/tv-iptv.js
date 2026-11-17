@@ -210,6 +210,7 @@
           popup.style.display='none';startEpisode(episodes[q],q);return;
         }
       }
+      var firstEpisode=list.getElementsByTagName('button')[0];if(firstEpisode)firstEpisode.focus();
       say(episodes.length+' bölüm bulundu. Bölüm seç.');
     }
     if(cached)onSeries(null,cached);
@@ -324,7 +325,8 @@
     focusCache=null;
     clear(channels);
     var count=0;
-    var query=(document.getElementById('tv-search').value||'').toLowerCase(),searchScope=document.getElementById('tv-search-scope').value;
+    var normalize=window.XIPTVGlobalSearch&&window.XIPTVGlobalSearch.normal||function(value){return String(value||'').toLowerCase();};
+    var query=normalize(document.getElementById('tv-search').value||''),searchScope=document.getElementById('tv-search-scope').value;
     var sorting=document.getElementById('tv-sort').value;
     var cacheKey=mode+'|'+sorting;
     var list=sortedCache[cacheKey];
@@ -352,7 +354,7 @@
       for(;i<end;i++){
       var ch=list[i];
       if(selectedCategory!=='all' && String(ch.category_id)!==selectedCategory)continue;
-      if(query){var inName=String(ch.name||ch.title||'').toLowerCase().indexOf(query)>=0;var inCategory=String(categoryNames[String(ch.category_id)]||'').toLowerCase().indexOf(query)>=0;if(searchScope==='name'&&!inName||searchScope==='category'&&!inCategory||searchScope==='all'&&!inName&&!inCategory)continue;}
+      if(query){var inName=normalize(ch.name||ch.title||'').indexOf(query)>=0;var inCategory=normalize(categoryNames[String(ch.category_id)]||'').indexOf(query)>=0;if(searchScope==='name'&&!inName||searchScope==='category'&&!inCategory||searchScope==='all'&&!inName&&!inCategory)continue;}
       if(!window.XIPTVTV.filterFavorite(mode,ch))continue;
       if(window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(mode,ch))continue;
       var catLabel=categoryNames[String(ch.category_id)]||'';

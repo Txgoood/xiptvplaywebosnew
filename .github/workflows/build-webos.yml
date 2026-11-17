@@ -1,5 +1,5 @@
 name: Build LG webOS IPK
-run-name: XIPTV Play LG webOS v1.0.58 Build #${{ github.run_number }} • ${{ github.event_name }}
+run-name: XIPTV Play LG webOS v1.0.59 Build #${{ github.run_number }} • ${{ github.event_name }}
 
 on:
   workflow_dispatch:
@@ -50,6 +50,7 @@ jobs:
           node --test webos/catalog-navigation.test.mjs
           node --check webos/tv-keyboard.js
           node --check webos/tv-global-search.js
+          node --test webos/global-search.test.mjs
           node --check webos/tv-catalog-layout.js
 
       - name: Prepare standalone webOS 2 app
@@ -114,7 +115,7 @@ jobs:
             echo "Unsupported modern JavaScript module found in webOS 2 package"
             exit 1
           fi
-          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.58'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true||f.disableBackHistoryAPI!==true) process.exit(1)"
+          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.59'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true||f.disableBackHistoryAPI!==true) process.exit(1)"
 
       - name: Run remote-control and playback UI smoke tests
         run: node webos/legacy-smoke-test.mjs
@@ -128,7 +129,7 @@ jobs:
           grep -q "XIPTV_PKG='native'" webos-package-native/pkg-info.js
           grep -q "XIPTV_PKG='netcast'" webos-package/pkg-info.js
           grep -q 'tv-mkv-tracks.js' webos-package-native/index.html
-          node -e "const f=require('./webos-package-native/appinfo.json'); if(f.id!=='com.xiptvplay.tv.native'||f.version!=='1.0.58'||f.trustLevel!==undefined||f.vendorExtension!==undefined||f.disableBackHistoryAPI!==true||f.title!=='XIPTV Play Native'||f.main!=='index.html') process.exit(1)"
+          node -e "const f=require('./webos-package-native/appinfo.json'); if(f.id!=='com.xiptvplay.tv.native'||f.version!=='1.0.59'||f.trustLevel!==undefined||f.vendorExtension!==undefined||f.disableBackHistoryAPI!==true||f.title!=='XIPTV Play Native'||f.main!=='index.html') process.exit(1)"
 
       - name: Install webOS CLI
         run: |

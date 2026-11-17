@@ -84,3 +84,9 @@ Bu depo, eski dalın 1.0.16 anlık görüntüsünün webOS'a ait dosyalarından 
 - Katalogda görünen sayfa (en fazla 24 kart) üzerinde çalışır; ek ağ isteği, animasyon ve sürekli zamanlayıcı eklenmedi. Tam ekran oynatıcı ve ana sayfa gezinmesi korunur.
 - CI #191 başarılı: dört katalog gezinme testi, mevcut kumanda/oynatıcı smoke testleri, medya testleri ve iki IPK paketinin doğrulamaları geçti. Fiziksel LG TV'de sayfa düğmesi boyutu, dört yön ve sayfa sonrası odak doğrulanmalı.
 - Kaynak commit: `fc0d9679399586ba05e0252e006e0fa90d7bc796`. Ana IPK v1.0.58 / Build #191: https://github.com/Txgoood/xiptvplaywebosnew/actions/runs/44164905941/artifacts/14364512644
+
+## 2026-11-17 — v1.0.59 global aramadan doğru içeriği açma
+- `tv-global-search.js` sonuç satırı eskiden yalnızca adı katalog aramasına yazıyordu. Şimdi gerçek seçilen nesneyi ve series_id/stream_id değerini mevcut `XIPTVTV.openItem` yoluna iletir: diziler bölüm listesi, filmler/canlı yayın oynatılır.
+- Tümünü Gör ayrı filtrelenmiş katalog yolu olarak korunur; gizli yıl/tür/puan filtreleri temizlenir, ebeveyn onayı ve profil kontrolleri korunur. Katalog araması global aramanın Türkçe ad normalleştirmesini kullanır.
+- Sonuç açılırken arama ve klavye kapanır; arka planda kalan sonuç arama zamanlayıcısı iptal edilir.
+- CI ve gerçek sağlayıcı/TV sonucu ayrıca doğrulanmalı.
