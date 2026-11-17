@@ -313,7 +313,9 @@
     if(posterLoadTimer)clearTimeout(posterLoadTimer);
     posterLoadTimer=setTimeout(loadPostersNearby,75);
   },false);
+  var renderTicket=0;
   function renderChannels(){
+    var ticket=++renderTicket,filterStarted=new Date().getTime();
     focusCache=null;
     clear(channels);
     var count=0;
@@ -338,7 +340,11 @@
       }
       list=categoryCache[ck];
     }
-    for(var i=0;i<list.length;i++){
+    var i=0;
+    function scanChunk(){
+      if(ticket!==renderTicket)return;
+      var end=Math.min(i+450,list.length);
+      for(;i<end;i++){
       var ch=list[i];
       if(selectedCategory!=='all' && String(ch.category_id)!==selectedCategory)continue;
       if(query){var inName=String(ch.name||ch.title||'').toLowerCase().indexOf(query)>=0;var inCategory=String(categoryNames[String(ch.category_id)]||'').toLowerCase().indexOf(query)>=0;if(searchScope==='name'&&!inName||searchScope==='category'&&!inCategory||searchScope==='all'&&!inName&&!inCategory)continue;}
@@ -354,7 +360,13 @@
       if(document.getElementById('tv-tr-only').checked && catLabel.toUpperCase().indexOf('TR')!==0)continue;
       if(document.getElementById('tv-hide-adult').checked && /^(XXX|18\+|ADULT|🔞|❤)/i.test(catLabel))continue;
       matches.push(ch);
+      }
+      if(i<list.length){setTimeout(scanChunk,0);return;}
+      finishRender();
     }
+    function finishRender(){
+    if(ticket!==renderTicket)return;
+    if(window.XIPTVPerformance)window.XIPTVPerformance.measure('Katalog filtreleme',new Date().getTime()-filterStarted);
     // Preserve the category/filter/sort order for fullscreen channel zapping.
     // Only a live list becomes a channel-change source; films and series never do.
     if(mode==='live')liveChannelOrder=matches.slice(0);
@@ -422,6 +434,8 @@
       if(mode==='live')action(channels,'Kanal listesini yeniden yükle',function(){document.getElementById('iptv-connect').click();});
     }
     say(matches.length+' içerik bulundu; '+totalStreams+' kayıt yüklü. Sayfa '+(currentPage+1)+'/'+totalPages+'.');
+    }
+    scanChunk();
   }
   function renderCategories(){
     focusCache=null;
