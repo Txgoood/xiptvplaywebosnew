@@ -19,7 +19,7 @@ var drawerClose=document.createElement('button');drawerClose.type='button';drawe
 drawerHeading.appendChild(drawerTitle);drawerHeading.appendChild(drawerClose);
 var drawerItems=document.createElement('div');drawerItems.id='tv-category-drawer-items';drawer.appendChild(drawerHeading);drawer.appendChild(drawerItems);
 document.body.appendChild(drawer);
-var previousFocus=null,active='all',currentMode='live',playingFocus=null,playingScroll=0,drawerDirty=true;
+var previousFocus=null,active='all',currentMode='live',playingFocus=null,playingScroll=0,drawerDirty=true,seriesPoster=null;
 function closeDrawer(){drawer.style.display='none';if(previousFocus&&previousFocus.focus)previousFocus.focus();}
 function openDrawer(){
  previousFocus=document.activeElement;
@@ -55,7 +55,7 @@ function sync(mode,selected,items){
 }
 function beforePlay(){
  if((' '+document.body.className+' ').indexOf(' tv-fullscreen ')<0){
-  playingFocus=document.activeElement;
+  playingFocus=seriesPoster&&seriesPoster.offsetWidth&&seriesPoster.offsetHeight?seriesPoster:document.activeElement;
   var cards=document.getElementById('iptv-channels');playingScroll=cards?cards.scrollTop:0;
  }
  var cls=' '+document.body.className+' ';
@@ -81,5 +81,5 @@ document.addEventListener('keydown',function(e){
  if((' '+document.body.className+' ').indexOf(' tv-fullscreen ')>=0)return;
  if(active!=='all'&&browser.style.display!=='none'){back.click();if(e.preventDefault)e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
 },true);
-window.XIPTVCatalogLayout={sync:sync,beforePlay:beforePlay,exitPlayer:exitPlayer,closeDrawer:closeDrawer};
+window.XIPTVCatalogLayout={sync:sync,beforePlay:beforePlay,exitPlayer:exitPlayer,closeDrawer:closeDrawer,rememberSeriesPoster:function(){seriesPoster=document.activeElement;},clearSeriesPoster:function(){seriesPoster=null;}};
 })();
