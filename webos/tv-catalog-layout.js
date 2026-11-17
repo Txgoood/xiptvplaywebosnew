@@ -19,9 +19,21 @@ var drawerClose=document.createElement('button');drawerClose.type='button';drawe
 drawerHeading.appendChild(drawerTitle);drawerHeading.appendChild(drawerClose);
 var drawerItems=document.createElement('div');drawerItems.id='tv-category-drawer-items';drawer.appendChild(drawerHeading);drawer.appendChild(drawerItems);
 document.body.appendChild(drawer);
-var previousFocus=null,active='all',currentMode='live',playingFocus=null,playingScroll=0;
+var previousFocus=null,active='all',currentMode='live',playingFocus=null,playingScroll=0,drawerDirty=true;
 function closeDrawer(){drawer.style.display='none';if(previousFocus&&previousFocus.focus)previousFocus.focus();}
-function openDrawer(){previousFocus=document.activeElement;drawer.style.display='block';var b=drawerItems.getElementsByTagName('button');if(b.length)b[0].focus();}
+function openDrawer(){
+ previousFocus=document.activeElement;
+ if(drawerDirty){
+  while(drawerItems.firstChild)drawerItems.removeChild(drawerItems.firstChild);
+  var source=categories.getElementsByTagName('button');
+  for(var j=0;j<source.length;j++){(function(original){
+   var copy=document.createElement('button');copy.type='button';copy.textContent=original.textContent;copy.className=original.className;
+   copy.onclick=function(){closeDrawer();original.click();};drawerItems.appendChild(copy);
+  })(source[j]);}
+  drawerDirty=false;
+ }
+ drawer.style.display='block';var b=drawerItems.getElementsByTagName('button');if(b.length)b[0].focus();
+}
 drawerClose.onclick=closeDrawer;openBtn.onclick=openDrawer;
 prev.onclick=function(){categories.scrollLeft=Math.max(0,categories.scrollLeft-520);};
 next.onclick=function(){categories.scrollLeft+=520;};
@@ -38,8 +50,7 @@ function sync(mode,selected,items){
  prev.style.display=next.style.display=active==='all'?'inline-block':'none';
  openBtn.textContent=active==='all'?'▦  Tüm Kategoriler':'▦  Kategori Değiştir';
  drawerTitle.textContent=modeLabel+' Kategorileri';
- while(drawerItems.firstChild)drawerItems.removeChild(drawerItems.firstChild);
- for(var j=0;j<source.length;j++){(function(original){var copy=document.createElement('button');copy.type='button';copy.textContent=original.textContent;copy.className=original.className;copy.onclick=function(){closeDrawer();original.click();};drawerItems.appendChild(copy);})(source[j]);}
+ drawerDirty=true;
  if(active==='all')categories.scrollLeft=0;
 }
 function beforePlay(){
