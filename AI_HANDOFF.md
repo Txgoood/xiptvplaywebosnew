@@ -82,4 +82,5 @@ Bu depo, eski dalın 1.0.16 anlık görüntüsünün webOS'a ait dosyalarından 
 - Sayfa düğmeleri `tv-iptv.js` içinde ayrı `tv-page-bar` satırında; `tv-catalog-redesign.css` düğme yüksekliğini 42 px olarak sınırlar. Önceki sayfa artık afişler için ayrılan alanı kaplamaz.
 - Yeni ES5 `tv-catalog-navigation.js`: dört yön, gerçek kart satır/sütunlarına göre; kart üzerindeki favori/çocuk rozetlerini atlar, seçili afişi görünür alana kaydırır. İlk satırdan yukarı üst menüye, üst menüden aşağı ilk afişe geçilir. Sayfa değiştirdikten sonra ilk karta odak taşınır.
 - Katalogda görünen sayfa (en fazla 24 kart) üzerinde çalışır; ek ağ isteği, animasyon ve sürekli zamanlayıcı eklenmedi. Tam ekran oynatıcı ve ana sayfa gezinmesi korunur.
-- CI ve gerçek LG TV sonucu henüz doğrulanmadı.
+- CI #191 başarılı: dört katalog gezinme testi, mevcut kumanda/oynatıcı smoke testleri, medya testleri ve iki IPK paketinin doğrulamaları geçti. Fiziksel LG TV'de sayfa düğmesi boyutu, dört yön ve sayfa sonrası odak doğrulanmalı.
+- Kaynak commit: `fc0d9679399586ba05e0252e006e0fa90d7bc796`. Ana IPK v1.0.58 / Build #191: https://github.com/Txgoood/xiptvplaywebosnew/actions/runs/44164905941/artifacts/14364512644
