@@ -71,7 +71,9 @@ Bu depo, eski dalın 1.0.16 anlık görüntüsünün webOS'a ait dosyalarından 
 - Gerçek LG TV üzerinde doğrulama öncelikleri: açılış/katalog, çocuk onay seçimi, poster kaydırma, ses/sub menüsü, P+/P-, mavi/yeşil/sarı tuş, numara tuşları, dizi bölüm seçimi/sonraki bölüm, yeni afişler ve altyazı konumu.
 - GitHub Actions'ı başarılı görmek **TV'de çalıştı** demek değildir; test edilmemiş özellikleri test edildi diye bildirme.
 
-## 2026-11-18 — v1.0.57 ayarlar konumu
+## 2026-11-17 — v1.0.57 ayarlar konumu
 - `webos/tv-catalog-redesign.css`: eski sidebar left/bottom kuralları üst menüdeki Ayarlar düğmesini logoya bindiriyordu. Düğme sağ üst köşeye sabitlendi, menüde 130 px sağ boşluk ayrıldı. Ayarlar paneli sağda düğmenin altında açılır.
 - Sürüm build.mjs, legacy-index.html ve Actions doğrulamalarında 1.0.57 olarak eşleştirildi.
-- Oynatma/katalog mantığı değiştirilmedi. CI sonucu ayrıca kontrol edilmeli; gerçek LG TV'de yerleşim ve kumandayla Ayarlar aç/kapat doğrulanmalı.
+- Oynatma/katalog mantığı değiştirilmedi. CI #190 başarılı: medya testleri, paket doğrulaması, kumanda/oynatıcı smoke testleri ve her iki IPK üretimi geçti. Gerçek LG TV'de yerleşim ve kumandayla Ayarlar aç/kapat doğrulanmalı. Yerel tarayıcı görsel testi ortam kısıtı nedeniyle çalıştırılamadı.
+
+- v1.0.57 kaynak commit: `beb1b9f8625aade080f0879c441fc861731ad9dd`. Ana IPK: https://github.com/Txgoood/xiptvplaywebosnew/actions/runs/44163821612/artifacts/14363384387 (Build #190).
