@@ -1,6 +1,8 @@
 /* XIPTV Play webOS 2 - Turkish Q TV keyboard, ES5 only. */
 (function(){
 var box=document.getElementById('iptv-keyboard'),keys=document.getElementById('iptv-keys'),display=document.getElementById('iptv-keyboard-title'),target=null,upper=false,row=0,col=0,rows=[],lastFocus=null;
+/* Keyboard must work when the main catalog panel is hidden. */
+document.body.appendChild(box);
 var names=['iptv-server','iptv-user','iptv-pass','tv-search','tv-global-search-input','tv-profile-name','tv-profile-pin'];
 var letters=[['q','w','e','r','t','y','u','ı','o','p','ğ','ü'],['a','s','d','f','g','h','j','k','l','ş','i'],['SHIFT','z','x','c','v','b','n','m','ö','ç','BACK']];
 var functionsRow=['123','ABC','BOŞLUK','SİL','TEMİZLE','←','→','.','@','.com','ARA','KAPAT'];
