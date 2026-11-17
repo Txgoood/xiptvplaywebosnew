@@ -306,7 +306,7 @@
       var wrapper=img.parentNode&&img.parentNode.parentNode;
       if(!wrapper)continue;
       var top=wrapper.offsetTop;
-      if(top>=min&&top<=max){img.removeAttribute('data-iptv-src');img.src=src;}
+      if(top>=min&&top<=max){img.removeAttribute('data-iptv-src');if(window.XIPTVPosterCache)window.XIPTVPosterCache.attach(img,src);else img.src=src;}
     }
   }
   channels.addEventListener('scroll',function(){
@@ -388,7 +388,7 @@
             if(sources.length){var image=document.createElement('img'),sourceIndex=0;
               image.alt='';image.style.display='none';
               image.onload=function(){fallback.style.display='none';image.style.display='block';};
-              image.onerror=function(){sourceIndex++;if(sourceIndex<sources.length)image.src=sources[sourceIndex];else{image.style.display='none';fallback.style.display='block';if(window.XIPTVMetadata){image.removeAttribute('src');window.XIPTVMetadata.usePoster(image,item,'series');}}};
+              image.onerror=function(){sourceIndex++;if(sourceIndex<sources.length){if(window.XIPTVPosterCache)window.XIPTVPosterCache.attach(image,sources[sourceIndex]);else image.src=sources[sourceIndex];}else{image.style.display='none';fallback.style.display='block';if(window.XIPTVMetadata){image.removeAttribute('src');window.XIPTVMetadata.usePoster(image,item,'series');}}};
               image.setAttribute('loading','lazy');image.setAttribute('data-iptv-src',sources[0]);line.appendChild(image);
             }
           }else if(/^https?:\/\//i.test(picture)){
