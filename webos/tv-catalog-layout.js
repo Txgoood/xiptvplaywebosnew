@@ -29,8 +29,8 @@ back.onclick=function(){var b=categories.getElementsByTagName('button');if(b.len
 function sync(mode,selected,items){
  currentMode=mode;active=String(selected||'all');
  var modeLabel=mode==='live'?'Canlı TV':mode==='movie'?'Filmler':'Diziler';
- var chosen='Tümü';var source=categories.getElementsByTagName('button');var selectedButton=null;
- for(var i=0;i<source.length;i++){var b=source[i];b.className=String(i===0&&active==='all'||i>0&&items[i-1]&&String(items[i-1].category_id)===active?'active':'');if(b.className==='active'){chosen=b.textContent;selectedButton=b;}}
+ var chosen='Tümü';var source=categories.getElementsByTagName('button');var selectedName='';for(var ci=0;ci<items.length;ci++)if(String(items[ci].category_id)===active)selectedName=String(items[ci].category_name||'');
+ for(var i=0;i<source.length;i++){var b=source[i];b.className=String(i===0&&active==='all'||i>0&&selectedName&&b.textContent===selectedName?'active':'');if(b.className==='active'){chosen=b.textContent;selectedButton=b;}}
  current.textContent=active==='all'?modeLabel+'  ›  Tümü':modeLabel+'  ›  '+chosen;
  back.style.display=active==='all'?'none':'inline-block';
  categories.style.display=active==='all'?'block':'none';
