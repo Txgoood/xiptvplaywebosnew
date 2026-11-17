@@ -42,7 +42,9 @@ jobs:
           node --check webos/tv-themes.js
           node --check webos/tv-metadata.js
           node --check webos/tv-features.js
-          node --check webos/tv-iptv.js\n          node --check webos/tv-keyboard.js\n          node --check webos/tv-global-search.js
+          node --check webos/tv-iptv.js
+          node --check webos/tv-keyboard.js
+          node --check webos/tv-global-search.js
 
       - name: Prepare standalone webOS 2 app
         run: |
@@ -87,7 +89,8 @@ jobs:
           test -s webos-package/tv-themes.js
           test -s webos-package/tv-themes.css
           test -s webos-package/tv-metadata.js
-          test -s webos-package/tv-keyboard.js\n          test -s webos-package/tv-global-search.js
+          test -s webos-package/tv-keyboard.js
+          test -s webos-package/tv-global-search.js
           test -s webos-package/tv-layout.css
           grep -q 'id="iptv-open"' webos-package/index.html
           grep -q 'Yerel Video' webos-package/index.html
