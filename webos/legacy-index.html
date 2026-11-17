@@ -126,7 +126,11 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <p>Canlı TV Kategorileri</p><div id="iptv-categories" style="max-height:160px;overflow:auto"></div>
 <p>Kanallar</p><div id="iptv-channels" style="max-height:230px;overflow:auto"></div>
 </div>
-<div id="iptv-keyboard" style="display:none"><p id="iptv-keyboard-title">Klavye</p><button id="iptv-keyboard-close" type="button">Kapat ✕</button><div id="iptv-keys"></div></div>
+<div id="tv-global-search" style="display:none" role="dialog" aria-label="Tüm içeriklerde ara">
+<div class="tv-global-heading"><strong>⌕ &nbsp; Tüm içeriklerde ara</strong><button type="button" id="tv-global-search-close">Kapat ✕</button></div>
+<input id="tv-global-search-input" type="text" placeholder="Kanal, film veya dizi adı yazın" autocomplete="off" />
+<div id="tv-global-scopes"><button type="button" class="selected" data-scope="all">Hepsi</button><button type="button" data-scope="live">Canlı TV</button><button type="button" data-scope="movie">Filmler</button><button type="button" data-scope="series">Diziler</button><span id="tv-global-search-count">0 sonuç</span></div>
+<div id="tv-global-search-results"></div></div><div id="iptv-keyboard" style="display:none"><p id="iptv-keyboard-title">Klavye</p><button id="iptv-keyboard-close" type="button">Kapat ✕</button><div id="iptv-keys"></div></div>
 <p id="iptv-message" style="color:#89eaf9"></p>
 </section>
 <div id="status">Uygulama başlatılıyor...</div>
@@ -205,4 +209,4 @@ video.addEventListener('error',function(){var code=video.error?video.error.code:
 video.addEventListener('ended',function(){message('Video başarıyla sona erdi.');update();},false);
 focus(0);system();update();
 })();
-</script><script src="./tv-features.js"></script><script src="./tv-iptv.js"></script><script src="./tv-profiles.js"></script><script src="./tv-keyboard.js"></script><script src="./tv-mkv-tracks.js"></script><script src="./lg-media-config.js"></script><script src="./tv-lg-media.js"></script><script src="./tv-posters.js"></script><script src="./tv-home.js"></script><script src="./tv-alt-player.js"></script><script src="./tv-player-ui.js"></script><script src="./tv-metadata.js"></script><script src="./tv-themes.js"></script></body></html>
+</script><script src="./tv-features.js"></script><script src="./tv-iptv.js"></script><script src="./tv-profiles.js"></script><script src="./tv-keyboard.js"></script><script src="./tv-mkv-tracks.js"></script><script src="./lg-media-config.js"></script><script src="./tv-lg-media.js"></script><script src="./tv-posters.js"></script><script src="./tv-home.js"></script><script src="./tv-alt-player.js"></script><script src="./tv-player-ui.js"></script><script src="./tv-metadata.js"></script><script src="./tv-themes.js"></script><script src="./tv-global-search.js"></script></body></html>
