@@ -123,7 +123,7 @@
         else say('Canlı TV ilk yüklemesi tamamlanamadı. Kanal listesini yeniden yükle seçeneğini kullanabilirsin.');
         return;
       }
-      catalogData.liveStreams=data.liveStreams;
+      catalogData.liveStreams=data.liveStreams;window.XIPTVGlobalCatalog=catalogData;
       if(data.liveCategories&&data.liveCategories.length)catalogData.liveCategories=data.liveCategories;
       sortedCache={};categoryCache={};focusCache=null;
       if(window.XIPTVTVHome&&window.XIPTVTVHome.render)window.XIPTVTVHome.render(catalogData);
@@ -602,7 +602,7 @@
         connecting=false;
         if(error){if(!previewReady){show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';}say('Katalog güncellenemedi: '+error.message);return;}
         bootMetric('catalog',new Date().getTime()-catalogAt);
-        catalogData=catalog;sortedCache={};categoryCache={};focusCache=null;currentPage=0;
+        catalogData=catalog;window.XIPTVGlobalCatalog=catalog;sortedCache={};categoryCache={};focusCache=null;currentPage=0;
         trackNewCatalogItems(catalog);
         cacheHome(catalog);
         try{localStorage.setItem('xiptv_webos2_last_catalog_refresh',new Date().toISOString());}catch(e){}
