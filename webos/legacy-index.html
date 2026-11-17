@@ -105,11 +105,12 @@ button:focus,button.active{background:#167c9b;outline:4px solid #8af4ff;outline-
 <button id="tv-seek-back" type="button">-10 sn</button><button id="tv-seek-forward" type="button">+10 sn</button>
 </div>
 <div id="tv-mode-tabs"><button id="tv-tab-live" type="button">Canlı TV</button><button id="tv-tab-movie" type="button">Filmler</button><button id="tv-tab-series" type="button">Diziler</button></div>
-<div id="tv-next-episode" style="display:none" role="dialog"><strong id="tv-next-episode-label">Sıradaki bölüm</strong><button id="tv-next-episode-play" type="button">▶ Sonraki Bölümü Oynat</button><button id="tv-next-episode-close" type="button">Kapat</button></div><div id="tv-episodes" style="display:none"><button id="tv-episodes-close" type="button">Bölümleri Kapat</button><strong id="tv-episodes-title">Dizi Bölümleri</strong><div id="tv-episodes-list"></div></div>
+<div id="tv-next-episode" style="display:none" role="dialog"><strong id="tv-next-episode-label">Sıradaki bölüm</strong><span id="tv-next-episode-countdown" aria-live="polite">10 saniye sonra otomatik oynatılacak</span><button id="tv-next-episode-play" type="button">▶ Sonraki Bölümü Oynat</button><button id="tv-next-episode-close" type="button">Kapat</button></div><div id="tv-episodes" style="display:none"><button id="tv-episodes-close" type="button">Bölümleri Kapat</button><strong id="tv-episodes-title">Dizi Bölümleri</strong><div id="tv-episodes-list"></div></div>
 <div id="tv-player-controls" class="tv-custom-player">
  <div class="tv-player-top"><strong id="tv-player-title">Oynatılıyor</strong><span id="tv-player-live-label">XIPTV Play</span></div>
  <div class="tv-progress-row"><span id="tv-elapsed">--:--</span><input id="tv-progress" type="range" min="0" max="100" value="0" aria-label="Video ilerleme çubuğu"><span id="tv-duration">--:--</span></div>
  <div class="tv-player-actions">
+ <button id="tv-player-back" type="button" aria-label="Oynatıcıdan çıkıp önceki ekrana dön">← Geri</button>
  <button id="tv-player-favorite" type="button" aria-label="Favori">♡ Favori</button>
  <button id="tv-alt-player" type="button">Alternatif Oynatıcı</button><button id="tv-alt-return" type="button" style="display:none">Eski Oynatıcıya Dön</button><span id="tv-alt-player-status" role="status"></span>
  <button id="tv-fullscreen" type="button">⛶ Tam Ekran</button>
