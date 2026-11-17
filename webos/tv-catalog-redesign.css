@@ -141,3 +141,17 @@ body.tv-mode #iptv-browser.tv-catalog-filtered #iptv-channels.tv-poster-list,
 body.tv-mode #iptv-browser.tv-catalog-filtered #iptv-channels.tv-live-list{top:67px!important}
 body.tv-mode #iptv-browser.tv-catalog-filtered #tv-category-tools{top:3px!important}
 body.tv-mode #iptv-browser.tv-catalog-filtered #tv-category-tools #tv-category-open{height:46px!important}
+
+/* webOS 2 performance/remote refinements: avoid expensive effects on every poster. */
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap>button:first-child{
+ box-shadow:none!important;transition:none!important;-webkit-transition:none!important}
+body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap img{
+ -webkit-transform:none!important;transform:none!important}
+body.tv-mode #tv-player-controls.tv-custom-player #tv-player-back{
+ background:#007fbe!important;border:2px solid #5be9ff!important;
+ color:#fff!important;font-size:19px!important;font-weight:bold!important;
+ padding:10px 23px!important;min-width:112px!important}
+body.tv-mode #tv-player-controls.tv-custom-player #tv-player-back:focus{
+ background:#05b9ed!important;outline:3px solid #fff!important}
+body.tv-mode #tv-next-episode #tv-next-episode-countdown{
+ display:block;margin:13px auto 3px;color:#8eefff;font-size:23px;font-weight:bold}
