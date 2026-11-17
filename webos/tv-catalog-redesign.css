@@ -134,3 +134,10 @@ body.tv-mode #iptv-message{bottom:0!important;left:2%!important;right:2%!importa
  body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap{width:23.7%!important}
  body.tv-mode #iptv-channels.tv-live-list>.tv-item-wrap{width:31.8%!important}
 }
+
+/* Compact breadcrumb when a category is selected: no wasted empty category row. */
+body.tv-mode #iptv-browser.tv-catalog-filtered #iptv-channels,
+body.tv-mode #iptv-browser.tv-catalog-filtered #iptv-channels.tv-poster-list,
+body.tv-mode #iptv-browser.tv-catalog-filtered #iptv-channels.tv-live-list{top:67px!important}
+body.tv-mode #iptv-browser.tv-catalog-filtered #tv-category-tools{top:3px!important}
+body.tv-mode #iptv-browser.tv-catalog-filtered #tv-category-tools #tv-category-open{height:46px!important}
