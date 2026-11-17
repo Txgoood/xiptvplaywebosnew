@@ -1,5 +1,10 @@
 # Başka Yapay Zekâya Teknik Devir — XIPTV Play LG webOS
 
+## Kullanıcının kurulu paketi — doğrulandı 17 Kasım 2026
+- Kullanıcı TV'sinde **XIPTV Play Native** yüklü: uygulama kimliği **`com.xiptvplay.tv.native`**. Güncellemelerde bu kimliği koruyun ve kullanıcıya yalnızca `xiptvplay-lg-webos-native-ipk` artifact bağlantısını verin.
+- Standart `com.xiptvplay.tv` paketi ayrı uygulama oluşturur; bu kullanıcı için güncelleme olarak sunmayın. Eski uygulamayı kaldırmasını istemeyin.
+- Son doğrulanan Native güncellemesi: v1.0.59 / Build #192, https://github.com/Txgoood/xiptvplaywebosnew/actions/runs/44166043393/artifacts/14364703759 ; ZIP dosyasında `com.xiptvplay.tv.native_1.0.59_all.ipk`.
+
 ## Kapsam ve sınır
 Bu depo sadece **LG webOS Smart TV IPK** içindir. Android koduna, Android APK derlemelerine, orijinal `Txgoood/xiptvplay` reposuna dokunmayın. Proje LG webOS 2 (eski ES5 tarayıcı) hedefiyle derleniyor.
 
