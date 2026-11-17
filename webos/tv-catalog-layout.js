@@ -53,6 +53,11 @@ function sync(mode,selected,items){
  drawerDirty=true;
  if(active==='all')categories.scrollLeft=0;
 }
+function goBack(){
+ if(drawer.style.display==='block'){closeDrawer();return true;}
+ if(active!=='all'){back.click();return true;}
+ return false;
+}
 function beforePlay(){
  if((' '+document.body.className+' ').indexOf(' tv-fullscreen ')<0){
   playingFocus=seriesPoster&&seriesPoster.offsetWidth&&seriesPoster.offsetHeight?seriesPoster:document.activeElement;
@@ -81,5 +86,5 @@ document.addEventListener('keydown',function(e){
  if((' '+document.body.className+' ').indexOf(' tv-fullscreen ')>=0)return;
  if(active!=='all'&&browser.style.display!=='none'){back.click();if(e.preventDefault)e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
 },true);
-window.XIPTVCatalogLayout={sync:sync,beforePlay:beforePlay,exitPlayer:exitPlayer,closeDrawer:closeDrawer,rememberSeriesPoster:function(){seriesPoster=document.activeElement;},clearSeriesPoster:function(){seriesPoster=null;}};
+window.XIPTVCatalogLayout={sync:sync,beforePlay:beforePlay,exitPlayer:exitPlayer,goBack:goBack,closeDrawer:closeDrawer,rememberSeriesPoster:function(){seriesPoster=document.activeElement;},clearSeriesPoster:function(){seriesPoster=null;}};
 })();
