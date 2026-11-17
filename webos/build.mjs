@@ -21,7 +21,7 @@ fs.copyFileSync(path.join(root,'webos/tv-home.js'),path.join(out,'tv-home.js'));
 fs.copyFileSync(path.join(root,'webos/tv-themes.js'),path.join(out,'tv-themes.js'));
 fs.copyFileSync(path.join(root,'webos/tv-themes.css'),path.join(out,'tv-themes.css'));
 fs.copyFileSync(path.join(root,'webos/tv-metadata.js'),path.join(out,'tv-metadata.js'));
-fs.copyFileSync(path.join(root,'webos/tv-keyboard.js'),path.join(out,'tv-keyboard.js'));
+fs.copyFileSync(path.join(root,'webos/tv-keyboard.js'),path.join(out,'tv-keyboard.js'));\nfs.copyFileSync(path.join(root,'webos/tv-global-search.js'),path.join(out,'tv-global-search.js'));
 fs.copyFileSync(path.join(root,'webos/tv-alt-player.js'),path.join(out,'tv-alt-player.js'));
 fs.copyFileSync(path.join(root,'webos/tv-player-ui.js'),path.join(out,'tv-player-ui.js'));
 fs.copyFileSync(path.join(root,'webos/tv-mkv-tracks.js'),path.join(out,'tv-mkv-tracks.js'));
