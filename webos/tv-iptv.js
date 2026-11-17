@@ -484,7 +484,7 @@
     fullBtn.textContent=hasClass('tv-fullscreen')?'Tam Ekrandan Çık':'Tam Ekran';
     aspectBtn.textContent=hasClass('tv-fill')?'Orijinal Oran':'Ekrana Doldur';
   }
-  fullBtn.onclick=function(){setClass('tv-fullscreen',!hasClass('tv-fullscreen'));updatePlayerButtons();};
+  fullBtn.onclick=function(){if(hasClass('tv-fullscreen')&&window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.exitPlayer)window.XIPTVCatalogLayout.exitPlayer();else setClass('tv-fullscreen',!hasClass('tv-fullscreen'));updatePlayerButtons();};
   aspectBtn.onclick=function(){setClass('tv-fill',!hasClass('tv-fill'));updatePlayerButtons();};
   // Catch D-pad before the legacy diagnostic menu handler; traverse visible controls.
   document.addEventListener('keydown',function(e){
@@ -517,7 +517,8 @@
     // Blue remote key: toggle fullscreen without changing the selected channel.
     // Keep OK, Back and the other color keys on their existing paths.
     if(key===406 && (video.currentSrc||video.getAttribute('src'))){
-      setClass('tv-fullscreen',!hasClass('tv-fullscreen'));
+      if(hasClass('tv-fullscreen')&&window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.exitPlayer)window.XIPTVCatalogLayout.exitPlayer();
+      else setClass('tv-fullscreen',!hasClass('tv-fullscreen'));
       updatePlayerButtons();
       e.preventDefault();e.stopImmediatePropagation();return;
     }
@@ -642,7 +643,7 @@
     server=document.getElementById('iptv-server').value.trim().replace(/\/+$/,'');
     username=document.getElementById('iptv-user').value.trim();
     password=document.getElementById('iptv-pass').value;
-    if(displayCachedHome()){document.getElementById('tv-home').style.display='block';hide(panel);hide(login);hide(browser);bootLock(true);}
+    if(displayCachedHome()){document.getElementById('tv-home').style.display='block';hide(panel);hide(login);hide(browser);bootLock(false);}
     else{show(panel);hide(login);hide(browser);say('İlk katalog alınıyor; sonraki açılış daha hızlı olacak...');}
     document.getElementById('iptv-connect').click();
   }else{
