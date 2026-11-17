@@ -1,6 +1,8 @@
 /* Universal search across the already loaded Xtream catalog. ES5 / webOS 2. */
 (function(){
 var overlay=document.getElementById('tv-global-search'),input=document.getElementById('tv-global-search-input'),results=document.getElementById('tv-global-search-results'),scope='all',timer=null;
+/* Move outside the legacy panel: the panel is hidden on the Home screen. */
+document.body.appendChild(overlay);
 var groups=[{id:'live',label:'Canlı TV',field:'liveStreams'},{id:'movie',label:'Filmler',field:'vodStreams'},{id:'series',label:'Diziler',field:'seriesList'}];
 function normal(s){return String(s||'').toLocaleLowerCase?String(s||'').toLocaleLowerCase('tr-TR').replace(/ı/g,'i').replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ö/g,'o').replace(/ç/g,'c'):String(s||'').toLowerCase();}
 function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
