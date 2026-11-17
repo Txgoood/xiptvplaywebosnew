@@ -165,3 +165,15 @@ body.tv-mode #tv-next-episode #tv-next-episode-countdown{
  left:auto;right:20px;top:104px;bottom:auto;
  max-height:76%;box-sizing:border-box;
 }
+
+/* Pagination is a compact toolbar row, never a poster-sized direct child. */
+body.tv-mode #iptv-channels>.tv-page-bar{
+ display:block!important;width:100%!important;height:auto!important;min-height:0!important;
+ margin:0 0 10px!important;padding:3px 0!important;clear:both!important;
+}
+body.tv-mode #iptv-channels .tv-page-bar>.tv-page-button{
+ display:inline-block!important;position:static!important;width:auto!important;max-width:320px!important;
+ height:42px!important;min-height:0!important;margin:0!important;padding:8px 18px!important;
+ font-size:18px!important;line-height:22px!important;border-radius:9px!important;
+ box-sizing:border-box!important;white-space:nowrap!important;
+}

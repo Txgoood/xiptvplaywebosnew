@@ -5,7 +5,7 @@ const nativeVariant=process.env.WEBOS_VARIANT==='native';
 const root=process.cwd(), out=path.join(root,nativeVariant?'webos-package-native':'webos-package');
 fs.rmSync(out,{recursive:true,force:true});
 fs.cpSync(path.join(root,'dist'),out,{recursive:true});
-const VERSION='1.0.57';
+const VERSION='1.0.58';
 // Main package: trustLevel netcast (CORS validation off, but NO PalmServiceBridge / luna access).
 // Native test package: default trust level, separate app id; luna is available, CORS is enforced.
 const info=nativeVariant
@@ -13,6 +13,7 @@ const info=nativeVariant
   :{id:'com.xiptvplay.tv',version:VERSION,disableBackHistoryAPI:true,trustLevel:'netcast',vendorExtension:{allowCrossDomain:true},vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Play',icon:'icon.png',resolution:'1920x1080'};
 fs.writeFileSync(path.join(out,'appinfo.json'),JSON.stringify(info,null,2));
 fs.copyFileSync(path.join(root,'webos/tv-remote.js'),path.join(out,'tv-remote.js'));
+fs.copyFileSync(path.join(root,'webos/tv-catalog-navigation.js'),path.join(out,'tv-catalog-navigation.js'));
 fs.copyFileSync(path.join(root,'webos/tv-iptv.js'),path.join(out,'tv-iptv.js'));
 fs.copyFileSync(path.join(root,'webos/tv-features.js'),path.join(out,'tv-features.js'));
 fs.copyFileSync(path.join(root,'webos/tv-profiles.js'),path.join(out,'tv-profiles.js'));

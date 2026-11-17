@@ -313,7 +313,12 @@
     if(posterLoadTimer)clearTimeout(posterLoadTimer);
     posterLoadTimer=setTimeout(loadPostersNearby,75);
   },false);
-  var renderTicket=0;
+  var renderTicket=0,focusCatalogAfterRender=false;
+  function pageAction(label,delta){
+    var bar=document.createElement('div');bar.className='tv-page-bar';channels.appendChild(bar);
+    var button=action(bar,label,function(){currentPage+=delta;focusCatalogAfterRender=true;renderChannels();channels.scrollTop=0;});
+    button.className='tv-page-button';
+  }
   function renderChannels(){
     var ticket=++renderTicket,filterStarted=new Date().getTime();
     focusCache=null;
@@ -372,7 +377,7 @@
     if(mode==='live')liveChannelOrder=matches.slice(0);
     var totalPages=Math.max(1,Math.ceil(matches.length/PAGE_SIZE));
     if(currentPage>=totalPages)currentPage=totalPages-1;
-    if(currentPage>0)action(channels,'◀ Önceki sayfa',function(){currentPage--;renderChannels();channels.scrollTop=0;});
+    if(currentPage>0)pageAction('◀ Önceki sayfa',-1);
     var first=currentPage*PAGE_SIZE,last=Math.min(first+PAGE_SIZE,matches.length);
     for(var j=first;j<last;j++){
       var ch=matches[j];
@@ -425,7 +430,7 @@
     }
     channels.appendChild(batch);
     if(mode!=='live')loadPostersNearby();
-    if(currentPage+1<totalPages)action(channels,'Sonraki sayfa ▶ ('+(currentPage+2)+'/'+totalPages+')',function(){currentPage++;renderChannels();channels.scrollTop=0;});
+    if(currentPage+1<totalPages)pageAction('Sonraki sayfa ▶ ('+(currentPage+2)+'/'+totalPages+')',1);
     if(!matches.length){
       if(mode==='live' && !document.getElementById('tv-search').value && !document.getElementById('tv-favorite-only').checked && liveRetryCount<2) setTimeout(retryLiveCatalog,700);
       var empty=document.createElement('div');empty.className='tv-empty-results';
@@ -433,6 +438,7 @@
       channels.appendChild(empty);
       if(mode==='live')action(channels,'Kanal listesini yeniden yükle',function(){document.getElementById('iptv-connect').click();});
     }
+    if(focusCatalogAfterRender){focusCatalogAfterRender=false;if(window.XIPTVCatalogNavigation)window.XIPTVCatalogNavigation.focus(channels,window.XIPTVCatalogNavigation.first(channels));}
     say(matches.length+' içerik bulundu; '+totalStreams+' kayıt yüklü. Sayfa '+(currentPage+1)+'/'+totalPages+'.');
     }
     scanChunk();
@@ -567,6 +573,18 @@
     if(hasClass('tv-fullscreen')&&key===13){var controls=document.getElementById('tv-player-controls');if(controls&&controls.style.opacity==='0'){if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.show)window.XIPTVPlayerUI.show();document.getElementById('tv-player-back').focus();e.preventDefault();e.stopImmediatePropagation();return;}}
     if(key!==37&&key!==38&&key!==39&&key!==40&&key!==13&&key!==461&&key!==27)return;
     if((key===461||key===27)&&hasClass('tv-fullscreen')){if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.exitPlayer)window.XIPTVCatalogLayout.exitPlayer();else setClass('tv-fullscreen',false);updatePlayerButtons();e.preventDefault();e.stopImmediatePropagation();return;}
+    // Navigate catalogue cards by their rendered rows, skipping favorite/child badges.
+    var activeCard=document.activeElement,nav=window.XIPTVCatalogNavigation;
+    var side=document.getElementById('stitch-side');
+    if(nav&&!hasClass('tv-fullscreen')&&(key===37||key===38||key===39||key===40)&&
+       document.getElementById('tv-episodes').style.display==='none'&&
+       (channels.contains(activeCard)||(key===40&&activeCard&&
+        (activeCard.parentNode===side||activeCard.id==='tv-catalog-back'||activeCard.id==='tv-category-open')))){
+      var target=channels.contains(activeCard)?nav.target(channels,activeCard,key):nav.first(channels);
+      if(target)nav.focus(channels,target);
+      else if(key===38){var selected=side.querySelector('button.selected');if(selected)selected.focus();}
+      e.preventDefault();e.stopImmediatePropagation();return;
+    }
     var list=focusCache,i,el;
     if(!list){list=[];
       var nodes=document.getElementsByTagName('button');

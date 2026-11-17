@@ -77,3 +77,9 @@ Bu depo, eski dalın 1.0.16 anlık görüntüsünün webOS'a ait dosyalarından 
 - Oynatma/katalog mantığı değiştirilmedi. CI #190 başarılı: medya testleri, paket doğrulaması, kumanda/oynatıcı smoke testleri ve her iki IPK üretimi geçti. Gerçek LG TV'de yerleşim ve kumandayla Ayarlar aç/kapat doğrulanmalı. Yerel tarayıcı görsel testi ortam kısıtı nedeniyle çalıştırılamadı.
 
 - v1.0.57 kaynak commit: `beb1b9f8625aade080f0879c441fc861731ad9dd`. Ana IPK: https://github.com/Txgoood/xiptvplaywebosnew/actions/runs/44163821612/artifacts/14363384387 (Build #190).
+
+## 2026-11-17 — v1.0.58 katalog sayfalama ve kumanda
+- Sayfa düğmeleri `tv-iptv.js` içinde ayrı `tv-page-bar` satırında; `tv-catalog-redesign.css` düğme yüksekliğini 42 px olarak sınırlar. Önceki sayfa artık afişler için ayrılan alanı kaplamaz.
+- Yeni ES5 `tv-catalog-navigation.js`: dört yön, gerçek kart satır/sütunlarına göre; kart üzerindeki favori/çocuk rozetlerini atlar, seçili afişi görünür alana kaydırır. İlk satırdan yukarı üst menüye, üst menüden aşağı ilk afişe geçilir. Sayfa değiştirdikten sonra ilk karta odak taşınır.
+- Katalogda görünen sayfa (en fazla 24 kart) üzerinde çalışır; ek ağ isteği, animasyon ve sürekli zamanlayıcı eklenmedi. Tam ekran oynatıcı ve ana sayfa gezinmesi korunur.
+- CI ve gerçek LG TV sonucu henüz doğrulanmadı.
