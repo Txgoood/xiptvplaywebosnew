@@ -13,7 +13,7 @@
   var categoryList=[], channelList=[], selectedCategory='all', mode='live';
   var liveChannelOrder=[], lastChannelSwitchAt=0;
    var catalogData=null, lastLive=null, connecting=false, startup=true, lastSeries=null, seriesCache={}, liveRetryCount=0, liveRetryPending=false;
-  var PAGE_SIZE=60, currentPage=0, searchTimer=null, sortedCache={}, focusCache=null, categoryCache={};
+  var PAGE_SIZE=24, currentPage=0, searchTimer=null, sortedCache={}, focusCache=null, categoryCache={};
   var server='',username='',password='';
   var SAVE_KEY='xiptv_webos2_xtream_local_v1';
   var HOME_CACHE_PREFIX='xiptv_webos2_home_preview_v1_';
@@ -151,9 +151,12 @@
     document.getElementById('tv-now-playing').textContent=mode==='live'?'Canlı TV':mode==='movie'?'Filmler':'Diziler';
     renderCategories();
   }
-  var activeEpisodeQueue=[],activeEpisodeIndex=-1;
+  var activeEpisodeQueue=[],activeEpisodeIndex=-1,episodeCountdown=null,episodeRemaining=10;
+  function cancelEpisodeCountdown(){if(episodeCountdown){clearInterval(episodeCountdown);episodeCountdown=null;}document.getElementById('tv-next-episode').style.display='none';}
+  window.XIPTVEpisodeNext={cancel:cancelEpisodeCountdown};
   function startEpisode(entry,index){
     if(!entry||!entry.item)return;
+    cancelEpisodeCountdown();
     activeEpisodeIndex=index;
     var ep=entry.item,ext=String(ep.container_extension||'mp4').replace(/[^a-zA-Z0-9]/g,'');
     document.getElementById('tv-episodes').style.display='none';
@@ -212,14 +215,24 @@
   }
   video.addEventListener('ended',function(){
     if(!lastSeries||activeEpisodeIndex<0||activeEpisodeIndex+1>=activeEpisodeQueue.length)return;
+    cancelEpisodeCountdown();
     var next=document.getElementById('tv-next-episode'),entry=activeEpisodeQueue[activeEpisodeIndex+1];
     document.getElementById('tv-next-episode-label').textContent='Sıradaki: Sezon '+entry.season+' · '+String(entry.item.title||entry.item.episode_num||'Bölüm');
+    episodeRemaining=10;
+    var count=document.getElementById('tv-next-episode-countdown');
+    if(count)count.textContent='10 saniye sonra otomatik oynatılacak';
     next.style.display='block';document.getElementById('tv-next-episode-play').focus();
+    episodeCountdown=setInterval(function(){
+      if(next.style.display==='none'){cancelEpisodeCountdown();return;}
+      episodeRemaining--;
+      if(episodeRemaining<=0){cancelEpisodeCountdown();startEpisode(entry,activeEpisodeIndex+1);return;}
+      if(count)count.textContent=episodeRemaining+' saniye sonra otomatik oynatılacak';
+    },1000);
   },false);
-  document.getElementById('tv-next-episode-play').onclick=function(){startEpisode(activeEpisodeQueue[activeEpisodeIndex+1],activeEpisodeIndex+1);};
-  document.getElementById('tv-next-episode-close').onclick=function(){document.getElementById('tv-next-episode').style.display='none';};
+  document.getElementById('tv-next-episode-play').onclick=function(){cancelEpisodeCountdown();startEpisode(activeEpisodeQueue[activeEpisodeIndex+1],activeEpisodeIndex+1);};
+  document.getElementById('tv-next-episode-close').onclick=cancelEpisodeCountdown;
   function playStream(kind,id,ext,name){
-    if(kind!=='series'){activeEpisodeIndex=-1;document.getElementById('tv-next-episode').style.display='none';}
+    if(kind!=='series'){cancelEpisodeCountdown();activeEpisodeIndex=-1;}
     if(id===null||typeof id==='undefined'){say('Yayın kimliği eksik');return;}
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.beforePlay)window.XIPTVCatalogLayout.beforePlay();
     var suffix=ext|| (kind==='live'?'m3u8':'mp4');
@@ -356,10 +369,10 @@
               image.alt='';image.style.display='none';
               image.onload=function(){fallback.style.display='none';image.style.display='block';};
               image.onerror=function(){sourceIndex++;if(sourceIndex<sources.length)image.src=sources[sourceIndex];else{image.style.display='none';fallback.style.display='block';if(window.XIPTVMetadata){image.removeAttribute('src');window.XIPTVMetadata.usePoster(image,item,'series');}}};
-              image.src=sources[0];line.appendChild(image);
+              image.setAttribute('loading','lazy');image.src=sources[0];line.appendChild(image);
             }
           }else if(/^https?:\/\//i.test(picture)){
-            var img=document.createElement('img');img.src=picture;
+            var img=document.createElement('img');img.alt='';img.setAttribute('loading','lazy');img.src=picture;
             img.alt='';img.loading='lazy';
             img.onerror=function(){this.style.display='none';if(window.XIPTVMetadata){this.removeAttribute('src');window.XIPTVMetadata.usePoster(this,item,'movie');}};
             line.appendChild(img);
@@ -516,7 +529,7 @@
       e.preventDefault();e.stopImmediatePropagation();return;
     }
     if(key!==37&&key!==38&&key!==39&&key!==40&&key!==13&&key!==461&&key!==27)return;
-    if((key===461||key===27)&&hasClass('tv-fullscreen')){setClass('tv-fullscreen',false);updatePlayerButtons();fullBtn.focus();e.preventDefault();e.stopImmediatePropagation();return;}
+    if((key===461||key===27)&&hasClass('tv-fullscreen')){if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.exitPlayer)window.XIPTVCatalogLayout.exitPlayer();else setClass('tv-fullscreen',false);updatePlayerButtons();e.preventDefault();e.stopImmediatePropagation();return;}
     var list=focusCache,i,el;
     if(!list){list=[];
       var nodes=document.getElementsByTagName('button');
@@ -537,7 +550,7 @@
       if(list.length){
         var next=list[(idx+(key===37||key===38?-1:1)+list.length)%list.length];
         if(next.offsetWidth&&next.offsetHeight){next.focus();
-          if(next.parentNode===channels||next.parentNode&&next.parentNode.parentNode===channels){try{next.scrollIntoView(false);}catch(e){}}}
+          if(next.parentNode===channels||next.parentNode&&next.parentNode.parentNode===channels){var top=next.offsetTop;if(top<channels.scrollTop)channels.scrollTop=top;else if(top+next.offsetHeight>channels.scrollTop+channels.clientHeight)channels.scrollTop=top+next.offsetHeight-channels.clientHeight;}}
         else focusCache=null;
       }
       e.preventDefault();e.stopImmediatePropagation();
