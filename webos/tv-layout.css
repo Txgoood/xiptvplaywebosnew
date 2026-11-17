@@ -467,3 +467,30 @@ body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap>.tv-card-child-approve{
 body.tv-mode #iptv-channels.tv-poster-list>.tv-item-wrap .tv-card-title{
  display:block!important;color:#f4f7fa!important;
 }
+
+/* v1.0.51 universal search and large Turkish Q keyboard (WebKit 538-safe). */
+#tv-global-search{position:fixed;z-index:1800;left:12%;right:2%;top:3%;bottom:4%;padding:20px 24px;box-sizing:border-box;border:2px solid #19c9f5;border-radius:17px;color:#f7fbff;background:#0b1422;box-shadow:0 0 0 999px rgba(1,5,13,.79),0 0 24px rgba(0,202,245,.3);overflow:hidden}
+.tv-global-heading{height:9%;display:-webkit-box;display:flex;align-items:center;justify-content:space-between;font-size:30px}
+#tv-global-search button{background:#1b2a41;color:#f4faff;border:1px solid #435f80;border-radius:10px;padding:13px 19px;font-size:22px}
+#tv-global-search button:focus,#tv-global-search button.selected{background:#02c9ed;color:#051723;outline:2px solid #a4f7ff}
+#tv-global-search-input{box-sizing:border-box;width:100%;height:9%;border:2px solid #1edafa;border-radius:12px;background:#1d2e43;color:white;font-size:29px;padding:11px 25px}
+#tv-global-scopes{display:flex;align-items:center;gap:12px;margin:15px 0;min-height:56px}
+#tv-global-scopes button{min-width:130px}
+#tv-global-search-count{margin-left:auto;font-size:19px;color:#9fd7e7}
+#tv-global-search-results{height:67%;overflow-y:auto;padding-right:10px}
+.tv-global-group{display:inline-block;vertical-align:top;box-sizing:border-box;width:32%;margin-right:1%;padding:13px;background:#172338;border:1px solid #37536d;border-radius:13px;min-height:200px}
+.tv-global-group-heading{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-size:23px}
+#tv-global-search .tv-global-all{font-size:17px;padding:7px}
+#tv-global-search .tv-global-result{display:block;width:100%;text-align:left;margin:8px 0;padding:12px;font-size:19px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tv-global-hint,.tv-global-empty{font-size:23px;color:#a9bdcb}
+#iptv-keyboard,body #iptv-keyboard,body.tv-mode #iptv-keyboard{left:3%!important;width:94%!important;right:3%!important;bottom:2%!important;top:auto!important;height:48%!important;max-height:48%!important;border:2px solid #00dffa!important;border-radius:16px!important;background:#0e1827!important;padding:13px 22px!important;z-index:99999!important}
+#iptv-keyboard-title{box-sizing:border-box;height:45px!important;line-height:34px!important;font-size:25px!important;background:#20324d!important;border-radius:9px!important;padding:5px 12px!important}
+#iptv-keyboard-close{font-size:20px!important;border-radius:8px!important}
+#iptv-keys{height:calc(100% - 58px)!important;overflow:hidden!important;display:block;text-align:center}
+.iptv-key-row{display:flex;align-items:center;justify-content:center;height:25%;width:100%;gap:5px}
+#iptv-keys .iptv-key{min-width:0!important;flex:1 1 0;height:82%;box-sizing:border-box;margin:0!important;padding:3px!important;border:1px solid #45617d;border-radius:10px;background:#203049;color:#fff;font-size:27px!important;font-weight:bold;white-space:nowrap}
+#iptv-keys .iptv-key.wide{flex:1.6 1 0}
+#iptv-keys .iptv-key.primary{background:#08bfe6;color:#071b28}
+#iptv-keys .iptv-key.secondary{background:#334259}
+#iptv-keys .iptv-key.active,#iptv-keys .iptv-key:focus{background:#00c6ef!important;color:#071422!important;outline:3px solid #b5f6ff!important}
+@media(max-width:1100px){#iptv-keys .iptv-key{font-size:19px!important}#tv-global-search{left:8%;}#tv-global-search button{font-size:18px}.tv-global-group{width:31%}}
