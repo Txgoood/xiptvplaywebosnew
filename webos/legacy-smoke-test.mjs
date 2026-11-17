@@ -221,6 +221,8 @@ assert(catalogLayout.includes('tv-category-drawer'));
 assert(catalogLayout.includes('tv-catalog-back'));
 assert(catalogLayout.includes('beforePlay'));
 assert(catalogLayout.includes('function exitPlayer()'),'Player must stop stream and restore focus');
+assert(catalogLayout.includes('function goBack()'),'Back must return to parent category');
+assert(iptvScript.includes('window.XIPTVCatalogLayout.goBack()'),'Remote Back must delegate to category history');
 assert(catalogLayout.includes('playingScroll'),'Returning from playback must restore scroll');
 const catalogCss=fs.readFileSync('webos-package/tv-catalog-redesign.css','utf8');
 assert(catalogCss.includes('tv-poster-list')&&catalogCss.includes('tv-live-list'));
