@@ -89,4 +89,5 @@ Bu depo, eski dalın 1.0.16 anlık görüntüsünün webOS'a ait dosyalarından 
 - `tv-global-search.js` sonuç satırı eskiden yalnızca adı katalog aramasına yazıyordu. Şimdi gerçek seçilen nesneyi ve series_id/stream_id değerini mevcut `XIPTVTV.openItem` yoluna iletir: diziler bölüm listesi, filmler/canlı yayın oynatılır.
 - Tümünü Gör ayrı filtrelenmiş katalog yolu olarak korunur; gizli yıl/tür/puan filtreleri temizlenir, ebeveyn onayı ve profil kontrolleri korunur. Katalog araması global aramanın Türkçe ad normalleştirmesini kullanır.
 - Sonuç açılırken arama ve klavye kapanır; arka planda kalan sonuç arama zamanlayıcısı iptal edilir.
-- CI ve gerçek sağlayıcı/TV sonucu ayrıca doğrulanmalı.
+- CI #192 başarılı: yeni global arama testleri (dizi, film/canlı kimliği, Tümünü Gör, profil izni), katalog yön testleri, mevcut kumanda/oynatıcı smoke testleri ve iki IPK üretimi geçti. Gerçek IPTV sağlayıcısı/LG TV'de seçimin oynatılması veya bölümlerin gelmesi ayrıca denenmeli.
+- Kaynak commit: `68c926470cd52c83ceab8a8d1896df19835f05f1`. Ana IPK v1.0.59 / Build #192: https://github.com/Txgoood/xiptvplaywebosnew/actions/runs/44166043393/artifacts/14365682215
