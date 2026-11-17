@@ -96,7 +96,7 @@
  video.addEventListener('loadedmetadata',function(){noNative();update();});
  video.addEventListener('timeupdate',update);
  video.addEventListener('durationchange',update);
- video.addEventListener('playing',function(){noNative();update();});
+ video.addEventListener('playing',function(){noNative();update();show();});
  video.addEventListener('error',function(){var now=new Date().getTime();if(now-lastErrorAt<1200)return;lastErrorAt=now;notice('Oynatma hatası: Kaynak açılamadı. Yayını yeniden deneyin.','error');});
  video.addEventListener('waiting',function(){notice('Yayın yükleniyor veya bağlantı bekleniyor…','warning');});
  video.addEventListener('canplay',function(){if(toast.className.indexOf('warning')>=0)toast.style.display='none';});
@@ -108,6 +108,6 @@
   if(key===38||key===40){if(buttons.length){var next=(index+(key===38?-1:1)+buttons.length)%buttons.length;buttons[next].focus();}return true;}
   if(key===13){if(index>=0)buttons[index].click();return true;}
   return key===37||key===39;
- },notice:notice,update:update,closeMenu:closeMenu};
+ },notice:notice,update:update,closeMenu:closeMenu,show:show};
  update();
 })();
