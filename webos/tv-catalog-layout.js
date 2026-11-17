@@ -19,7 +19,7 @@ var drawerClose=document.createElement('button');drawerClose.type='button';drawe
 drawerHeading.appendChild(drawerTitle);drawerHeading.appendChild(drawerClose);
 var drawerItems=document.createElement('div');drawerItems.id='tv-category-drawer-items';drawer.appendChild(drawerHeading);drawer.appendChild(drawerItems);
 document.body.appendChild(drawer);
-var previousFocus=null,active='all',currentMode='live';
+var previousFocus=null,active='all',currentMode='live',playingFocus=null,playingScroll=0;
 function closeDrawer(){drawer.style.display='none';if(previousFocus&&previousFocus.focus)previousFocus.focus();}
 function openDrawer(){previousFocus=document.activeElement;drawer.style.display='block';var b=drawerItems.getElementsByTagName('button');if(b.length)b[0].focus();}
 drawerClose.onclick=closeDrawer;openBtn.onclick=openDrawer;
@@ -31,7 +31,7 @@ function sync(mode,selected,items){
  browser.className=active==='all'?'tv-catalog-all':'tv-catalog-filtered';
  var modeLabel=mode==='live'?'Canlı TV':mode==='movie'?'Filmler':'Diziler';
  var chosen='Tümü';var source=categories.getElementsByTagName('button');var selectedName='';for(var ci=0;ci<items.length;ci++)if(String(items[ci].category_id)===active)selectedName=String(items[ci].category_name||'');
- for(var i=0;i<source.length;i++){var b=source[i];b.className=String(i===0&&active==='all'||i>0&&selectedName&&b.textContent===selectedName?'active':'');if(b.className==='active'){chosen=b.textContent;selectedButton=b;}}
+ for(var i=0;i<source.length;i++){var b=source[i];b.className=String(i===0&&active==='all'||i>0&&selectedName&&b.textContent===selectedName?'active':'');if(b.className==='active'){chosen=b.textContent;}}
  current.textContent=active==='all'?modeLabel+'  ›  Tümü':modeLabel+'  ›  '+chosen;
  back.style.display=active==='all'?'none':'inline-block';
  categories.style.display=active==='all'?'block':'none';
@@ -43,9 +43,26 @@ function sync(mode,selected,items){
  if(active==='all')categories.scrollLeft=0;
 }
 function beforePlay(){
+ if((' '+document.body.className+' ').indexOf(' tv-fullscreen ')<0){
+  playingFocus=document.activeElement;
+  var cards=document.getElementById('iptv-channels');playingScroll=cards?cards.scrollTop:0;
+ }
  var cls=' '+document.body.className+' ';
  if(cls.indexOf(' tv-fullscreen ')<0)document.body.className+=' tv-fullscreen';
  closeDrawer();
+}
+function exitPlayer(){
+ if(window.XIPTVEpisodeNext&&window.XIPTVEpisodeNext.cancel)window.XIPTVEpisodeNext.cancel();
+ var v=document.getElementById('video');
+ try{v.pause();v.removeAttribute('src');v.load();}catch(e){}
+ document.body.className=(' '+document.body.className+' ').replace(/ tv-fullscreen /g,' ').replace(/^\s+|\s+$/g,'');
+ var episodes=document.getElementById('tv-next-episode');if(episodes)episodes.style.display='none';
+ var ch=document.getElementById('tv-channel-panel');if(ch)ch.style.display='none';
+ if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.closeMenu)window.XIPTVPlayerUI.closeMenu();
+ var cards=document.getElementById('iptv-channels');
+ if(cards)cards.scrollTop=playingScroll;
+ if(playingFocus&&playingFocus.offsetWidth&&playingFocus.offsetHeight)playingFocus.focus();
+ else if(cards){var b=cards.getElementsByTagName('button');if(b.length)b[0].focus();}
 }
 document.addEventListener('keydown',function(e){
  var k=e.keyCode||e.which;if(k!==461&&k!==27)return;
@@ -53,5 +70,5 @@ document.addEventListener('keydown',function(e){
  if((' '+document.body.className+' ').indexOf(' tv-fullscreen ')>=0)return;
  if(active!=='all'&&browser.style.display!=='none'){back.click();if(e.preventDefault)e.preventDefault();if(e.stopImmediatePropagation)e.stopImmediatePropagation();}
 },true);
-window.XIPTVCatalogLayout={sync:sync,beforePlay:beforePlay,closeDrawer:closeDrawer};
+window.XIPTVCatalogLayout={sync:sync,beforePlay:beforePlay,exitPlayer:exitPlayer,closeDrawer:closeDrawer};
 })();
