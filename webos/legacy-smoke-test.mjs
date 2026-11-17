@@ -186,6 +186,8 @@ assert(iptvScript.includes("function changeLiveChannel(step)"),'Fullscreen live-
 assert(iptvScript.includes('episodeCountdown=setInterval'),'Next episode must auto-start after countdown');
 assert(iptvScript.includes('episodeRemaining=10'),'Autoplay timer must start at 10 seconds');
 assert(iptvScript.includes('PAGE_SIZE=24'),'TV poster page must avoid excessive image loading');
+assert(iptvScript.includes('loadPostersNearby'),'TV must progressively load visible posters');
+assert(iptvScript.includes('data-iptv-src'),'Poster network requests must wait until visible');
 assert(iptvScript.includes('window.XIPTVCatalogLayout.exitPlayer'),'LG Back key must exit playback');
 assert(iptvScript.includes('function chooseChannelNumber(n)'), 'Remote digits must select channels');
 assert(iptvScript.includes('previousChannel'), 'Previous-channel navigation must exist');
