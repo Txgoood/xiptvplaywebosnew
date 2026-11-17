@@ -45,6 +45,7 @@ assert(html.includes('id="tv-next-episode-play"'));
 assert(html.includes('id="tv-next-episode-close"'));
 
 assert.equal(metadata.trustLevel,'netcast');
+assert.equal(metadata.disableBackHistoryAPI,true,'LG Back key must be delivered to our app');
 assert.equal(metadata.vendorExtension?.allowCrossDomain,true);
 const homeScript=fs.readFileSync('webos-package/tv-home.js','utf8');
 new vm.Script(homeScript,{filename:'tv-home.js'});
@@ -180,6 +181,8 @@ assert(html.includes('src="./tv-player-ui.js"'));
 const playerUIScript=fs.readFileSync('webos-package/tv-player-ui.js','utf8');
 new vm.Script(playerUIScript,{filename:'tv-player-ui.js'});
 assert(playerUIScript.includes('window.XIPTVPlayerUI'), 'Player UI must expose navigation API');
+assert(playerUIScript.includes("byId('tv-player-back').onclick"),'Player Back button needs a click handler');
+assert(playerUIScript.includes('XIPTVCatalogLayout.exitPlayer'),'Player Back must actually return to catalogue');
 assert(html.includes('id="tv-aspect"'));
 assert(iptvScript.includes("setClass('tv-fullscreen'"));
 assert(iptvScript.includes("function changeLiveChannel(step)"),'Fullscreen live-TV channel zapping must be present');
