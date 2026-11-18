@@ -86,23 +86,43 @@
     var b=document.createElement('button');b.type='button';b.appendChild(document.createTextNode(label));b.onclick=cb;parent.appendChild(b);return b;
   }
   function request(route,data,callback){
-    var xhr=new XMLHttpRequest();
-    try{
-      xhr.open('POST',BASE+route,true);
-      xhr.timeout=45000;
-      xhr.setRequestHeader('Content-Type','application/json');
-      xhr.onreadystatechange=function(){
-        if(xhr.readyState!==4)return;
-        var response=null;
-        try{response=JSON.parse(xhr.responseText);}catch(err){}
-        if(xhr.status<200||xhr.status>=300){callback(new Error(response&&response.error||'HTTP '+xhr.status));return;}
-        if(!response){callback(new Error('Sunucu yanıtı okunamadı'));return;}
-        callback(null,response);
-      };
-      xhr.onerror=function(){callback(new Error('Render sunucusuna bağlantı kurulamadı'));};
-      xhr.ontimeout=function(){callback(new Error('Sunucu zaman aşımı'));};
-      xhr.send(JSON.stringify(data));
-    }catch(e){callback(e);}
+    // Retry transient Render/backend network failures; never retry invalid credentials.
+    var canRetry=route==='/api/iptv/xtream/verify'||route==='/api/iptv/xtream/catalog';
+    var attempt=0,maxAttempts=canRetry?3:1,finished=false;
+    function submit(){
+      if(finished)return;
+      attempt++;
+      var xhr=new XMLHttpRequest(),resolved=false;
+      function done(err,response,retryable){
+        if(resolved||finished)return;resolved=true;
+        if(err&&retryable&&attempt<maxAttempts){
+          say('Bağlantı geçici olarak başarısız. Otomatik yeniden deneniyor ('+(attempt+1)+'/'+maxAttempts+')...');
+          setTimeout(submit,attempt*1200);return;
+        }
+        finished=true;callback(err,response);
+      }
+      try{
+        xhr.open('POST',BASE+route,true);xhr.timeout=45000;
+        xhr.setRequestHeader('Content-Type','application/json');
+        xhr.onreadystatechange=function(){
+          if(xhr.readyState!==4)return;
+          var response=null;
+          try{response=JSON.parse(xhr.responseText);}catch(err){}
+          if(xhr.status<200||xhr.status>=300){
+            var reason=response&&response.error||'HTTP '+xhr.status;
+            var transient=xhr.status===0||xhr.status===408||xhr.status===429||xhr.status>=500;
+            // Authentication errors (401/403) must not be retried.
+            done(new Error(reason),null,transient);return;
+          }
+          if(!response){done(new Error('Sunucu yanıtı okunamadı'),null,true);return;}
+          done(null,response,false);
+        };
+        xhr.onerror=function(){done(new Error('Render sunucusuna bağlantı kurulamadı'),null,true);};
+        xhr.ontimeout=function(){done(new Error('Sunucu zaman aşımı'),null,true);};
+        xhr.send(JSON.stringify(data));
+      }catch(e){done(e,null,true);}
+    }
+    submit();
   }
   // Some Xtream sources return categories before their live streams on cold start.
   // Retry ONLY the live data in memory; never erase the working film/series catalogue.
