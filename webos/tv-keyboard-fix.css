@@ -1,0 +1,41 @@
+/* TV keyboard layout for LG webOS 2 (WebKit 538). No flex or grid dependency. */
+html body #iptv-keyboard, html body.tv-mode #iptv-keyboard {
+  position:fixed!important;left:3%!important;right:3%!important;top:auto!important;bottom:3%!important;
+  width:94%!important;height:49%!important;max-height:49%!important;
+  padding:12px 18px!important;box-sizing:border-box!important;
+  border:2px solid #16d9fc!important;border-radius:16px!important;
+  background:#0b1a2d!important;z-index:2147483000!important;overflow:hidden!important;
+}
+html body #iptv-keyboard-title{box-sizing:border-box!important;margin:0!important;padding:6px 140px 6px 14px!important;
+  height:13%!important;min-height:39px!important;line-height:28px!important;
+  font-size:23px!important;color:#f4faff!important;background:#1a3453!important;
+  white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;
+}
+html body #iptv-keyboard-close{position:absolute!important;top:16px!important;right:24px!important;
+  height:38px!important;padding:3px 15px!important;font-size:19px!important;z-index:2!important;}
+html body #iptv-keys{display:block!important;box-sizing:border-box!important;height:85%!important;width:100%!important;
+  overflow:hidden!important;padding:6px 0 0!important;text-align:center!important;}
+html body #iptv-keys .iptv-key-row{display:block!important;box-sizing:border-box!important;
+  width:100%!important;height:25%!important;white-space:nowrap!important;
+  text-align:center!important;overflow:visible!important;line-height:normal!important;}
+html body #iptv-keys .iptv-key{display:inline-block!important;box-sizing:border-box!important;
+  vertical-align:middle!important;height:82%!important;min-width:0!important;max-width:none!important;
+  margin:0 .32%!important;padding:3px 2px!important;border:1px solid #56799a!important;
+  border-radius:9px!important;background:#1f3b59!important;color:#fff!important;
+  font-size:26px!important;font-weight:bold!important;line-height:1.15!important;
+  white-space:nowrap!important;text-align:center!important;float:none!important;
+  -webkit-flex:none!important;flex:none!important;}
+html body #iptv-keys .iptv-key-row.count-12 .iptv-key{width:7.55%!important}
+html body #iptv-keys .iptv-key-row.count-11 .iptv-key{width:8.32%!important}
+html body #iptv-keys .iptv-key-row.count-10 .iptv-key{width:9.15%!important}
+html body #iptv-keys .iptv-key-row.count-8 .iptv-key{width:11.7%!important}
+html body #iptv-keys .iptv-key-row.count-13 .iptv-key{width:6.8%!important}
+html body #iptv-keys .iptv-key.primary{background:#04bde9!important;color:#031525!important;}
+html body #iptv-keys .iptv-key.secondary{background:#3b506c!important;}
+html body #iptv-keys .iptv-key.active,html body #iptv-keys .iptv-key:focus{
+  background:#00d4ff!important;color:#06172b!important;border:2px solid #efffff!important;
+  outline:2px solid #90eeff!important;}
+@media(max-width:1100px){
+ html body #iptv-keys .iptv-key{font-size:19px!important;}
+ html body #iptv-keyboard-title{font-size:18px!important;}
+}
