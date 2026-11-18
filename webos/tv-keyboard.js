@@ -26,7 +26,7 @@ function apply(value){
 function focusKey(r,c){if(!rows.length)return;row=Math.max(0,Math.min(rows.length-1,r));col=Math.max(0,Math.min(rows[row].length-1,c));for(var i=0;i<rows.length;i++)for(var j=0;j<rows[i].length;j++)rows[i][j].className=rows[i][j].className.replace(/\s*active/g,'');var b=rows[row][col];b.className+=' active';b.focus();}
 function paint(){
  keys.innerHTML='';rows=[];var grid=numberMode?numberRow:letters;grid=grid.concat([functionsRow]);
- for(var r=0;r<grid.length;r++){var line=document.createElement('div');line.className='iptv-key-row';keys.appendChild(line);var buttons=[];for(var c=0;c<grid[r].length;c++){(function(value){var b=document.createElement('button');b.type='button';b.textContent=value==='SHIFT'?'⇧':value==='BACK'?'⌫':value;b.className='iptv-key'+(value==='BOŞLUK'?' wide':'')+(value==='ARA'?' primary':'')+(value==='KAPAT'?' secondary':'');b.onclick=function(){apply(value);};line.appendChild(b);buttons.push(b);})(grid[r][c]);}rows.push(buttons);}
+ for(var r=0;r<grid.length;r++){var line=document.createElement('div');line.className='iptv-key-row count-'+grid[r].length;keys.appendChild(line);var buttons=[];for(var c=0;c<grid[r].length;c++){(function(value){var b=document.createElement('button');b.type='button';b.textContent=value==='SHIFT'?'⇧':value==='BACK'?'⌫':value;b.className='iptv-key'+(value==='BOŞLUK'?' wide':'')+(value==='ARA'?' primary':'')+(value==='KAPAT'?' secondary':'');b.onclick=function(){apply(value);};line.appendChild(b);buttons.push(b);})(grid[r][c]);}rows.push(buttons);}
  focusKey(row,col);label();
 }
 function open(id){var t=document.getElementById(id);if(!t)return;lastFocus=document.activeElement;target=t;row=0;col=0;numberMode=false;box.style.display='block';paint();}
