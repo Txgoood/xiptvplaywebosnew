@@ -185,6 +185,22 @@
     playStream('series',ep.id,ext,ep.title||'Dizi Bölümü');
   }
   function showSeries(item){
+    // One poster can represent several independent provider records.
+    // Never discard their episodes: let the viewer choose a source first.
+    if(item&&item._xiptvSeriesVariants&&item._xiptvSeriesVariants.length>1){
+      var variants=item._xiptvSeriesVariants,popup=document.getElementById('tv-episodes'),list=document.getElementById('tv-episodes-list');
+      document.getElementById('tv-episodes-title').textContent=String(item.name||'Dizi')+' — Kaynak Seç';
+      clear(list);
+      for(var vi=0;vi<variants.length;vi++){(function(source,ordinal){
+        action(list,'Kaynak '+ordinal+' · '+String(source.name||item.name||'Dizi')+' · ID '+String(source.series_id),function(){
+          popup.style.display='none';
+          showSeries(source);
+        });
+      })(variants[vi],vi+1);}
+      popup.style.display='block';
+      var first=list.getElementsByTagName('button')[0];if(first)first.focus();
+      return;
+    }
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.rememberSeriesPoster)window.XIPTVCatalogLayout.rememberSeriesPoster();
     var id=item.series_id;
     if(!id){say('Dizi bilgisi eksik');return;}
@@ -394,6 +410,29 @@
     function finishRender(){
     if(ticket!==renderTicket)return;
     if(window.XIPTVPerformance)window.XIPTVPerformance.measure('Katalog filtreleme',new Date().getTime()-filterStarted);
+    // Collapse duplicate series posters conservatively: same canonical name AND year.
+    // Provider entries remain untouched so each source retains its own seasons and episodes.
+    if(mode==='series'&&matches.length>1){
+      var unique=[],bySignature={};
+      for(var di=0;di<matches.length;di++){
+        var source=matches[di],title=String(source.name||source.title||'').replace(/^\\s+|\\s+$/g,'');
+        var year=String(source.year||'').replace(/[^0-9]/g,'');
+        if(!year){var y=title.match(/(?:\\(|\\[)(19[0-9]{2}|20[0-9]{2})(?:\\)|\\])/);if(y)year=y[1];}
+        if(!year){var date=String(source.release_date||'');var m=date.match(/^(19[0-9]{2}|20[0-9]{2})/);if(m)year=m[1];}
+        // Without a release year, preserve entries separately to avoid merging remakes.
+        var signature=year?title.toLowerCase().replace(/\\s*(?:\\(|\\[)(?:19|20)[0-9]{2}(?:\\)|\\])\\s*/g,' ').replace(/[^a-z0-9\\u00c0-\\u024f\\u0400-\\u04ff]+/g,' ').replace(/^\\s+|\\s+$/g,'')+'|'+year:'';
+        if(!signature){unique.push(source);continue;}
+        var previous=bySignature[signature];
+        if(!previous){
+          var clone={};for(var prop in source)if(Object.prototype.hasOwnProperty.call(source,prop))clone[prop]=source[prop];
+          clone._xiptvSeriesVariants=[source];bySignature[signature]=clone;unique.push(clone);
+        }else if(String(previous.series_id)!==String(source.series_id)){
+          var exists=false;for(var gi=0;gi<previous._xiptvSeriesVariants.length;gi++)if(String(previous._xiptvSeriesVariants[gi].series_id)===String(source.series_id))exists=true;
+          if(!exists)previous._xiptvSeriesVariants.push(source);
+        }
+      }
+      matches=unique;
+    }
     // Preserve the category/filter/sort order for fullscreen channel zapping.
     // Only a live list becomes a channel-change source; films and series never do.
     if(mode==='live')liveChannelOrder=matches.slice(0);
