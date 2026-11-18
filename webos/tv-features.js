@@ -12,11 +12,27 @@ function read(k,fallback){try{return JSON.parse(localStorage.getItem(prefix+scop
 function save(k,value){try{localStorage.setItem(prefix+scope+'_'+k,JSON.stringify(value));}catch(e){}}
 function key(mode,item){return mode+':'+String(item.stream_id||item.series_id||item.id||'');}
 function favs(){if(!favoriteCache)favoriteCache=read('favorites',{});return favoriteCache;}
-function isFavorite(mode,item){return !!favs()[key(mode,item)];}
+function isFavorite(mode,item){
+ var store=favs(),variants=item&&item._xiptvSeriesVariants;
+ if(mode==='series'&&variants&&variants.length){
+  for(var vi=0;vi<variants.length;vi++)if(store[key(mode,variants[vi])])return true;
+ }
+ return !!store[key(mode,item)];
+}
 function getFavoriteOrder(){var saved=read('liveFavoriteOrder',[]),favorites=favs(),out=saved.slice(0);for(var k in favorites)if(Object.prototype.hasOwnProperty.call(favorites,k)&&k.indexOf('live:')===0&&out.indexOf(k)<0)out.push(k);return out;}
 function moveFavoriteChannel(item,step){var k=key('live',item),order=getFavoriteOrder(),index=order.indexOf(k);if(index<0)return;var target=index+step;if(target<0||target>=order.length)return;var hold=order[target];order[target]=order[index];order[index]=hold;save('liveFavoriteOrder',order);if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();}
 function toggleFavorite(mode,item){
- var f=favs(),k=key(mode,item),adding=!f[k];if(f[k])delete f[k];else f[k]={name:String(item.name||''),type:mode};save('favorites',f);
+ var f=favs(),k=key(mode,item),adding=!isFavorite(mode,item);
+ var variants=mode==='series'&&item&&item._xiptvSeriesVariants;
+ if(variants&&variants.length){
+  // Keep existing provider IDs in storage; a grouped favorite acts on every variant.
+  for(var vi=0;vi<variants.length;vi++){
+   var variantKey=key(mode,variants[vi]);
+   if(adding)f[variantKey]={name:String(variants[vi].name||''),type:mode};
+   else delete f[variantKey];
+  }
+ }else{if(f[k])delete f[k];else f[k]={name:String(item.name||''),type:mode};}
+ save('favorites',f);
  if(mode==='live'){var order=getFavoriteOrder(),at=order.indexOf(k);if(adding&&at<0)order.push(k);else if(!adding&&at>=0)order.splice(at,1);save('liveFavoriteOrder',order);}
  if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();
  if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();
