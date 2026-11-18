@@ -415,12 +415,12 @@
     if(mode==='series'&&matches.length>1){
       var unique=[],bySignature={};
       for(var di=0;di<matches.length;di++){
-        var source=matches[di],title=String(source.name||source.title||'').replace(/^\\s+|\\s+$/g,'');
+        var source=matches[di],title=String(source.name||source.title||'').replace(/^\s+|\s+$/g,'');
         var year=String(source.year||'').replace(/[^0-9]/g,'');
-        if(!year){var y=title.match(/(?:\\(|\\[)(19[0-9]{2}|20[0-9]{2})(?:\\)|\\])/);if(y)year=y[1];}
+        if(!year){var y=title.match(/(?:\(|\[)(19[0-9]{2}|20[0-9]{2})(?:\)|\])/);if(y)year=y[1];}
         if(!year){var date=String(source.release_date||'');var m=date.match(/^(19[0-9]{2}|20[0-9]{2})/);if(m)year=m[1];}
         // Without a release year, preserve entries separately to avoid merging remakes.
-        var signature=year?title.toLowerCase().replace(/\\s*(?:\\(|\\[)(?:19|20)[0-9]{2}(?:\\)|\\])\\s*/g,' ').replace(/[^a-z0-9\\u00c0-\\u024f\\u0400-\\u04ff]+/g,' ').replace(/^\\s+|\\s+$/g,'')+'|'+year:'';
+        var signature=year?title.toLowerCase().replace(/\s*(?:\(|\[)(?:19|20)[0-9]{2}(?:\)|\])\s*/g,' ').replace(/[^a-z0-9\u00c0-\u024f\u0400-\u04ff]+/g,' ').replace(/^\s+|\s+$/g,'')+'|'+year:'';
         if(!signature){unique.push(source);continue;}
         var previous=bySignature[signature];
         if(!previous){
