@@ -190,6 +190,8 @@ assert(iptvScript.includes('episodeCountdown=setInterval'),'Next episode must au
 assert(iptvScript.includes('episodeRemaining=10'),'Autoplay timer must start at 10 seconds');
 assert(iptvScript.includes('PAGE_SIZE=24'),'TV poster page must avoid excessive image loading');
 assert(iptvScript.includes('loadPostersNearby'),'TV must progressively load visible posters');
+assert(iptvScript.includes('var canRetry=route==='),'Transient connection retries must be enabled');
+assert(iptvScript.includes('maxAttempts=canRetry?3:1'),'Retries must be bounded');
 assert(iptvScript.includes('data-iptv-src'),'Poster network requests must wait until visible');
 assert(iptvScript.includes('window.XIPTVCatalogLayout.exitPlayer'),'LG Back key must exit playback');
 assert(iptvScript.includes('function chooseChannelNumber(n)'), 'Remote digits must select channels');
@@ -226,6 +228,9 @@ assert(safeCache.includes('Poster depolama: kapalı'),'Disk usage must be disabl
 const perfScript=fs.readFileSync('webos-package/tv-performance.js','utf8');
 new vm.Script(perfScript,{filename:'tv-performance.js'});
 assert(html.includes('tv-catalog-redesign.css'));
+assert(html.includes('tv-keyboard-fix.css'),'Keyboard CSS must load after the catalogue');
+const keyboardFix=fs.readFileSync('webos-package/tv-keyboard-fix.css','utf8');
+assert(keyboardFix.includes('count-12')&&keyboardFix.includes('inline-block'),'Legacy keyboard keys need fixed row widths');
 const catalogLayout=fs.readFileSync('webos-package/tv-catalog-layout.js','utf8');
 new vm.Script(catalogLayout,{filename:'tv-catalog-layout.js'});
 assert(catalogLayout.includes('tv-category-drawer'));
