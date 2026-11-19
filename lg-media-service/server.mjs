@@ -13,6 +13,8 @@ import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { promises as fs } from 'node:fs';
+import { tmpdir } from 'node:os';
 
 const here=path.dirname(fileURLToPath(import.meta.url));
 const PORT=Number(process.env.PORT||3101);
@@ -25,6 +27,8 @@ const MAX_BODY=8192, PROBE_TIMEOUT=22000, MAX_SESSIONS=64, SESSION_TTL=90*60*100
 const STREAM_SECONDS=Math.max(15,Math.min(300,Number(process.env.LG_MEDIA_MAX_STREAM_SECONDS||120)));
 const STREAM_BYTES=Math.max(5,Math.min(100,Number(process.env.LG_MEDIA_MAX_STREAM_MB||60)))*1024*1024;
 const sessions=new Map(),ratelimits=new Map(),mediaTickets=new Map();
+const mp4Clips=new Map();
+const MP4_CLIP_SECONDS=8,MP4_CLIP_MAX_BYTES=4*1024*1024,MP4_CLIP_TTL=5*60*1000;
 const subtitleJobs=new Map();
 const subtitleCache=new Map();
 const SUBTITLE_CACHE_TTL=10*60*1000;
@@ -280,6 +284,53 @@ export function compatibilityArgs(proxySource,start=0,audioIndex=null){
   '-t',String(STREAM_SECONDS),'-f','mpegts','pipe:1');
  return args;
 }
+// Produce a *complete* MP4 with a normal moov atom, then serve with Range
+// support. A live pipe cannot safely use +faststart (requires seekable output).
+export function mp4ClipArgs(proxySource,outputPath,start=0,audioIndex=null){
+ const args=compatibilityArgs(proxySource,start,audioIndex);
+ const fmt=args.lastIndexOf('-f');
+ args.splice(fmt,3,'-t',String(MP4_CLIP_SECONDS),'-movflags','+faststart','-f','mp4',outputPath);
+ return args;
+}
+async function prepareMp4Clip(session,start){
+ const dir=await fs.mkdtemp(path.join(tmpdir(),'lg-vod-'));
+ const outputPath=path.join(dir,'sample.mp4');
+ const selectedAudio=session.streams.find(t=>t.type==='audio');
+ const args=mp4ClipArgs(session.proxyUrl,outputPath,start,selectedAudio?selectedAudio.index:null);
+ let errText='',settled=false;
+ try{
+  await new Promise((resolve,reject)=>{
+   const proc=spawn(FFMPEG,args,{stdio:['ignore','ignore','pipe'],windowsHide:true});
+   const timer=setTimeout(()=>proc.kill('SIGKILL'),80000);
+   proc.stderr.on('data',chunk=>{if(errText.length<1600)errText+=String(chunk).slice(0,1600);});
+   proc.on('error',err=>{if(!settled){settled=true;clearTimeout(timer);reject(Error('FFmpeg başlatılamadı.'));}});
+   proc.on('close',(code,signal)=>{
+    if(settled)return;settled=true;clearTimeout(timer);
+    if(code===0&&!signal)resolve();
+    else {
+     console.warn('[lg-media] MP4 clip failed code='+String(code)+' signal='+String(signal||'none')+' detail='+diagnose(errText));
+     reject(Error(signal?'FFmpeg '+String(signal):'FFmpeg çıkış '+String(code)));
+    }
+   });
+  });
+  const stat=await fs.stat(outputPath);
+  if(stat.size<2048||stat.size>MP4_CLIP_MAX_BYTES)throw Error('MP4 çıktı boyutu geçersiz.');
+  const bytes=await fs.readFile(outputPath);
+  // A complete MP4 must contain the normal file type and movie index atoms.
+  if(bytes.toString('latin1',4,8)!=='ftyp'||!bytes.includes(Buffer.from('moov')))throw Error('MP4 dosyası tamamlanamadı.');
+  return bytes;
+ }finally{await fs.rm(dir,{recursive:true,force:true}).catch(()=>{});}
+}
+export function parseByteRange(header,size){
+ if(!header)return {start:0,end:size-1,status:200};
+ const match=String(header).match(/^bytes=(\d*)-(\d*)$/);
+ if(!match)return null;
+ let start=match[1]?Number(match[1]):null,end=match[2]?Number(match[2]):null;
+ if(start===null){if(end===null||end<=0)return null;start=Math.max(0,size-end);end=size-1;}
+ else if(end===null)end=size-1;
+ if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>=size||start<0||end<start)return null;
+ return {start,end:Math.min(end,size-1),status:206};
+}
 function sendStream(res,req,args,contentType,maxMs){
  let first=true,finished=false,bytesSent=0;
  const proc=spawn(FFMPEG,args,{stdio:['ignore','pipe','pipe'],windowsHide:true});
@@ -300,7 +351,7 @@ function sendStream(res,req,args,contentType,maxMs){
  });
  res.on('close',()=>{if(!res.writableEnded)proc.kill('SIGKILL');});
 }
-function cleanup(){for(const [k,v] of sessions)if(v.expiry<Date.now()){sessions.delete(k);mediaTickets.delete(k);}for(const [k,v] of mediaTickets)if(v.expiry<Date.now())mediaTickets.delete(k);}
+function cleanup(){for(const [k,v] of sessions)if(v.expiry<Date.now()){sessions.delete(k);mediaTickets.delete(k);mp4Clips.delete(k);}for(const [k,v] of mediaTickets)if(v.expiry<Date.now())mediaTickets.delete(k);for(const [k,v] of mp4Clips)if(v.expiry<Date.now())mp4Clips.delete(k);}
 async function extractSubtitle(url,index){
  // Tam altyazı taraması için analiz kotasından ayrı bir medya bileti kullan.
  const token=randomBytes(24).toString('hex');
@@ -360,6 +411,38 @@ const server=http.createServer(async(req,res)=>{
    json(res,200,{success:true,token,expiresIn:Math.floor(SESSION_TTL/1000),tracks:streams,probeFallback,playback:{method:'mpegts-copy',compatibility:'h264-aac-ts-360p',experimental:true}});
   }catch(e){error(res,400,String(e.message||'Analiz başarısız').slice(0,150));}
   finally{activeProbes--;}
+  return;
+ }
+ // Experimental 8-second complete MP4 test for legacy LG devices.
+ // Do not expose an arbitrary URL: only sessions created via authenticated
+ // /tracks can request a clip, with one bounded FFmpeg process at a time.
+ const mp4Prepare=pathname.match(/^\/compat-mp4\/prepare\/([a-f0-9]{48})$/);
+ if(req.method==='POST'&&mp4Prepare){
+  const token=mp4Prepare[1],sess=getSession(token);
+  if(!sess){error(res,401,'Medya oturumu sona erdi; yeniden analiz edin.');return;}
+  if(!sess.streams.some(t=>t.type==='video')){error(res,422,'Medya video içermiyor.');return;}
+  if(activeStreams>=1){res.setHeader('Retry-After','5');error(res,429,'Dönüştürücü başka bir işlemle meşgul.');return;}
+  activeStreams++;
+  try{
+   // The clip is intentionally short. This is a compatibility test, not full playback.
+   const output=await prepareMp4Clip(sess,0);
+   mp4Clips.set(token,{bytes:output,expiry:Math.min(sess.expiry,Date.now()+MP4_CLIP_TTL)});
+   cleanup();
+   json(res,200,{success:true,format:'mp4',seconds:MP4_CLIP_SECONDS,bytes:output.length,path:'/compat-mp4/file/'+token});
+  }catch(e){error(res,502,'MP4 denemesi üretilemedi: '+String(e.message||'Dönüştürme hatası').slice(0,80));}
+  finally{activeStreams--;}
+  return;
+ }
+ const mp4File=pathname.match(/^\/compat-mp4\/file\/([a-f0-9]{48})$/);
+ if((req.method==='GET'||req.method==='HEAD')&&mp4File){
+  const sess=getSession(mp4File[1]),clip=mp4Clips.get(mp4File[1]);
+  if(!sess||!clip||clip.expiry<Date.now()){error(res,404,'MP4 denemesi bulunamadı veya süresi doldu.');return;}
+  const bytes=clip.bytes,range=parseByteRange(req.headers.range,bytes.length);
+  if(!range){res.writeHead(416,{'Content-Range':'bytes */'+bytes.length});res.end();return;}
+  res.writeHead(range.status,{'Content-Type':'video/mp4','Content-Length':range.end-range.start+1,
+   'Accept-Ranges':'bytes','Cache-Control':'private, max-age=0','X-Content-Type-Options':'nosniff',
+   ...(range.status===206?{'Content-Range':'bytes '+range.start+'-'+range.end+'/'+bytes.length}:{})});
+  res.end(req.method==='HEAD'?undefined:bytes.subarray(range.start,range.end+1));
   return;
  }
  // Short-lived token from authenticated /tracks. No source URL is exposed.
