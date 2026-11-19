@@ -4,9 +4,20 @@
  var video=document.getElementById('video'),url=String(window.XIPTV_LG_MEDIA_URL||'').replace(/\/+$/,'');
  var ctx=null,lastKind='',session=null,busy=false,busySince=0,manual=false,started=false,offset=0,scanSequence=0;
  var playerOverlay=document.getElementById('tv-lg-subtitle-overlay'),cues=[],lastCue=-1,sourceKey='';
- var scanButton=document.getElementById('tv-lg-media-scan'),summary=document.getElementById('tv-lg-media-status'),returnButton=document.getElementById('tv-lg-native-return'),compatButton=document.getElementById('tv-compat-play');
- var compatRequested=false,compatTimer=null;
- function say(s){summary.textContent=String(s||'');}
+ var scanButton=document.getElementById('tv-lg-media-scan'),summary=document.getElementById('tv-lg-media-status'),returnButton=document.getElementById('tv-lg-native-return'),compatButton=document.getElementById('tv-compat-play'),compatStatus=document.getElementById('tv-compat-status');
+ var compatRequested=false,compatActive=false,compatTimer=null;
+ function say(s){
+  summary.textContent=String(s||'');
+  if(compatRequested||compatActive){
+   if(compatStatus){compatStatus.style.display='block';compatStatus.textContent=String(s||'');}
+   if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.notice)window.XIPTVPlayerUI.notice(String(s||''),'info');
+  }
+ }
+ function compatMessage(message){
+  if(compatStatus){compatStatus.style.display='block';compatStatus.textContent=message;}
+  if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.notice)window.XIPTVPlayerUI.notice(message,'info');
+  summary.textContent=message;
+ }
  function request(method,path,data,cb,timeoutMs){
   var x=new XMLHttpRequest();
   try{x.open(method,url+path,true);x.timeout=timeoutMs||28000;
@@ -263,7 +274,9 @@
   }catch(e){failed();}
  }
  if(compatButton)compatButton.onclick=function(){
-  if(!ctx){say('Önce bir film veya dizi bölümü seçin.');return;}
+  compatActive=true;
+  compatMessage('Uyumlu oynatma düğmesi çalıştı. LG medya servisi ve codec analizi başlatılıyor…');
+  if(!ctx){compatMessage('Uyumlu oynatma için önce film veya dizi bölümü seçilmeli.');return;}
   compatButton.disabled=true;
   compatRequested=true;
   if(session&&session.token){compatRequested=false;playCompatible();}
@@ -285,7 +298,7 @@
   if(this.value.indexOf('native:a:')===0){var n=Number(this.value.split(':')[2]);try{for(var i=0;i<video.audioTracks.length;i++)video.audioTracks[i].enabled=i===n;say('TV ses kanalı seçildi.');}catch(e){say('TV ses kanalı geçişini desteklemiyor.');}}
  },false);
  window.XIPTVLGMedia={
-  setSource:function(data){scanSequence++;compatRequested=false;if(compatTimer){clearTimeout(compatTimer);compatTimer=null;}if(compatButton){compatButton.disabled=false;compatButton.style.display=data&&data.kind!=='live'?'inline-block':'none';}ctx=data;lastKind=data?String(data.kind||''):'live';session=null;manual=false;busy=false;started=false;offset=0;cues=[];lastCue=-1;playerOverlay.style.display='none';scanButton.disabled=false;returnButton.style.display='none';summary.textContent='';/* No automatic scan: a second connection to the IPTV account can interrupt the playing stream. Use the scan button. */},
+  setSource:function(data){scanSequence++;compatRequested=false;compatActive=false;if(compatStatus){compatStatus.style.display='none';compatStatus.textContent='';}if(compatTimer){clearTimeout(compatTimer);compatTimer=null;}if(compatButton){compatButton.disabled=false;compatButton.style.display=data&&data.kind!=='live'?'inline-block':'none';}ctx=data;lastKind=data?String(data.kind||''):'live';session=null;manual=false;busy=false;started=false;offset=0;cues=[];lastCue=-1;playerOverlay.style.display='none';scanButton.disabled=false;returnButton.style.display='none';summary.textContent='';/* No automatic scan: a second connection to the IPTV account can interrupt the playing stream. Use the scan button. */},
   extendMenus:extendMenus,
   scan:scan,
   subtitleForMkvOrdinal:subtitleForMkvOrdinal
