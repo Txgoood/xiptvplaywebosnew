@@ -366,6 +366,28 @@
     var button=action(bar,label,function(){currentPage+=delta;focusCatalogAfterRender=true;renderChannels();channels.scrollTop=0;});
     button.className='tv-page-button';
   }
+  function hasTurkishCategories(items){
+    for(var ti=0;ti<items.length;ti++){
+      var name=String(items[ti].category_name||'').toUpperCase();
+      if(/(^|[^A-Z])(TR|TURKISH|TURKIYE|TÜRKİYE|TÜRKÇE)([^A-Z]|$)/.test(name))return true;
+    }
+    return false;
+  }
+  function turkishCategory(name){
+    return /(^|[^A-Z])(TR|TURKISH|TURKIYE|TÜRKİYE|TÜRKÇE)([^A-Z]|$)/.test(String(name||'').toUpperCase());
+  }
+  function trFilterApplies(){
+    return document.getElementById('tv-tr-only').checked &&
+      (mode==='live'||hasTurkishCategories(categoryList));
+  }
+  function clearAdvancedFilters(){
+    document.getElementById('tv-search').value='';
+    document.getElementById('tv-filter-year-min').value='';
+    document.getElementById('tv-filter-genre').value='';
+    document.getElementById('tv-filter-min-rating').value='';
+    document.getElementById('tv-search-scope').value='all';
+    document.getElementById('tv-favorite-only').checked=false;
+  }
   function renderChannels(){
     var ticket=++renderTicket,filterStarted=new Date().getTime();
     focusCache=null;
@@ -410,7 +432,7 @@
         var rating=Number(ch.rating||ch.vote_average||0);if(ratingMin&&rating<ratingMin)continue;
         if(genreQuery&&String(ch.genre||ch.genre_names||catLabel).toLowerCase().indexOf(genreQuery)<0)continue;
       }
-      if(document.getElementById('tv-tr-only').checked && catLabel.toUpperCase().indexOf('TR')!==0)continue;
+      if(trFilterApplies() && !turkishCategory(catLabel))continue;
       if(document.getElementById('tv-hide-adult').checked && /^(XXX|18\+|ADULT|🔞|❤)/i.test(catLabel))continue;
       matches.push(ch);
       }
@@ -507,6 +529,7 @@
       var empty=document.createElement('div');empty.className='tv-empty-results';
       empty.textContent=totalStreams===0?'Canlı TV kanal verisi sunucudan boş geldi. Katalog yeniden yüklenmeli.':'Bu kategoride eşleşen kanal bulunamadı ('+totalStreams+' kayıt yüklendi).';
       channels.appendChild(empty);
+      if(totalStreams>0)action(channels,'Arama ve gelişmiş filtreleri temizle',function(){clearAdvancedFilters();selectedCategory='all';currentPage=0;renderCategories();});
       if(mode==='live')action(channels,'Kanal listesini yeniden yükle',function(){document.getElementById('iptv-connect').click();});
     }
     if(focusCatalogAfterRender){focusCatalogAfterRender=false;if(window.XIPTVCatalogNavigation)window.XIPTVCatalogNavigation.focus(channels,window.XIPTVCatalogNavigation.first(channels));}
@@ -519,9 +542,14 @@
     clear(categories);
     action(categories,'Tümü',function(){selectedCategory='all';currentPage=0;if(window.XIPTVCatalogLayout)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);renderChannels();});
     for(var i=0;i<categoryList.length;i++){
-      (function(c){var label=String(c.category_name||'Kategori');if(document.getElementById('tv-tr-only').checked&&label.toUpperCase().indexOf('TR')!==0)return;if(document.getElementById('tv-hide-adult').checked&&/^(XXX|18\\+|ADULT|🔞|❤)/i.test(label))return;action(categories,label,function(){selectedCategory=String(c.category_id);currentPage=0;if(window.XIPTVCatalogLayout)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);renderChannels();});})(categoryList[i]);
+      (function(c){var label=String(c.category_name||'Kategori');if(trFilterApplies()&&!turkishCategory(label))return;if(document.getElementById('tv-hide-adult').checked&&/^(XXX|18\\+|ADULT|🔞|❤)/i.test(label))return;action(categories,label,function(){selectedCategory=String(c.category_id);currentPage=0;if(window.XIPTVCatalogLayout)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);renderChannels();});})(categoryList[i]);
     }
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.sync)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);
+    if(mode!=='live'&&document.getElementById('tv-tr-only').checked&&!hasTurkishCategories(categoryList)){
+      var hint=document.createElement('div');hint.className='tv-category-notice';
+      hint.textContent='Yeni playlistte TR etiketli kategori bulunamadı. Film ve dizileri gizlememek için TR filtresi bu bölümde uygulanmadı.';
+      categories.appendChild(hint);
+    }
     renderChannels();
   }
   var previousChannel=null,numberBuffer='',numberTimer=null;
