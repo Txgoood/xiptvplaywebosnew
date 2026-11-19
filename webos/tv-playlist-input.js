@@ -10,7 +10,11 @@
     if(!/^https?:\/\//i.test(value))value='http://'+value;
     p=/^(https?:\/\/[^\/?#]+)(\/[^?#]*)?(?:\?([^#]*))?/i.exec(value);
     if(!p)return {error:'Geçerli bir http:// veya https:// adresi girin.'};
-    base=p[1];pathname=(p[2]||'/').replace(/\/+$/,'');query=params(p[3]||'');
+    base=p[1];
+    // Remote keyboards commonly insert a comma instead of a colon before a numeric port.
+    base=base.replace(/,(\\d{1,5})$/,':$1');
+    if(!/^https?:\\/\\/(?:\\[[0-9a-f:.]+\\]|[^\\s\\/:?,#]+)(?::\\d{1,5})?$/i.test(base))return {error:'Sunucu adresini kontrol edin. Port numarasından önce iki nokta (:) olmalı.'};
+    pathname=(p[2]||'/').replace(/\/+$/,'');query=params(p[3]||'');
     if(query.username&&query.password){username=query.username;password=query.password;credentials=true;}
     if(!credentials){
       var pathParts=pathname.split('/'),liveIndex=-1;
