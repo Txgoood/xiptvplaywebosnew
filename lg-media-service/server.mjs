@@ -142,6 +142,7 @@ function relayMedia(url,req,res,ticket,remaining=2){
   },response=>{
    const status=Number(response.statusCode||502);
    ticket.lastStatus=status;
+   if(ticket.purpose==='clip'&&status!==200&&status!==206)console.warn('[lg-media] clip upstream responded status='+status);
    ticket.lastType=String(response.headers['content-type']||'').split(';')[0].slice(0,80);
    if([301,302,303,307,308].includes(status)){
     response.resume();
@@ -294,9 +295,14 @@ export function mp4ClipArgs(proxySource,outputPath,start=0,audioIndex=null){
 }
 async function prepareMp4Clip(session,start){
  const dir=await fs.mkdtemp(path.join(tmpdir(),'lg-vod-'));
+ // Probe and conversion are independent upstream requests. Use a fresh
+ // scoped relay ticket so a crashed probe cannot consume the clip byte quota.
+ const clipToken=randomBytes(24).toString('hex');
+ const clipTicket={url:session.url,expiry:Date.now()+120000,bytes:0,maxBytes:MAX_UPSTREAM_BYTES,lastStatus:0,lastType:'',lastError:'',purpose:'clip'};
+ mediaTickets.set(clipToken,clipTicket);
  const outputPath=path.join(dir,'sample.mp4');
  const selectedAudio=session.streams.find(t=>t.type==='audio');
- const args=mp4ClipArgs(session.proxyUrl,outputPath,start,selectedAudio?selectedAudio.index:null);
+ const args=mp4ClipArgs(proxyUrl(clipToken),outputPath,start,selectedAudio?selectedAudio.index:null);
  let errText='',settled=false;
  try{
   await new Promise((resolve,reject)=>{
@@ -319,7 +325,11 @@ async function prepareMp4Clip(session,start){
   // A complete MP4 must contain the normal file type and movie index atoms.
   if(bytes.toString('latin1',4,8)!=='ftyp'||!bytes.includes(Buffer.from('moov')))throw Error('MP4 dosyası tamamlanamadı.');
   return bytes;
- }finally{await fs.rm(dir,{recursive:true,force:true}).catch(()=>{});}
+ }finally{
+  if(clipTicket.lastError||(clipTicket.lastStatus!==200&&clipTicket.lastStatus!==206))console.warn('[lg-media] MP4 source relay status='+clipTicket.lastStatus+' reason='+String(clipTicket.lastError||'none').replace(/https?:\/\/\S+/gi,'[url]'));
+  mediaTickets.delete(clipToken);
+  await fs.rm(dir,{recursive:true,force:true}).catch(()=>{});
+ }
 }
 export function parseByteRange(header,size){
  if(!header)return {start:0,end:size-1,status:200};
