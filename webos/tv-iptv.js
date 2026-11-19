@@ -326,7 +326,7 @@
           say('Dizi HLS biçiminde açılamadı. Aynı bölüm MP4 olarak bir kez deneniyor...');
           retryTimer=setTimeout(function(){
             if(!active||hasPlayed)return;
-            var altUrl=server.replace(/\\/$/,'')+'/series/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.mp4';
+            var altUrl=server.replace(/\/$/,'')+'/series/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.mp4';
             if(info){info.extension='mp4';info.retrying=true;}
             try{
               video.pause();
