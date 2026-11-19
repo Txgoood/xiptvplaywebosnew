@@ -235,7 +235,7 @@ document.getElementById('tv-settings-help').onclick=function(){settings(false);h
 document.getElementById('tv-remote-help-close').onclick=function(){helpPanel.style.display='none';document.getElementById('tv-nav-home').focus();};
 document.getElementById('tv-settings-player').onclick=function(){settings(false);open('live');var tools=document.getElementById('tv-player-settings');if(tools)tools.click();else document.getElementById('tv-controls-toggle').click();};
 document.getElementById('tv-settings-profiles').onclick=function(){settings(false);open('live');document.getElementById('tv-profile-switch').click();};
-document.getElementById('tv-settings-connection').onclick=function(){settings(false);open('live');document.getElementById('iptv-login').style.display='block';document.getElementById('iptv-browser').style.display='none';};
+document.getElementById('tv-settings-connection').onclick=function(){settings(false);if(window.XIPTVTV&&window.XIPTVTV.openConnectionSettings)window.XIPTVTV.openConnectionSettings();};
 document.getElementById('tv-settings-diagnostics').onclick=function(){settings(false);document.getElementById('tv-show-diagnostics').click();};
 document.getElementById('tv-show-diagnostics').onclick=function(){diag.style.display='block';home.style.display='none';document.getElementById('system').focus();};
 document.getElementById('iptv-hide').addEventListener('click',function(){home.style.display='block';document.body.className='';document.getElementById('tv-nav-home').focus();},false);
