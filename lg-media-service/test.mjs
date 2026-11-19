@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';
-const {safeIp,normalizeStreams,sourcePath,probeArgs,parseProbePayload,isXtreamAuthorized,validateHost,compatibilityArgs,shouldBypassCrashedProbe}=await import('./server.mjs');
+const {safeIp,normalizeStreams,sourcePath,probeArgs,parseProbePayload,isXtreamAuthorized,validateHost,compatibilityArgs,shouldBypassCrashedProbe,mp4ClipArgs,parseByteRange}=await import('./server.mjs');
 test('blocks loopback, RFC1918 and link-local addresses',()=>{
  for(const ip of ['127.0.0.1','10.0.0.1','172.16.1.1','192.168.2.4','169.254.169.254','::1','fc00::2'])assert.equal(safeIp(ip),false,ip);
  assert.equal(safeIp('1.1.1.1'),true);
@@ -118,4 +118,23 @@ test('only authenticated video media may bypass a SIGSEGV ffprobe crash',()=>{
  assert.equal(shouldBypassCrashedProbe('FFprobe sinyal SIGSEGV',{...ticket,lastType:'text/html'}),false);
  assert.equal(shouldBypassCrashedProbe('FFprobe sinyal SIGSEGV',{...ticket,lastType:'application/octet-stream'}),false);
  assert.equal(shouldBypassCrashedProbe('FFprobe timeout',ticket),false);
+});
+
+test('MP4 trial encodes a completed faststart file instead of streaming MPEG-TS',()=>{
+ const args=mp4ClipArgs('http://127.0.0.1:12345/ticket','/tmp/test.mp4',0,null);
+ assert.ok(args.includes('libx264'));
+ assert.ok(args.includes('aac'));
+ assert.ok(args.includes('+faststart'));
+ assert.equal(args[args.lastIndexOf('-f')+1],'mp4');
+ assert.equal(args[args.lastIndexOf('-t')+1],'8');
+ assert.ok(!args.includes('mpegts'));
+ assert.equal(args.at(-1),'/tmp/test.mp4');
+});
+test('byte range parser supports full file and bounded partial content',()=>{
+ assert.deepEqual(parseByteRange(null,100),{start:0,end:99,status:200});
+ assert.deepEqual(parseByteRange('bytes=0-9',100),{start:0,end:9,status:206});
+ assert.deepEqual(parseByteRange('bytes=95-',100),{start:95,end:99,status:206});
+ assert.deepEqual(parseByteRange('bytes=-10',100),{start:90,end:99,status:206});
+ assert.equal(parseByteRange('bytes=100-120',100),null);
+ assert.equal(parseByteRange('bytes=bad',100),null);
 });
