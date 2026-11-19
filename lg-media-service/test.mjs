@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';
-const {safeIp,normalizeStreams,sourcePath,probeArgs,parseProbePayload,isXtreamAuthorized,validateHost,compatibilityArgs}=await import('./server.mjs');
+const {safeIp,normalizeStreams,sourcePath,probeArgs,parseProbePayload,isXtreamAuthorized,validateHost,compatibilityArgs,shouldBypassCrashedProbe}=await import('./server.mjs');
 test('blocks loopback, RFC1918 and link-local addresses',()=>{
  for(const ip of ['127.0.0.1','10.0.0.1','172.16.1.1','192.168.2.4','169.254.169.254','::1','fc00::2'])assert.equal(safeIp(ip),false,ip);
  assert.equal(safeIp('1.1.1.1'),true);
@@ -107,4 +107,15 @@ test('video codec metadata is retained for TV compatibility decision',()=>{
  assert.equal(tracks[0].codec,'hevc');assert.equal(tracks[0].profile,'Main 10');
  assert.equal(tracks[0].width,3840);assert.equal(tracks[0].height,2160);
  assert.equal(tracks[1].codec,'eac3');
+});
+
+test('only authenticated video media may bypass a SIGSEGV ffprobe crash',()=>{
+ const ticket={lastStatus:200,lastType:'video/mp2t',lastError:''};
+ assert.equal(shouldBypassCrashedProbe('Medya analizi başarısız: FFprobe sinyal SIGSEGV',ticket),true);
+ assert.equal(shouldBypassCrashedProbe('FFprobe sinyal SIGSEGV',{...ticket,lastType:'video/x-matroska'}),true);
+ assert.equal(shouldBypassCrashedProbe('FFprobe sinyal SIGSEGV',{...ticket,lastStatus:403}),false);
+ assert.equal(shouldBypassCrashedProbe('FFprobe sinyal SIGSEGV',{...ticket,lastError:'upstream denied'}),false);
+ assert.equal(shouldBypassCrashedProbe('FFprobe sinyal SIGSEGV',{...ticket,lastType:'text/html'}),false);
+ assert.equal(shouldBypassCrashedProbe('FFprobe sinyal SIGSEGV',{...ticket,lastType:'application/octet-stream'}),false);
+ assert.equal(shouldBypassCrashedProbe('FFprobe timeout',ticket),false);
 });
