@@ -359,6 +359,11 @@
         video.addEventListener('error',onError,false);
         video.addEventListener('timeupdate',onProgress,false);
         video.addEventListener('loadeddata',onProgress,false);
+        // An HLS loader can stall forever without dispatching media error.
+        // Start an overall bounded HLS startup watchdog.
+        watchdog=setTimeout(function(){
+          if(active&&phase==='hls')retryMp4();
+        },12000);
         window.XIPTVSeriesSourceCleanup=cleanup;
       })();
     }
