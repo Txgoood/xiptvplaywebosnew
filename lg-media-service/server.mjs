@@ -137,15 +137,18 @@ function relayMedia(url,req,res,ticket,remaining=2){
    lookup:(_host,_opts,cb)=>cb(null,pinned,isIP(pinned))
   },response=>{
    const status=Number(response.statusCode||502);
+   ticket.lastStatus=status;
+   ticket.lastType=String(response.headers['content-type']||'').split(';')[0].slice(0,80);
    if([301,302,303,307,308].includes(status)){
     response.resume();
     const location=response.headers.location;
-    if(!location||remaining<=0){res.writeHead(502);res.end();return;}
+    if(!location||remaining<=0){ticket.lastError='Medya yönlendirmesi sınırı aşıldı';res.writeHead(502);res.end();return;}
     try{const next=new URL(location,u).toString();relayMedia(next,req,res,ticket,remaining-1);}
     catch(e){if(!res.headersSent){res.writeHead(502);res.end();}}
     return;
    }
    if(status!==200&&status!==206){
+    ticket.lastError='Yayın sunucusu HTTP '+status+' döndürdü';
     response.resume();if(!res.headersSent){res.writeHead(502);res.end();}return;
    }
    const outHeaders={'Content-Type':String(response.headers['content-type']||'application/octet-stream')};
@@ -161,10 +164,10 @@ function relayMedia(url,req,res,ticket,remaining=2){
    response.pipe(res);
   });
   upstream.on('timeout',()=>upstream.destroy(Error('Yayın sunucusu yanıt vermedi.')));
-  upstream.on('error',()=>{if(!res.headersSent){res.writeHead(502);res.end();}else res.destroy();});
+  upstream.on('error',(err)=>{ticket.lastError=err&&err.code==='ETIMEDOUT'?'Yayın sunucusu zaman aşımı':'Yayın sunucusu TCP/TLS bağlantısı başarısız';if(!res.headersSent){res.writeHead(502);res.end();}else res.destroy();});
   res.on('close',()=>upstream.destroy());
   upstream.end();
- })().catch(()=>{if(!res.headersSent){res.writeHead(502);res.end();}});
+ })().catch((err)=>{if(ticket)ticket.lastError=String(err&&err.message||'Yayın aktarma sorunu').replace(/https?:\/\/\S+/gi,'[url]').slice(0,100);if(!res.headersSent){res.writeHead(502);res.end();}});
 }
 const mediaProxy=http.createServer((req,res)=>{
  const match=String(req.url||'').match(/^\/([a-f0-9]{48})$/);
@@ -211,7 +214,7 @@ function collect(executable,args,timeout=PROBE_TIMEOUT,maxBytes=256000){
   function finish(err,value){if(ended)return;ended=true;clearTimeout(timer);if(err)reject(err);else resolve(value);}
   proc.on('error',()=>finish(Error('Medya analiz aracı bu sunucuda kullanılamıyor.')));
   proc.stdout.on('data',chunk=>{bytes+=chunk.length;if(bytes>maxBytes){proc.kill('SIGKILL');finish(Error('Medya analiz çıktısı çok büyük.'));}else chunks.push(chunk);});
-  proc.on('close',code=>{if(code!==0)finish(Error('Medya analizi başarısız: '+diagnose(errText)));else finish(null,Buffer.concat(chunks).toString('utf8'));});
+  proc.on('close',(code,signal)=>{if(code!==0)finish(Error('Medya analizi başarısız: '+(signal?'FFprobe sinyal '+String(signal).slice(0,24):errText.trim()?diagnose(errText):'FFprobe çıktı vermedi (çıkış kodu '+String(code)+')')));else finish(null,Buffer.concat(chunks).toString('utf8'));});
  });
 }
 function probeArgs(url,fallback=false){
@@ -320,11 +323,15 @@ const server=http.createServer(async(req,res)=>{
    const base=await validateHost(String(data.serverUrl||''),{username:data.username,password:data.password});
    const url=sourcePath(data,base);
    const token=randomBytes(24).toString('hex');
-   const ticket={url,expiry:Date.now()+SESSION_TTL,bytes:0};
+   const ticket={url,expiry:Date.now()+SESSION_TTL,bytes:0,lastStatus:0,lastType:'',lastError:''};
    mediaTickets.set(token,ticket);
    let parsed;
    try{parsed=await probeMedia(proxyUrl(token));}
-   catch(e){mediaTickets.delete(token);throw e;}
+   catch(e){
+      const reason=ticket.lastError||('Yayın HTTP '+ticket.lastStatus+(ticket.lastType?' · '+ticket.lastType:''));
+      mediaTickets.delete(token);
+      throw Error(String(e.message||'Analiz başarısız')+' | Kaynak: '+reason);
+    }
    const streams=normalizeStreams(parsed);
    cleanup();
    if(sessions.size>=MAX_SESSIONS)sessions.delete(sessions.keys().next().value);
