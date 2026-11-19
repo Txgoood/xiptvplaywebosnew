@@ -319,7 +319,12 @@
         }
         function onError(){
           if(!active||hasPlayed)return;
-          if(triedMp4){clearRetry();return;}
+          // Do not retry on abort, transport failures or codec decode errors.
+          if(!video.error||Number(video.error.code)!==4){clearRetry();return;}
+          if(triedMp4){
+            if(window.XIPTVPlaybackInfo)window.XIPTVPlaybackInfo.retrying=false;
+            clearRetry();return;
+          }
           triedMp4=true;
           var info=window.XIPTVPlaybackInfo;
           if(info)info.retrying=true;
