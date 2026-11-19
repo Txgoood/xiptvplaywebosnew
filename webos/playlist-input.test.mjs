@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const sandbox={};sandbox.window=sandbox;
+vm.runInNewContext(fs.readFileSync('webos/tv-playlist-input.js','utf8'),sandbox);
+const parse=sandbox.XIPTVPlaylistInput.parse;
+test('Xtream server and separate credentials',()=>{const v=parse('https://host.example:8443/','abc','def');assert.equal(v.server,'https://host.example:8443');assert.equal(v.username,'abc');});
+test('full M3U get.php query overrides stale fields',()=>{const v=parse('http://iptv.example:8080/get.php?username=newuser&password=newpass&type=m3u_plus','old','old');assert.equal(v.server,'http://iptv.example:8080');assert.equal(v.username,'newuser');assert.equal(v.password,'newpass');});
+test('player API query URL',()=>{const v=parse('https://iptv.example/player_api.php?username=a%40b&password=p%262','','');assert.equal(v.username,'a@b');assert.equal(v.password,'p&2');});
+test('Xtream stream URL',()=>{const v=parse('https://iptv.example:443/live/user/pass/123.ts','','');assert.equal(v.server,'https://iptv.example:443');assert.equal(v.username,'user');});
+test('independent M3U URL does not pretend to work',()=>{assert.match(parse('https://cdn.example/list.m3u','','').error,/M3U/);});
+test('missing credentials yields helpful error',()=>{assert.match(parse('host.example:8080','','').error,/kullanıcı/);});
