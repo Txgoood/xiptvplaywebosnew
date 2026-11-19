@@ -799,6 +799,23 @@
     if(hydrate()){say('Kayıtlı Xtream bağlantısı bulundu. Otomatik bağlanılıyor...');document.getElementById('iptv-connect').click();}
     else{document.getElementById('iptv-server').focus();}
   };
+  // Profile menu entry: reopen existing Xtream login without losing stored data.
+  window.XIPTVTV.openConnectionSettings=function(){
+    if(window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile()){
+      var warning=document.getElementById('tv-profile-message');
+      if(warning)warning.textContent='Playlist ayarlarını yetişkin profili yönetebilir.';
+      return false;
+    }
+    var profilePanel=document.getElementById('tv-profile-panel');
+    if(profilePanel)profilePanel.style.display='none';
+    focusCache=null;
+    show(panel);show(login);hide(browser);
+    document.body.className='tv-mode tv-catalog';
+    document.getElementById('tv-home').style.display='none';
+    say('Playlist bağlantısını buradan değiştirebilirsin. Kayıtlı Girişi Sil düğmesine basmadıkça mevcut bilgiler silinmez.');
+    document.getElementById('iptv-server').focus();
+    return true;
+  };
   document.getElementById('iptv-forget').onclick=function(){
     try{localStorage.removeItem(SAVE_KEY);}catch(e){}
     document.getElementById('iptv-server').value='';
