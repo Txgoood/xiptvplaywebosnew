@@ -5,7 +5,8 @@ Bu servis **normal Android backend'ine eklenmez**. Ayrı Render web hizmeti olar
 ## Özellikler
 
 - Xtream film/dizi akışından ses ve altyazı akışlarını `ffprobe` ile listeler (dil, codec, gerçek akış indeksleri).
-- Seçilen ses akışını `-c:v copy -c:a copy` ile deneysel MPEG-TS olarak sunar. Yeniden kodlama yapılmaz; **webOS 2 kodek uyumluluğu garanti edilmez**.
+- Seçilen ses akışını `-c:v copy -c:a copy` ile deneysel MPEG-TS olarak sunar. Bu yöntem yeniden kodlama yapmaz.
+- **Yeni deneysel, yalnızca kullanıcı isteğiyle çalışan seçenek:** `/tracks` ile doğrulanmış film/dizi için `GET /compat/:token?start=0` üzerinden 640×360, 20 fps H.264 Baseline + AAC MPEG-TS akışı üretir. Tek eşzamanlı işlem, 15–300 sn ve 5–100 MB sınırı korunur; 4K içerik düşürülür, altyazı gömülmez. Bu özellik **henüz gerçek LG TV'de doğrulanmadı**; Render CPU/bant genişliği gideri oluşturabilir.
 - Yazı tabanlı gömülü altyazıları deneysel WebVTT akışına dönüştürür; bitmap PGS/VobSub desteklenmez.
 - **Otomatik Xtream sunucu doğrulaması:** Kullanıcı playlist adresini değiştirince LG uygulaması yeni adresi gönderir. Sunucu genel IP'ye çözülmeli ve Xtream API hesabı aktif olarak doğrulamalıdır. Yeni alan adını Render'a elle eklemek gerekmez. DNS özel ağ/yerel erişim ve HTTP yönlendirmeleri engellenir.
 - Önceden izin verilen sağlayıcılar desteklenmeye devam eder. En fazla bir aktif inceleme ve bir aktif akış; 90 dakikalık rastgele oturum anahtarları.
@@ -38,5 +39,7 @@ Bu servis **normal Android backend'ine eklenmez**. Ayrı Render web hizmeti olar
 `GET /stream/:token/:audioIndex?start=180` → copy-only MPEG-TS (en fazla bir aktif akış).
 
 `GET /subtitle/:token/:subtitleIndex.vtt` → WebVTT (yalnız yazı altyazı).
+
+`GET /compat/:token?start=0` → Kullanıcı isteğiyle H.264 Baseline + AAC düşük çözünürlüklü deneme akışı (yalnız film/dizi; analiz oturumu gerekli).
 
 Video oynatımının webOS 2.2.3'te başarısı gerçek televizyonda doğrulanmalıdır. Dosya çözme veya DRM atlatma desteği yoktur.
