@@ -219,7 +219,7 @@ function probeArgs(url,fallback=false){
  // full stream object for providers whose metadata is incomplete or nonstandard.
  const args=['-v','error','-user_agent','VLC/3.0.18','-protocol_whitelist','http,https,tcp,tls,crypto','-rw_timeout',fallback?'15000000':'9500000','-probesize',fallback?'8000000':'3000000','-analyzeduration',fallback?'9000000':'5000000'];
  if(fallback)args.push('-show_streams');
- else args.push('-show_entries','stream=index,codec_type,codec_name:stream_tags=language,title,LANGUAGE');
+ else args.push('-show_entries','stream=index,codec_type,codec_name,profile,width,height:stream_tags=language,title,LANGUAGE');
  args.push('-of','json',url);
  return args;
 }
@@ -245,17 +245,32 @@ export async function probeMedia(url,runner=collect){
   try{
    const text=await runner(FFPROBE,probeArgs(url,attempt===1),attempt===0?10500:15000);
    const parsed=parseProbePayload(text);
-   if(parsed.streams.some(x=>x.codec_type==='audio'||x.codec_type==='subtitle'))return parsed;
+   if(parsed.streams.some(x=>x.codec_type==='video'||x.codec_type==='audio'||x.codec_type==='subtitle'))return parsed;
    firstError=Error('Kaynak ses veya altyazı parçası bildirmedi.');
   }catch(e){firstError=e;}
  }
  throw firstError||Error('Medya analizi tamamlanamadı.');
 }
 function normalizeStreams(raw){
- const streams=(raw.streams||[]).filter(s=>s.codec_type==='audio'||s.codec_type==='subtitle');
- return streams.map(s=>({index:Number(s.index),type:s.codec_type,codec:String(s.codec_name||'unknown'),language:String(s.tags?.language||s.tags?.LANGUAGE||'und').slice(0,32),title:String(s.tags?.title||'').slice(0,60),externalVtt: s.codec_type==='subtitle'&&['subrip','ass','ssa','mov_text','webvtt','text'].includes(String(s.codec_name||'').toLowerCase())})).filter(s=>Number.isInteger(s.index)&&s.index>=0&&s.index<256).slice(0,40);
+ const streams=(raw.streams||[]).filter(s=>s.codec_type==='video'||s.codec_type==='audio'||s.codec_type==='subtitle');
+ return streams.map(s=>({index:Number(s.index),type:s.codec_type,codec:String(s.codec_name||'unknown'),profile:String(s.profile||'').slice(0,40),width:Math.max(0,Math.min(7680,Number(s.width)||0)),height:Math.max(0,Math.min(4320,Number(s.height)||0)),language:String(s.tags?.language||s.tags?.LANGUAGE||'und').slice(0,32),title:String(s.tags?.title||'').slice(0,60),externalVtt: s.codec_type==='subtitle'&&['subrip','ass','ssa','mov_text','webvtt','text'].includes(String(s.codec_name||'').toLowerCase())})).filter(s=>Number.isInteger(s.index)&&s.index>=0&&s.index<256).slice(0,40);
 }
 function getSession(token){const s=sessions.get(token);if(!s||s.expiry<Date.now()){sessions.delete(token);mediaTickets.delete(token);return null;}return s;}
+// Experimental low-resolution compatibility path; one process, bounded duration
+// and byte count. Transcode is explicitly requested, never used for live TV.
+export function compatibilityArgs(proxySource,start=0,audioIndex=null){
+ const begin=Math.max(0,Math.min(14400,Number(start)||0));
+ const args=['-nostdin','-v','error','-rw_timeout','12000000','-ss',String(begin),
+  '-i',proxySource,'-map','0:v:0'];
+ if(Number.isInteger(audioIndex)&&audioIndex>=0&&audioIndex<256)args.push('-map','0:'+audioIndex);
+ else args.push('-map','0:a:0?');
+ args.push('-sn','-dn','-vf','scale=w=640:h=360:force_original_aspect_ratio=decrease,pad=640:360:(ow-iw)/2:(oh-ih)/2,fps=20',
+  '-c:v','libx264','-preset','ultrafast','-profile:v','baseline','-level:v','3.0',
+  '-pix_fmt','yuv420p','-b:v','650k','-maxrate','800k','-bufsize','1600k','-threads','2',
+  '-c:a','aac','-profile:a','aac_low','-ac','2','-ar','44100','-b:a','96k',
+  '-t',String(STREAM_SECONDS),'-f','mpegts','pipe:1');
+ return args;
+}
 function sendStream(res,req,args,contentType,maxMs){
  let first=true,finished=false,bytesSent=0;
  const proc=spawn(FFMPEG,args,{stdio:['ignore','pipe','ignore'],windowsHide:true});
@@ -314,9 +329,22 @@ const server=http.createServer(async(req,res)=>{
    cleanup();
    if(sessions.size>=MAX_SESSIONS)sessions.delete(sessions.keys().next().value);
    sessions.set(token,{url,proxyUrl:proxyUrl(token),expiry:Date.now()+SESSION_TTL,streams});
-   json(res,200,{success:true,token,expiresIn:Math.floor(SESSION_TTL/1000),tracks:streams,playback:{method:'mpegts-copy',experimental:true}});
+   json(res,200,{success:true,token,expiresIn:Math.floor(SESSION_TTL/1000),tracks:streams,playback:{method:'mpegts-copy',compatibility:'h264-aac-ts-360p',experimental:true}});
   }catch(e){error(res,400,String(e.message||'Analiz başarısız').slice(0,150));}
   finally{activeProbes--;}
+  return;
+ }
+ // Short-lived token from authenticated /tracks. No source URL is exposed.
+ const compat=pathname.match(/^\/compat\/([a-f0-9]{48})$/);
+ if(req.method==='GET'&&compat){
+  const sess=getSession(compat[1]);
+  if(!sess){error(res,401,'Uyumluluk oturumu sona erdi. Tekrar analiz edin.');return;}
+  if(!sess.streams.some(t=>t.type==='video')){error(res,422,'Bu kaynakta video akışı bulunamadı.');return;}
+  if(activeStreams>=1){res.setHeader('Retry-After','5');error(res,429,'Medya dönüştürücü meşgul.');return;}
+  const pos=Math.max(0,Math.min(14400,Number(new URL(req.url,'http://localhost').searchParams.get('start'))||0));
+  const selectedAudio=sess.streams.find(t=>t.type==='audio');
+  activeStreams++;
+  sendStream(res,req,compatibilityArgs(sess.proxyUrl,pos,selectedAudio?selectedAudio.index:null),'video/mp2t',STREAM_SECONDS*1000);
   return;
  }
  const match=pathname.match(/^\/(stream|subtitle)\/([a-f0-9]{48})\/([0-9]{1,3})(?:\.vtt)?$/);
