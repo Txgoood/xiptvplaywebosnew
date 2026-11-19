@@ -291,7 +291,7 @@ function sendStream(res,req,args,contentType,maxMs){
  proc.stdout.on('data',chunk=>{
   bytesSent+=chunk.length;
   if(bytesSent>STREAM_BYTES){proc.kill('SIGKILL');return;}
-  if(first){res.writeHead(200,{'Content-Type':contentType,'Cache-Control':'no-store','Access-Control-Expose-Headers':'Content-Type'});first=false;}
+  if(first){console.info('[lg-media] compatible media produced bytes: type='+contentType);res.writeHead(200,{'Content-Type':contentType,'Cache-Control':'no-store','Access-Control-Expose-Headers':'Content-Type'});first=false;}
   if(!res.write(chunk)){proc.stdout.pause();res.once('drain',()=>proc.stdout.resume());}
  });
  proc.on('close',(code,signal)=>{
@@ -371,6 +371,7 @@ const server=http.createServer(async(req,res)=>{
   if(activeStreams>=1){res.setHeader('Retry-After','5');error(res,429,'Medya dönüştürücü meşgul.');return;}
   const pos=Math.max(0,Math.min(14400,Number(new URL(req.url,'http://localhost').searchParams.get('start'))||0));
   const selectedAudio=sess.streams.find(t=>t.type==='audio');
+  console.info('[lg-media] compatible VOD requested: tracks='+sess.streams.length+' seek='+pos+' active='+activeStreams);
   activeStreams++;
   sendStream(res,req,compatibilityArgs(sess.proxyUrl,pos,selectedAudio?selectedAudio.index:null),'video/mp2t',STREAM_SECONDS*1000);
   return;
