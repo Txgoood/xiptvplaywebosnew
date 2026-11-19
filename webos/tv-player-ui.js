@@ -118,7 +118,7 @@
   if(info.retrying||info.terminal)return; // Bounded HLS fallback / final failure handles its own notice.
   var mediaKind=info.kind==='series'?'Dizi':info.kind==='movie'?'Film':info.kind==='live'?'Canlı TV':'Medya';
   var ext=String(info.extension||'bilinmiyor').replace(/[^a-z0-9]/gi,'').slice(0,12);
-  notice('Oynatma hatası '+code+' · '+mediaKind+' ('+ext+'): '+playbackErrorDescription(code)+'.','error');
+  notice('Oynatma hatası '+code+' · '+mediaKind+' ('+ext+', '+(info.transport==='proxy'?'proxy':'doğrudan')+'): '+playbackErrorDescription(code)+'.','error');
  });
  video.addEventListener('waiting',function(){notice('Yayın yükleniyor veya bağlantı bekleniyor…','warning');});
  video.addEventListener('canplay',function(){if(toast.className.indexOf('warning')>=0)toast.style.display='none';});
