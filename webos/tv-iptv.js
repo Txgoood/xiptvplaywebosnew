@@ -299,6 +299,58 @@
     // Attempt TS once if HLS errors or never reaches playback; leave movies/series untouched.
     var liveTimer=null,liveError=null,livePlaying=null,liveFallback=false,liveActive=true,liveStarted=false;
     if(window.XIPTVLiveCleanup)window.XIPTVLiveCleanup();
+    if(window.XIPTVSeriesSourceCleanup)window.XIPTVSeriesSourceCleanup();
+    // Some providers label on-demand episodes as HLS although they serve
+    // the same episode using MP4. Only try that alternative once, and only
+    // when initial HLS playback fails before any frames have played.
+    if(kind==='series'&&suffix==='m3u8'){
+      (function(){
+        var active=true,triedMp4=false,hasPlayed=false,retryTimer=null;
+        function clearRetry(){
+          active=false;
+          if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}
+          video.removeEventListener('error',onError,false);
+          video.removeEventListener('playing',onPlaying,false);
+        }
+        function onPlaying(){
+          hasPlayed=true;
+          if(window.XIPTVPlaybackInfo)window.XIPTVPlaybackInfo.retrying=false;
+          clearRetry();
+        }
+        function onError(){
+          if(!active||hasPlayed)return;
+          if(triedMp4){clearRetry();return;}
+          triedMp4=true;
+          var info=window.XIPTVPlaybackInfo;
+          if(info)info.retrying=true;
+          say('Dizi HLS biçiminde açılamadı. Aynı bölüm MP4 olarak bir kez deneniyor...');
+          retryTimer=setTimeout(function(){
+            if(!active||hasPlayed)return;
+            var altUrl=server.replace(/\\/$/,'')+'/series/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.mp4';
+            if(info){info.extension='mp4';info.retrying=true;}
+            try{
+              video.pause();
+              video.removeAttribute('src');
+              video.load();
+              if(window.XIPTVLGMedia&&window.XIPTVLGMedia.setSource){
+                window.XIPTVLGMedia.setSource({serverUrl:server,username:username,password:password,kind:'series',id:id,extension:'mp4',originalUrl:altUrl});
+              }
+              video.src=altUrl;
+              video.load();
+              var attempt=video.play();
+              if(attempt&&attempt.catch)attempt.catch(function(){});
+              say('Dizi bölümü MP4 olarak deneniyor...');
+            }catch(err){
+              clearRetry();
+              say('HLS ve MP4 denemesi başarısız. Kaynak biçimi sağlayıcıdan doğrulanmalı.');
+            }
+          },350);
+        }
+        video.addEventListener('error',onError,false);
+        video.addEventListener('playing',onPlaying,false);
+        window.XIPTVSeriesSourceCleanup=clearRetry;
+      })();
+    }
     function cleanupLive(){
       liveActive=false;
       if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}
