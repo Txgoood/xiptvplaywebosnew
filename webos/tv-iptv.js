@@ -79,6 +79,16 @@
 
   var video=document.getElementById('video');
   function say(t){msg.textContent=t;}
+  function safeConnectionError(raw){
+    var text=String(raw||'Bilinmeyen bağlantı hatası');
+    if(/ERR_INVALID_URL|Failed to parse URL|Invalid URL/i.test(text))return 'Geçersiz bağlantı adresi. Port numarasından önce iki nokta (:) kullanın.';
+    // Backend errors can contain full Xtream URLs including passwords. Never show those on TV.
+    text=text.replace(/https?:\/\/[^\s]+/gi,'[sunucu adresi gizlendi]');
+    if(password)text=text.split(password).join('***');
+    if(username)text=text.split(username).join('***');
+    return text;
+  }
+
   function show(el){el.style.display='block';}
   function hide(el){el.style.display='none';}
   function clear(el){while(el.firstChild)el.removeChild(el.firstChild);}
@@ -727,7 +737,7 @@
     if(server.indexOf('http://')!==0 && server.indexOf('https://')!==0)server='http://'+server;
     say('Xtream bağlantısı doğrulanıyor...');
     request('/api/iptv/xtream/verify',{serverUrl:server,username:username,password:password},function(err,data){
-      if(err||!data.success){connecting=false;bootLock(false);previewReady=false;show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Doğrulama başarısız: '+(err?err.message:data.error||'Hesap reddedildi'));return;}
+      if(err||!data.success){connecting=false;bootLock(false);previewReady=false;show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';say('Doğrulama başarısız: '+safeConnectionError(err?err.message:data.error||'Hesap reddedildi'));return;}
       bootMetric('verify',new Date().getTime()-verifyAt);bootLock(false);
       server=data.effectiveServerUrl||server;
       persistCredentials();
@@ -739,7 +749,7 @@
       catalogAt=new Date().getTime();
       request('/api/iptv/xtream/catalog',{serverUrl:server,username:username,password:password},function(error,catalog){
         connecting=false;
-        if(error){if(!previewReady){show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';}say('Katalog güncellenemedi: '+error.message);return;}
+        if(error){if(!previewReady){show(panel);show(login);hide(browser);document.getElementById('tv-home').style.display='none';}say('Katalog güncellenemedi: '+safeConnectionError(error.message));return;}
         bootMetric('catalog',new Date().getTime()-catalogAt);
         catalogData=catalog;window.XIPTVGlobalCatalog=catalog;sortedCache={};categoryCache={};focusCache=null;currentPage=0;
         trackNewCatalogItems(catalog);
