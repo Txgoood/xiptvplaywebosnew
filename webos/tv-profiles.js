@@ -21,7 +21,15 @@ function render(){
  b.onclick=function(){select(p);};items.appendChild(b);
  })(data[i]);}
 }
-document.getElementById('tv-profile-switch').onclick=function(){render();panel.style.display='block';};
+var playlistArea=document.getElementById('tv-profile-playlist-area');
+var playlistButton=document.getElementById('tv-profile-playlist-manage');
+if(playlistButton)playlistButton.onclick=function(){
+ if(window.XIPTVTV&&window.XIPTVTV.openConnectionSettings)window.XIPTVTV.openConnectionSettings();
+};
+function updatePlaylistControl(){
+ if(playlistArea)playlistArea.style.display=window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile()?'none':'block';
+}
+document.getElementById('tv-profile-switch').onclick=function(){render();updatePlaylistControl();panel.style.display='block';};
 document.getElementById('tv-profile-close').onclick=function(){panel.style.display='none';};
 document.getElementById('tv-profile-add').onclick=function(){
  var name=(nameInput.value||'').replace(/^\s+|\s+$/g,'');if(!name)return;
