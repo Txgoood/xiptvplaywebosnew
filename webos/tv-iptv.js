@@ -337,6 +337,7 @@
         function retryMp4(){
           if(!active||phase!=='hls')return;
           phase='mp4';
+          clearTimers();
           if(info){info.retrying=true;info.extension='mp4';}
           say('HLS kaynağı açılamadı. MP4 tek sefer deneniyor...');
           retryTimer=setTimeout(function(){
