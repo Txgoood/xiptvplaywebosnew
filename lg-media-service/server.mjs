@@ -282,7 +282,9 @@ export function compatibilityArgs(proxySource,start=0,audioIndex=null){
 }
 function sendStream(res,req,args,contentType,maxMs){
  let first=true,finished=false,bytesSent=0;
- const proc=spawn(FFMPEG,args,{stdio:['ignore','pipe','ignore'],windowsHide:true});
+ const proc=spawn(FFMPEG,args,{stdio:['ignore','pipe','pipe'],windowsHide:true});
+ let ffmpegError='';
+ proc.stderr.on('data',chunk=>{if(ffmpegError.length<1200)ffmpegError+=String(chunk).slice(0,1200);});
  const timeout=setTimeout(()=>proc.kill('SIGKILL'),maxMs);
  function done(){if(finished)return;finished=true;clearTimeout(timeout);activeStreams=Math.max(0,activeStreams-1);}
  proc.on('error',()=>{if(!res.headersSent)error(res,503,'FFmpeg çalıştırılamadı.');else res.end();done();});
@@ -292,7 +294,10 @@ function sendStream(res,req,args,contentType,maxMs){
   if(first){res.writeHead(200,{'Content-Type':contentType,'Cache-Control':'no-store','Access-Control-Expose-Headers':'Content-Type'});first=false;}
   if(!res.write(chunk)){proc.stdout.pause();res.once('drain',()=>proc.stdout.resume());}
  });
- proc.on('close',code=>{if(first&&!res.headersSent)error(res,502,'Bu medya akışı mevcut codec veya dosya biçimiyle açılamadı.');else res.end();done();});
+ proc.on('close',(code,signal)=>{
+  if(code!==0||signal)console.warn('[lg-media] converter finished with code='+String(code)+' signal='+String(signal||'none')+' bytes='+bytesSent+' detail='+diagnose(ffmpegError));
+  if(first&&!res.headersSent)error(res,502,'Uyumlu dönüştürme başlatılamadı ('+(signal?'FFmpeg '+String(signal).slice(0,16):'FFmpeg çıkış '+String(code))+').');else res.end();done();
+ });
  res.on('close',()=>{if(!res.writableEnded)proc.kill('SIGKILL');});
 }
 function cleanup(){for(const [k,v] of sessions)if(v.expiry<Date.now()){sessions.delete(k);mediaTickets.delete(k);}for(const [k,v] of mediaTickets)if(v.expiry<Date.now())mediaTickets.delete(k);}
