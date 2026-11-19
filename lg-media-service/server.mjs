@@ -325,18 +325,31 @@ const server=http.createServer(async(req,res)=>{
    const token=randomBytes(24).toString('hex');
    const ticket={url,expiry:Date.now()+SESSION_TTL,bytes:0,lastStatus:0,lastType:'',lastError:''};
    mediaTickets.set(token,ticket);
-   let parsed;
+   let parsed=null,probeFallback=false;
    try{parsed=await probeMedia(proxyUrl(token));}
    catch(e){
-      const reason=ticket.lastError||('Yayın HTTP '+ticket.lastStatus+(ticket.lastType?' · '+ticket.lastType:''));
-      mediaTickets.delete(token);
-      throw Error(String(e.message||'Analiz başarısız')+' | Kaynak: '+reason);
-    }
+      // Some providers label MKV files but return MPEG-TS. The bundled
+      // ffprobe binary can crash with SIGSEGV on these streams.
+      // Never approve an arbitrary URL: the host/account were verified above,
+      // and upstream must have returned actual video media status/type.
+      const acceptableType=/^(video\/mp2t|video\/x-matroska|video\/mp4|application\/octet-stream)$/i.test(ticket.lastType);
+      const successfulStatus=ticket.lastStatus===200||ticket.lastStatus===206;
+      const crashed=/FFprobe sinyal SIGSEGV/.test(String(e.message||''));
+      if(crashed&&successfulStatus&&acceptableType&&!ticket.lastError){
+        probeFallback=true;
+        parsed={streams:[{index:0,codec_type:'video',codec_name:'unknown'}]};
+        // No guessed audio track index; FFmpeg selects the first available audio.
+      }else{
+        const reason=ticket.lastError||('Yayın HTTP '+ticket.lastStatus+(ticket.lastType?' · '+ticket.lastType:''));
+        mediaTickets.delete(token);
+        throw Error(String(e.message||'Analiz başarısız')+' | Kaynak: '+reason);
+      }
+   }
    const streams=normalizeStreams(parsed);
    cleanup();
    if(sessions.size>=MAX_SESSIONS)sessions.delete(sessions.keys().next().value);
    sessions.set(token,{url,proxyUrl:proxyUrl(token),expiry:Date.now()+SESSION_TTL,streams});
-   json(res,200,{success:true,token,expiresIn:Math.floor(SESSION_TTL/1000),tracks:streams,playback:{method:'mpegts-copy',compatibility:'h264-aac-ts-360p',experimental:true}});
+   json(res,200,{success:true,token,expiresIn:Math.floor(SESSION_TTL/1000),tracks:streams,probeFallback,playback:{method:'mpegts-copy',compatibility:'h264-aac-ts-360p',experimental:true}});
   }catch(e){error(res,400,String(e.message||'Analiz başarısız').slice(0,150));}
   finally{activeProbes--;}
   return;
