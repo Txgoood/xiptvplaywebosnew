@@ -245,11 +245,12 @@
   var target=url+'/compat/'+session.token+'?start='+Math.floor(previous);
   var completed=false,progress=false;
   function release(){if(compatTimer){clearTimeout(compatTimer);compatTimer=null;}video.removeEventListener('error',failed,false);video.removeEventListener('timeupdate',progressed,false);}
-  function failed(){
+  function failed(reason){
     if(completed)return;
+    var code=video.error&&Number(video.error.code)||0;
     completed=true;release();
     if(compatButton)compatButton.disabled=false;
-    say('Uyumlu video akışı açılamadı. LG servisindeki 360p H.264/AAC dönüşümü veya TV MPEG-TS desteği kontrol edilmeli.');
+    say('Uyumlu oynatma başarısız: '+(typeof reason==='string'?reason:'TV medya hatası')+' · TV kodu '+code+'. Sunucu dönüştürme günlüğü kontrol edilmeli.');
     try{video.pause();video.removeAttribute('src');video.load();}catch(e){}
   }
   function progressed(){
@@ -261,17 +262,19 @@
       say('Uyumlu video oynatılıyor: H.264 Baseline + AAC, 360p (deneysel; süre ve bant genişliği sınırlı).');
     }
   }
-  video.addEventListener('error',failed,false);
-  video.addEventListener('timeupdate',progressed,false);
-  compatTimer=setTimeout(failed,30000);
   try{
     if(window.XIPTVSeriesSourceCleanup)window.XIPTVSeriesSourceCleanup();
-    if(window.XIPTVPlaybackInfo){window.XIPTVPlaybackInfo.transport='compat';window.XIPTVPlaybackInfo.extension='ts';}
+    // Clear the failed direct stream BEFORE attaching handlers for the new
+    // compatible stream. A delayed error from the old source must not abort it.
     video.pause();video.removeAttribute('src');video.load();
+    if(window.XIPTVPlaybackInfo){window.XIPTVPlaybackInfo.transport='compat';window.XIPTVPlaybackInfo.extension='ts';}
+    video.addEventListener('error',failed,false);
+    video.addEventListener('timeupdate',progressed,false);
+    compatTimer=setTimeout(function(){failed('30 saniye boyunca çözümlenmiş görüntü gelmedi');},30000);
     video.src=target;video.load();
     var p=video.play();if(p&&p.catch)p.catch(function(){});
     say('LG uyumlu oynatma dönüştürülüyor: H.264/AAC 360p. Sunucu deneme sınırları uygulanır.');
-  }catch(e){failed();}
+  }catch(e){failed('Video başlatma işlemi başarısız');}
  }
  if(compatButton)compatButton.onclick=function(){
   compatActive=true;
