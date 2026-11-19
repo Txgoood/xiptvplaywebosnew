@@ -428,15 +428,16 @@ const server=http.createServer(async(req,res)=>{
    const output=await prepareMp4Clip(sess,0);
    mp4Clips.set(token,{bytes:output,expiry:Math.min(sess.expiry,Date.now()+MP4_CLIP_TTL)});
    cleanup();
-   json(res,200,{success:true,format:'mp4',seconds:MP4_CLIP_SECONDS,bytes:output.length,path:'/compat-mp4/file/'+token});
+   json(res,200,{success:true,format:'mp4',seconds:MP4_CLIP_SECONDS,bytes:output.length,path:'/compat-mp4/file/'+token+'.mp4'});
   }catch(e){error(res,502,'MP4 denemesi üretilemedi: '+String(e.message||'Dönüştürme hatası').slice(0,80));}
   finally{activeStreams--;}
   return;
  }
- const mp4File=pathname.match(/^\/compat-mp4\/file\/([a-f0-9]{48})$/);
+ const mp4File=pathname.match(/^\/compat-mp4\/file\/([a-f0-9]{48})\.mp4$/);
  if((req.method==='GET'||req.method==='HEAD')&&mp4File){
   const sess=getSession(mp4File[1]),clip=mp4Clips.get(mp4File[1]);
   if(!sess||!clip||clip.expiry<Date.now()){error(res,404,'MP4 denemesi bulunamadı veya süresi doldu.');return;}
+  console.info('[lg-media] MP4 clip request method='+req.method+' range='+(req.headers.range?'yes':'no')+' size='+clip.bytes.length);
   const bytes=clip.bytes,range=parseByteRange(req.headers.range,bytes.length);
   if(!range){res.writeHead(416,{'Content-Range':'bytes */'+bytes.length});res.end();return;}
   res.writeHead(range.status,{'Content-Type':'video/mp4','Content-Length':range.end-range.start+1,
