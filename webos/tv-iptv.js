@@ -280,15 +280,18 @@
   },false);
   document.getElementById('tv-next-episode-play').onclick=function(){cancelEpisodeCountdown();startEpisode(activeEpisodeQueue[activeEpisodeIndex+1],activeEpisodeIndex+1);};
   document.getElementById('tv-next-episode-close').onclick=cancelEpisodeCountdown;
-  function playStream(kind,id,ext,name,sourceServer){
+  function playStream(kind,id,ext,name,sourceServer,useProxy){
     if(kind!=='series'){cancelEpisodeCountdown();activeEpisodeIndex=-1;if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.clearSeriesPoster)window.XIPTVCatalogLayout.clearSeriesPoster();}
     if(id===null||typeof id==='undefined'){say('Yayın kimliği eksik');return;}
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.beforePlay)window.XIPTVCatalogLayout.beforePlay();
     var suffix=ext|| (kind==='live'?'m3u8':'mp4');
     var playbackServer=(kind==='series'&&sourceServer)||server;
-    var url=playbackServer.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
+    var directUrl=playbackServer.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
+    var url=useProxy?BASE+'/api/iptv/proxy?url='+encodeURIComponent(directUrl):directUrl;
+    var proxyButton=document.getElementById('tv-series-proxy');
+    if(proxyButton){proxyButton.style.display=kind==='series'&&!useProxy?'inline-block':'none';proxyButton.onclick=kind==='series'?function(){playStream('series',id,suffix,name,playbackServer,true);}:null;}
     // Expose only non-sensitive playback context to the player diagnostics.
-    window.XIPTVPlaybackInfo={kind:kind,extension:suffix,startedAt:new Date().getTime(),serverVariant:(playbackServer===server?'verified':'series-info')};
+    window.XIPTVPlaybackInfo={kind:kind,extension:suffix,startedAt:new Date().getTime(),transport:useProxy?'proxy':'direct',serverVariant:(playbackServer===server?'verified':'series-info')};
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
     window.XIPTVTV.beforePlay(kind,id,url,name);
     if(window.XIPTVPlayerUI){window.XIPTVPlayerUI.closeMenu();window.XIPTVPlayerUI.update();}
@@ -303,7 +306,7 @@
     if(window.XIPTVSeriesSourceCleanup)window.XIPTVSeriesSourceCleanup();
     // Strictly bounded VOD recovery. A 'playing' event alone is NOT proof of
     // decoded frames on this legacy webOS device.
-    if(kind==='series'&&suffix==='m3u8'){
+    if(kind==='series'&&suffix==='m3u8'&&!useProxy){
       (function(){
         var active=true,phase='hls',retryTimer=null,watchdog=null,progressAt=0,terminal=false;
         var info=window.XIPTVPlaybackInfo;
@@ -405,7 +408,7 @@
       if(started)return;started=true;
       try{
         video.src=url;video.load();video.play();
-        say('Oynatılıyor: '+String(name||'Video')+' | '+suffix.toUpperCase()+' • Görüntü/ses desteği yayına bağlıdır.');
+        say('Oynatılıyor: '+String(name||'Video')+' | '+suffix.toUpperCase()+(useProxy?' · Render proxy':' · doğrudan')+' • Görüntü/ses desteği yayına bağlıdır.');
       }catch(e){say('Oynatma hatası: '+e.message);}
     }
     // MKV: read the track list BEFORE playback so no second connection competes with the player.
