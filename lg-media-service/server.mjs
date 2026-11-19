@@ -254,6 +254,12 @@ export async function probeMedia(url,runner=collect){
  }
  throw firstError||Error('Medya analizi tamamlanamadı.');
 }
+export function shouldBypassCrashedProbe(message,ticket){
+ if(!ticket||ticket.lastError)return false;
+ if(ticket.lastStatus!==200&&ticket.lastStatus!==206)return false;
+ if(!/FFprobe sinyal SIGSEGV/.test(String(message||'')))return false;
+ return /^(video\/mp2t|video\/x-matroska|video\/mp4)$/i.test(String(ticket.lastType||''));
+}
 function normalizeStreams(raw){
  const streams=(raw.streams||[]).filter(s=>s.codec_type==='video'||s.codec_type==='audio'||s.codec_type==='subtitle');
  return streams.map(s=>({index:Number(s.index),type:s.codec_type,codec:String(s.codec_name||'unknown'),profile:String(s.profile||'').slice(0,40),width:Math.max(0,Math.min(7680,Number(s.width)||0)),height:Math.max(0,Math.min(4320,Number(s.height)||0)),language:String(s.tags?.language||s.tags?.LANGUAGE||'und').slice(0,32),title:String(s.tags?.title||'').slice(0,60),externalVtt: s.codec_type==='subtitle'&&['subrip','ass','ssa','mov_text','webvtt','text'].includes(String(s.codec_name||'').toLowerCase())})).filter(s=>Number.isInteger(s.index)&&s.index>=0&&s.index<256).slice(0,40);
@@ -332,10 +338,7 @@ const server=http.createServer(async(req,res)=>{
       // ffprobe binary can crash with SIGSEGV on these streams.
       // Never approve an arbitrary URL: the host/account were verified above,
       // and upstream must have returned actual video media status/type.
-      const acceptableType=/^(video\/mp2t|video\/x-matroska|video\/mp4|application\/octet-stream)$/i.test(ticket.lastType);
-      const successfulStatus=ticket.lastStatus===200||ticket.lastStatus===206;
-      const crashed=/FFprobe sinyal SIGSEGV/.test(String(e.message||''));
-      if(crashed&&successfulStatus&&acceptableType&&!ticket.lastError){
+      if(shouldBypassCrashedProbe(e.message,ticket)){
         probeFallback=true;
         parsed={streams:[{index:0,codec_type:'video',codec_name:'unknown'}]};
         // No guessed audio track index; FFmpeg selects the first available audio.
