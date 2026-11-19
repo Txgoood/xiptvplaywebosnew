@@ -192,7 +192,7 @@
     var ep=entry.item,ext=String(ep.container_extension||'mp4').replace(/[^a-zA-Z0-9]/g,'');
     document.getElementById('tv-episodes').style.display='none';
     document.getElementById('tv-next-episode').style.display='none';
-    playStream('series',ep.id,ext,ep.title||'Dizi Bölümü');
+    playStream('series',ep.id,ext,ep.title||'Dizi Bölümü',entry.workingServer);
   }
   function showSeries(item){
     // One poster can represent several independent provider records.
@@ -231,7 +231,7 @@
       seasonTools.style.display='block';
       for(var sk=0;sk<seasonKeys.length;sk++){
         var season=seasonKeys[sk],group=(seasons[season]||[]).slice(0).sort(function(a,b){return Number(a.episode_num||0)-Number(b.episode_num||0);});
-        for(var gi=0;gi<group.length;gi++)episodes.push({season:season,item:group[gi]});
+        for(var gi=0;gi<group.length;gi++)episodes.push({season:season,item:group[gi],workingServer:data.workingServer||server});
       }
       activeEpisodeQueue=episodes;activeEpisodeIndex=-1;
       if(window.XIPTVTV.registerEpisodeCount)window.XIPTVTV.registerEpisodeCount(id,episodes.length);
@@ -280,18 +280,19 @@
   },false);
   document.getElementById('tv-next-episode-play').onclick=function(){cancelEpisodeCountdown();startEpisode(activeEpisodeQueue[activeEpisodeIndex+1],activeEpisodeIndex+1);};
   document.getElementById('tv-next-episode-close').onclick=cancelEpisodeCountdown;
-  function playStream(kind,id,ext,name){
+  function playStream(kind,id,ext,name,sourceServer){
     if(kind!=='series'){cancelEpisodeCountdown();activeEpisodeIndex=-1;if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.clearSeriesPoster)window.XIPTVCatalogLayout.clearSeriesPoster();}
     if(id===null||typeof id==='undefined'){say('Yayın kimliği eksik');return;}
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.beforePlay)window.XIPTVCatalogLayout.beforePlay();
     var suffix=ext|| (kind==='live'?'m3u8':'mp4');
-    var url=server.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
+    var playbackServer=(kind==='series'&&sourceServer)||server;
+    var url=playbackServer.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
     // Expose only non-sensitive playback context to the player diagnostics.
-    window.XIPTVPlaybackInfo={kind:kind,extension:suffix,startedAt:new Date().getTime()};
+    window.XIPTVPlaybackInfo={kind:kind,extension:suffix,startedAt:new Date().getTime(),serverVariant:(playbackServer===server?'verified':'series-info')};
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
     window.XIPTVTV.beforePlay(kind,id,url,name);
     if(window.XIPTVPlayerUI){window.XIPTVPlayerUI.closeMenu();window.XIPTVPlayerUI.update();}
-    if(window.XIPTVLGMedia&&window.XIPTVLGMedia.setSource)window.XIPTVLGMedia.setSource(kind==='live'?null:{serverUrl:server,username:username,password:password,kind:kind,id:id,extension:suffix,originalUrl:url});
+    if(window.XIPTVLGMedia&&window.XIPTVLGMedia.setSource)window.XIPTVLGMedia.setSource(kind==='live'?null:{serverUrl:playbackServer,username:username,password:password,kind:kind,id:id,extension:suffix,originalUrl:url});
     if(window.XIPTVAltPlayer&&window.XIPTVAltPlayer.beforeSourceChange)window.XIPTVAltPlayer.beforeSourceChange();
     // Release the previous stream first: many IPTV accounts allow only one connection.
     try{video.pause();video.removeAttribute('src');while(video.firstChild)video.removeChild(video.firstChild);video.load();}catch(e){}
@@ -343,7 +344,7 @@
           retryTimer=setTimeout(function(){
             retryTimer=null;
             if(!active||terminal)return;
-            var altUrl=server.replace(/\/$/,'')+'/series/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.mp4';
+            var altUrl=playbackServer.replace(/\/$/,'')+'/series/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.mp4';
             try{
               video.pause();video.removeAttribute('src');video.load();
               video.src=altUrl;video.load();
