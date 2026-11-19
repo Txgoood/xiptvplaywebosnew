@@ -11,3 +11,7 @@ test('player API query URL',()=>{const v=parse('https://iptv.example/player_api.
 test('Xtream stream URL',()=>{const v=parse('https://iptv.example:443/live/user/pass/123.ts','','');assert.equal(v.server,'https://iptv.example:443');assert.equal(v.username,'user');});
 test('independent M3U URL does not pretend to work',()=>{assert.match(parse('https://cdn.example/list.m3u','','').error,/M3U/);});
 test('missing credentials yields helpful error',()=>{assert.match(parse('host.example:8080','','').error,/kullanıcı/);});
+
+test('comma before the port is normalized',()=>{const v=parse('http://iptv.example,8080','user','pass');assert.equal(v.server,'http://iptv.example:8080');});
+test('comma in a full get.php URL is normalized',()=>{const v=parse('http://iptv.example,8080/get.php?username=user&password=pass','','');assert.equal(v.server,'http://iptv.example:8080');});
+test('invalid host punctuation produces an error',()=>{assert.match(parse('http://iptv.example;8080','user','pass').error,/Sunucu adresini/);});
