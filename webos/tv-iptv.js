@@ -288,8 +288,43 @@
     var playbackServer=(kind==='series'&&sourceServer)||server;
     var directUrl=playbackServer.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
     var url=useProxy?BASE+'/api/iptv/proxy?url='+encodeURIComponent(directUrl):directUrl;
+    var isVod=kind==='series'||kind==='movie';
     var proxyButton=document.getElementById('tv-series-proxy');
-    if(proxyButton){proxyButton.style.display=kind==='series'&&!useProxy?'inline-block':'none';proxyButton.onclick=kind==='series'?function(){playStream('series',id,suffix,name,playbackServer,true);}:null;}
+    if(proxyButton){
+      proxyButton.style.display=isVod&&!useProxy?'inline-block':'none';
+      proxyButton.onclick=isVod?function(){playStream(kind,id,suffix,name,playbackServer,true);}:null;
+    }
+    var diagnosticButton=document.getElementById('tv-vod-diagnose');
+    var diagnosticText=document.getElementById('tv-vod-diagnostics');
+    if(diagnosticText)diagnosticText.textContent='';
+    if(diagnosticButton){
+      diagnosticButton.style.display=isVod?'inline-block':'none';
+      diagnosticButton.onclick=isVod?function(){
+        diagnosticButton.disabled=true;
+        if(diagnosticText)diagnosticText.textContent='Yayın adresinin HTTP yanıtı kontrol ediliyor. Hesap bilgileri gösterilmeyecek...';
+        var probeUrl=BASE+'/api/iptv/proxy?url='+encodeURIComponent(directUrl);
+        var xhr=new XMLHttpRequest(),finished=false;
+        function complete(message){
+          if(finished)return;finished=true;diagnosticButton.disabled=false;
+          if(diagnosticText)diagnosticText.textContent=message;
+        }
+        try{
+          xhr.open('HEAD',probeUrl,true);xhr.timeout=14000;
+          xhr.onreadystatechange=function(){
+            if(xhr.readyState!==4)return;
+            var code=xhr.status,type=String(xhr.getResponseHeader('Content-Type')||'belirsiz').split(';')[0];
+            if(code>=200&&code<300)complete('Proxy HEAD: HTTP '+code+' · Tür: '+type+'. Bu kontrol codec uyumluluğunu doğrulamaz.');
+            else if(code===401||code===403)complete('Proxy HEAD: HTTP '+code+' · Yayın sunucusu erişimi reddediyor olabilir.');
+            else if(code===404)complete('Proxy HEAD: HTTP 404 · Bölüm/film adresi veya uzantısı bulunamadı.');
+            else if(code===405||code===501)complete('Proxy HEAD: HTTP '+code+' · Sağlayıcı HEAD kontrolünü desteklemiyor; sonuç kesin değil.');
+            else complete('Proxy HEAD: HTTP '+code+' · Akış bağlantısı doğrulanamadı; HEAD desteği veya proxy erişimi sorunlu olabilir.');
+          };
+          xhr.onerror=function(){complete('Proxy HTTP kontrolü başarısız: TV ile Render bağlantısı kurulamadı.');};
+          xhr.ontimeout=function(){complete('Proxy bağlantı kontrolü zaman aşımına uğradı.');};
+          xhr.send(null);
+        }catch(e){complete('Bağlantı tanılama isteği başlatılamadı.');}
+      }:null;
+    }
     // Expose only non-sensitive playback context to the player diagnostics.
     window.XIPTVPlaybackInfo={kind:kind,extension:suffix,startedAt:new Date().getTime(),transport:useProxy?'proxy':'direct',serverVariant:(playbackServer===server?'verified':'series-info')};
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
