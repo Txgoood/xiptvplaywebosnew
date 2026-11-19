@@ -713,10 +713,15 @@
   };
   document.getElementById('iptv-hide').onclick=function(){hide(panel);document.body.className='';updatePlayerButtons();launcher.focus();};
   document.getElementById('iptv-connect').onclick=function(){
-    server=document.getElementById('iptv-server').value.trim().replace(/\/+$/,'');
-    username=document.getElementById('iptv-user').value.trim();
-    password=document.getElementById('iptv-pass').value;
-    if(!server||!username||!password){say('Sunucu, kullanıcı ve şifre zorunludur');show(login);hide(browser);return;}
+    var parsed=window.XIPTVPlaylistInput&&window.XIPTVPlaylistInput.parse(
+      document.getElementById('iptv-server').value,
+      document.getElementById('iptv-user').value,
+      document.getElementById('iptv-pass').value);
+    if(!parsed||parsed.error){say(parsed?parsed.error:'Playlist adresi okunamadı.');show(login);hide(browser);return;}
+    server=parsed.server;username=parsed.username;password=parsed.password;
+    document.getElementById('iptv-server').value=server;
+    document.getElementById('iptv-user').value=username;
+    document.getElementById('iptv-pass').value=password;
     if(connecting)return;
     connecting=true;verifyAt=new Date().getTime();
     if(server.indexOf('http://')!==0 && server.indexOf('https://')!==0)server='http://'+server;
