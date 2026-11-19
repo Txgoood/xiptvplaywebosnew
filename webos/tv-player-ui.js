@@ -104,7 +104,21 @@
  video.addEventListener('timeupdate',update);
  video.addEventListener('durationchange',update);
  video.addEventListener('playing',function(){noNative();update();show();});
- video.addEventListener('error',function(){var now=new Date().getTime();if(now-lastErrorAt<1200)return;lastErrorAt=now;notice('Oynatma hatası: Kaynak açılamadı. Yayını yeniden deneyin.','error');});
+ function playbackErrorDescription(code){
+  if(code===1)return 'Oynatma işlemi durduruldu';
+  if(code===2)return 'Ağ bağlantısı veya yayın sunucusu hatası';
+  if(code===3)return 'Medya çözümlenemedi (codec/dosya sorunu)';
+  if(code===4)return 'Kaynak veya medya biçimi desteklenmiyor; yayın adresi reddedilmiş de olabilir';
+  return 'Kaynak açılamadı';
+ }
+ video.addEventListener('error',function(){
+  var now=new Date().getTime();if(now-lastErrorAt<1200)return;lastErrorAt=now;
+  var err=video.error,code=err&&Number(err.code)||0;
+  var info=window.XIPTVPlaybackInfo||{};
+  var mediaKind=info.kind==='series'?'Dizi':info.kind==='movie'?'Film':info.kind==='live'?'Canlı TV':'Medya';
+  var ext=String(info.extension||'bilinmiyor').replace(/[^a-z0-9]/gi,'').slice(0,12);
+  notice('Oynatma hatası '+code+' · '+mediaKind+' ('+ext+'): '+playbackErrorDescription(code)+'.','error');
+ });
  video.addEventListener('waiting',function(){notice('Yayın yükleniyor veya bağlantı bekleniyor…','warning');});
  video.addEventListener('canplay',function(){if(toast.className.indexOf('warning')>=0)toast.style.display='none';});
  document.addEventListener('keydown',function(e){if(menu.style.display!=='none'&&(e.keyCode===461||e.keyCode===27)){closeMenu();show();e.preventDefault();}},false);
