@@ -4,7 +4,8 @@
  var video=document.getElementById('video'),url=String(window.XIPTV_LG_MEDIA_URL||'').replace(/\/+$/,'');
  var ctx=null,lastKind='',session=null,busy=false,busySince=0,manual=false,started=false,offset=0,scanSequence=0;
  var playerOverlay=document.getElementById('tv-lg-subtitle-overlay'),cues=[],lastCue=-1,sourceKey='';
- var scanButton=document.getElementById('tv-lg-media-scan'),summary=document.getElementById('tv-lg-media-status'),returnButton=document.getElementById('tv-lg-native-return');
+ var scanButton=document.getElementById('tv-lg-media-scan'),summary=document.getElementById('tv-lg-media-status'),returnButton=document.getElementById('tv-lg-native-return'),compatButton=document.getElementById('tv-compat-play');
+ var compatRequested=false,compatTimer=null;
  function say(s){summary.textContent=String(s||'');}
  function request(method,path,data,cb,timeoutMs){
   var x=new XMLHttpRequest();
@@ -210,20 +211,64 @@
     if(err&&!retried&&/analiz işlemi sürüyor/i.test(String(err.message))){retried=true;setTimeout(function(){if(thisScan===scanSequence)analyse();},4000);return;}
     busy=false;scanButton.disabled=false;
     if(err)pendingMkvOrdinal=null;
-    if(err){say('LG medya servisi: '+url+' — '+err.message+'. MKV içi parçalar için üstteki “MKV:” girdileri doğrudan dosya başlığından okunur.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
+    if(err){compatRequested=false;if(compatButton)compatButton.disabled=false;say('LG medya servisi: '+url+' — '+err.message+'. MKV içi parçalar için üstteki “MKV:” girdileri doğrudan dosya başlığından okunur.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
     if(!data||!data.tracks){say('Parça listesi alınamadı.');return;}
     session=data;say(data.tracks.length+' parça bulundu: '+data.tracks.filter(function(t){return t.type==='audio';}).length+' ses, '+data.tracks.filter(function(t){return t.type==='subtitle';}).length+' altyazı. Desteklenmeyen altyazılar yalnızca bilgi amaçlıdır.');
     if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();
     applyPendingMkv();
+    if(compatRequested){compatRequested=false;playCompatible();}
     // Never silently replace a working stream. User chooses a track explicitly.
    },70000);
   }
   wake(function(werr){
    if(thisScan!==scanSequence)return;
-   if(werr){busy=false;scanButton.disabled=false;say('LG medya servisine ulaşılamadı ('+werr.message+'). MKV parçaları doğrudan dosya başlığından okunuyor.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
+   if(werr){busy=false;scanButton.disabled=false;compatRequested=false;if(compatButton)compatButton.disabled=false;say('LG medya servisine ulaşılamadı ('+werr.message+'). MKV parçaları doğrudan dosya başlığından okunuyor.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
    analyse();
   });
  }
+ function playCompatible(){
+  if(!ctx||!session||!session.token){if(compatButton)compatButton.disabled=false;say('Uyumlu oynatma için geçerli medya analizi bulunamadı.');return;}
+  var videoTracks=(session.tracks||[]).filter(function(t){return t.type==='video';});
+  if(!videoTracks.length){if(compatButton)compatButton.disabled=false;say('Medya analizinde video parçası bulunamadı.');return;}
+  var source=ctx.originalUrl||video.currentSrc||video.src,previous=Number(video.currentTime)||0;
+  var target=url+'/compat/'+session.token+'?start='+Math.floor(previous);
+  var completed=false,progress=false;
+  function release(){if(compatTimer){clearTimeout(compatTimer);compatTimer=null;}video.removeEventListener('error',failed,false);video.removeEventListener('timeupdate',progressed,false);}
+  function failed(){
+    if(completed)return;
+    completed=true;release();
+    if(compatButton)compatButton.disabled=false;
+    say('Uyumlu video akışı açılamadı. LG servisindeki 360p H.264/AAC dönüşümü veya TV MPEG-TS desteği kontrol edilmeli.');
+    try{video.pause();video.removeAttribute('src');video.load();}catch(e){}
+  }
+  function progressed(){
+    if(completed)return;
+    if(video.readyState>=2&&video.currentTime>0){
+      progress=true;completed=true;release();
+      if(compatButton)compatButton.disabled=false;
+      returnButton.style.display='inline-block';
+      say('Uyumlu video oynatılıyor: H.264 Baseline + AAC, 360p (deneysel; süre ve bant genişliği sınırlı).');
+    }
+  }
+  video.addEventListener('error',failed,false);
+  video.addEventListener('timeupdate',progressed,false);
+  compatTimer=setTimeout(failed,30000);
+  try{
+    if(window.XIPTVSeriesSourceCleanup)window.XIPTVSeriesSourceCleanup();
+    if(window.XIPTVPlaybackInfo){window.XIPTVPlaybackInfo.transport='compat';window.XIPTVPlaybackInfo.extension='ts';}
+    video.pause();video.removeAttribute('src');video.load();
+    video.src=target;video.load();
+    var p=video.play();if(p&&p.catch)p.catch(function(){});
+    say('LG uyumlu oynatma dönüştürülüyor: H.264/AAC 360p. Sunucu deneme sınırları uygulanır.');
+  }catch(e){failed();}
+ }
+ if(compatButton)compatButton.onclick=function(){
+  if(!ctx){say('Önce bir film veya dizi bölümü seçin.');return;}
+  compatButton.disabled=true;
+  compatRequested=true;
+  if(session&&session.token){compatRequested=false;playCompatible();}
+  else scan();
+ };
  scanButton.onclick=function(){manual=false;scan();};
  returnButton.onclick=function(){if(ctx&&ctx.originalUrl){var pos=(video.currentTime||0)+offset;revert(ctx.originalUrl,pos);say('Önceki çalışan TV oynatıcısı geri açıldı.');}};
  video.addEventListener('timeupdate',paintSubtitles,false);
@@ -240,7 +285,7 @@
   if(this.value.indexOf('native:a:')===0){var n=Number(this.value.split(':')[2]);try{for(var i=0;i<video.audioTracks.length;i++)video.audioTracks[i].enabled=i===n;say('TV ses kanalı seçildi.');}catch(e){say('TV ses kanalı geçişini desteklemiyor.');}}
  },false);
  window.XIPTVLGMedia={
-  setSource:function(data){scanSequence++;ctx=data;lastKind=data?String(data.kind||''):'live';session=null;manual=false;busy=false;started=false;offset=0;cues=[];lastCue=-1;playerOverlay.style.display='none';scanButton.disabled=false;returnButton.style.display='none';summary.textContent='';/* No automatic scan: a second connection to the IPTV account can interrupt the playing stream. Use the scan button. */},
+  setSource:function(data){scanSequence++;compatRequested=false;if(compatTimer){clearTimeout(compatTimer);compatTimer=null;}if(compatButton){compatButton.disabled=false;compatButton.style.display=data&&data.kind!=='live'?'inline-block':'none';}ctx=data;lastKind=data?String(data.kind||''):'live';session=null;manual=false;busy=false;started=false;offset=0;cues=[];lastCue=-1;playerOverlay.style.display='none';scanButton.disabled=false;returnButton.style.display='none';summary.textContent='';/* No automatic scan: a second connection to the IPTV account can interrupt the playing stream. Use the scan button. */},
   extendMenus:extendMenus,
   scan:scan,
   subtitleForMkvOrdinal:subtitleForMkvOrdinal
