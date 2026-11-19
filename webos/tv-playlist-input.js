@@ -5,7 +5,7 @@
     for(i=0;i<parts.length;i++){p=parts[i];at=p.indexOf('=');key=decode(at<0?p:p.slice(0,at)).toLowerCase();if(key)out[key]=decode(at<0?'':p.slice(at+1));}return out;
   }
   function parse(raw,user,pass){
-    var value=String(raw||'').replace(/^\s+|\s+$/g,''),username=String(user||'').replace(/^\s+|\s+$/g''),password=String(pass||''),p,base,pathname,query,credentials=false;
+    var value=String(raw||'').replace(/^\s+|\s+$/g,''),username=String(user||'').replace(/^\s+|\s+$/g,''),password=String(pass||''),p,base,pathname,query,credentials=false;
     if(!value)return {error:'Sunucu veya playlist adresini yazın.'};
     if(!/^https?:\/\//i.test(value))value='http://'+value;
     p=/^(https?:\/\/[^\/?#]+)(\/[^?#]*)?(?:\?([^#]*))?/i.exec(value);
