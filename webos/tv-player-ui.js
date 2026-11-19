@@ -115,7 +115,7 @@
   var now=new Date().getTime();if(now-lastErrorAt<1200)return;lastErrorAt=now;
   var err=video.error,code=err&&Number(err.code)||0;
   var info=window.XIPTVPlaybackInfo||{};
-  if(info.retrying)return; // HLS fallback is in progress; avoid a stale error toast.
+  if(info.retrying||info.terminal)return; // Bounded HLS fallback / final failure handles its own notice.
   var mediaKind=info.kind==='series'?'Dizi':info.kind==='movie'?'Film':info.kind==='live'?'Canlı TV':'Medya';
   var ext=String(info.extension||'bilinmiyor').replace(/[^a-z0-9]/gi,'').slice(0,12);
   notice('Oynatma hatası '+code+' · '+mediaKind+' ('+ext+'): '+playbackErrorDescription(code)+'.','error');
