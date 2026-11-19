@@ -289,7 +289,7 @@ export function compatibilityArgs(proxySource,start=0,audioIndex=null){
 export function mp4ClipArgs(proxySource,outputPath,start=0,audioIndex=null){
  const args=compatibilityArgs(proxySource,start,audioIndex);
  const fmt=args.lastIndexOf('-f');
- args.splice(fmt,3,'-t',String(MP4_CLIP_SECONDS),'-movflags','+faststart','-f','mp4',outputPath);
+ args.splice(fmt-2,5,'-t',String(MP4_CLIP_SECONDS),'-movflags','+faststart','-f','mp4',outputPath);
  return args;
 }
 async function prepareMp4Clip(session,start){
