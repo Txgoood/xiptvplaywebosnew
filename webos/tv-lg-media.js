@@ -224,7 +224,7 @@
     if(err)pendingMkvOrdinal=null;
     if(err){compatRequested=false;if(compatButton)compatButton.disabled=false;say('LG medya servisi: '+url+' — '+err.message+'. MKV içi parçalar için üstteki “MKV:” girdileri doğrudan dosya başlığından okunur.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
     if(!data||!data.tracks){say('Parça listesi alınamadı.');return;}
-    session=data;say(data.tracks.length+' parça bulundu: '+data.tracks.filter(function(t){return t.type==='audio';}).length+' ses, '+data.tracks.filter(function(t){return t.type==='subtitle';}).length+' altyazı. Desteklenmeyen altyazılar yalnızca bilgi amaçlıdır.');
+    session=data;if(data.probeFallback){say('FFprobe çöktü; codec ve ses/altyazı bilgileri okunamadı. 1 video kaydı yalnızca geçici yer tutucu. Uyumlu video dönüştürme deneniyor…');}else{say(data.tracks.length+' parça bulundu: '+data.tracks.filter(function(t){return t.type==='audio';}).length+' ses, '+data.tracks.filter(function(t){return t.type==='subtitle';}).length+' altyazı. Desteklenmeyen altyazılar yalnızca bilgi amaçlıdır.');}
     if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();
     applyPendingMkv();
     if(compatRequested){compatRequested=false;playCompatible();}
