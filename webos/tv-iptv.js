@@ -286,6 +286,8 @@
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.beforePlay)window.XIPTVCatalogLayout.beforePlay();
     var suffix=ext|| (kind==='live'?'m3u8':'mp4');
     var url=server.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
+    // Expose only non-sensitive playback context to the player diagnostics.
+    window.XIPTVPlaybackInfo={kind:kind,extension:suffix,startedAt:new Date().getTime()};
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
     window.XIPTVTV.beforePlay(kind,id,url,name);
     if(window.XIPTVPlayerUI){window.XIPTVPlayerUI.closeMenu();window.XIPTVPlayerUI.update();}
