@@ -25,13 +25,14 @@ button:disabled{opacity:.55}
 @media(max-height:620px){main{padding:5px 12px}h1{font-size:23px}label{margin-top:3px}input,select{height:36px}button{min-height:38px;padding:5px 12px}#status{min-height:36px}}
 </style></head><body><main>
 <h1>XIPTV Play — Native HLS Lab</h1>
-<small>v0.3.5 • webOS 2 • 8 saniyelik film testi</small>
+<small>v0.3.6 • webOS 2 • 8 saniyelik film testi</small>
 <form id="form">
 <div id="search-line"><label>Film Adi Ara<input id="query" type="text" autocomplete="off" placeholder="Film adini yaz"></label><button type="button" id="search">Film Ara</button></div>
 <div id="results-line"><label>Film Secimi<select id="results"><option value="">Once Film Ara'ya bas</option></select></label>
 <label>Secilen Film ID<input id="item" type="text" readonly required></label></div>
 <div id="action-row"><button type="submit" id="go">Secilen Filmi Test Et (8 sn)</button><button type="button" id="toggle-account">Baglanti Ayarlari</button></div>
 <div id="status">Film adini arayip listeden sec. Hesabini girmediysen Baglanti Ayarlari'ni ac.</div>
+<p><button type="button" id="diagnose">Son Auto Hatasini Goster</button></p>
 <div id="account-panel" class="hidden">
 <p class="note">M3U linkini bir kez girip Yukle'ye bas. HTTP kaynak korunur. Bilgileri TV'de hatirlatabilirsin.</p>
 <label style="width:98%">M3U Playlist Linki<input id="m3u" type="text" autocomplete="off" placeholder="http://sunucu:8080/get.php?username=..."></label>
@@ -51,6 +52,37 @@ button:disabled{opacity:.55}
 var endpoint='https://xiptvplay-native-lab.onrender.com';
 function by(id){return document.getElementById(id);}
 function msg(s){by('status').textContent=s;}
+by('diagnose').onclick=function(){
+ msg('Native Auto son asama kontrol ediliyor...');
+ var xhr=new XMLHttpRequest();
+ xhr.open('GET',endpoint+'/diag',true);xhr.timeout=12000;
+ xhr.onreadystatechange=function(){
+  if(xhr.readyState!==4)return;
+  var d={};try{d=JSON.parse(xhr.responseText);}catch(e){}
+  if(xhr.status!==200){msg('Tanilama baglantisi HTTP '+xhr.status+'.');return;}
+  if(!d.found){msg('Native Auto sonuc kaydi bulunamadi. TV HTTPS baglantisi baslamamis olabilir; tek basina kesin kanit degildir.');return;}
+  var names={
+   pending_ok:'Klip anahtari alindi',
+   pending_none:'Hazir klip bulunamadi',
+   pending_network:'TV test sunucusuna HTTPS ile ulasamadi',
+   native_ready:'H264/AAC indirildi; oynatma motoru hazir',
+   clip_invalid:'Indirilen dosyanin bicimi veya aktarimi sorunlu',
+   remote_abort:'Gercek film verisi hazirlanamadi',
+   ndl_start:'NDL basladi',
+   ndl_first_frame:'NDL ilk goruntuyu olusturdu',
+   ndl_failed:'NDL ilk goruntuyu olusturamadi',
+   acb_start:'Starfish/ACB basladi',
+   acb_first_frame:'ACB ilk goruntuyu olusturdu',
+   acb_failed:'ACB ilk goruntuyu olusturamadi',
+   offline_fallback:'Gercek klip yerine yerel test goruntusu secildi'
+  };
+  msg('Native Auto son kaydi: '+(names[d.phase]||d.phase)+' (kod: '+d.code+'). Bu yazinin fotografini gonder.');
+ };
+ xhr.onerror=function(){msg('Tanilama servis baglantisi kurulamadı.');};
+ xhr.ontimeout=function(){msg('Tanilama sunucusu zaman asimi.');};
+ xhr.send(null);
+};
+
 by('toggle-visibility').onclick=function(){
  var show=by('password').type==='password';
  by('password').type=show?'text':'password';

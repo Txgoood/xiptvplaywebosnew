@@ -15,7 +15,8 @@ const PUBLIC_ORIGIN=process.env.NATIVE_LAB_PUBLIC_ORIGIN||'https://xiptvplay-nat
 const FF_MPEG=path.join(path.dirname(fileURLToPath(import.meta.url)),'../lg-media-service/node_modules/@ffmpeg-installer/linux-x64/ffmpeg');
 const RELAY_TTL_MS=3*60*1000,MAX_BYTES=8*1024*1024,MAX_POST=1600;
 const MAX_CATALOG_BYTES=40*1024*1024;
-const media=new Map(),usage=new Map(),pending=new Map();
+const media=new Map(),usage=new Map(),pending=new Map(),diagnostics=new Map();
+const DIAG_TTL=10*60*1000;
 const PENDING_TTL_MS=90*1000;
 let active=false,internalReady=false;
 if(!/^https:\/\/[a-z0-9.-]+\.onrender\.com$/.test(PUBLIC_ORIGIN))throw Error('Invalid public origin');
@@ -142,7 +143,27 @@ const server=http.createServer(async(req,res)=>{
    const ip=clientIp(req),task=pending.get(ip);
    if(!task||task.expires<Date.now()||!media.has(task.ticket)){pending.delete(ip);fail(res,404,'No recent clip for this network');return;}
    pending.delete(ip);
+   console.log('[lab] pending clip collected by native client');
    respond(res,{success:true,token:task.ticket});return;
+  }
+  if(req.method==='POST'&&pathname==='/diag'){
+   const input=await body(req);
+   const allowed=['start','pending_ok','pending_none','pending_network','fetch_video_ok','fetch_video_fail','fetch_audio_ok','fetch_audio_fail','clip_invalid','native_ready','ndl_start','ndl_first_frame','ndl_failed','acb_start','acb_first_frame','acb_failed','remote_abort','offline_fallback'];
+   const phase=String(input.phase||'');
+   const code=Number(input.code||0);
+   if(!allowed.includes(phase)||!Number.isInteger(code)||code<0||code>1000){fail(res,400,'Invalid native status');return;}
+   const ip=clientIp(req);
+   diagnostics.set(ip,{phase,code,updatedAt:Date.now()});
+   while(diagnostics.size>200)diagnostics.delete(diagnostics.keys().next().value);
+   console.log('[lab-native] phase='+phase+' code='+code);
+   respond(res,{success:true});
+   return;
+  }
+  if(req.method==='GET'&&pathname==='/diag'){
+   const row=diagnostics.get(clientIp(req));
+   if(!row||Date.now()-row.updatedAt>DIAG_TTL){respond(res,{success:true,found:false});return;}
+   respond(res,{success:true,found:true,phase:row.phase,code:row.code});
+   return;
   }
   if(req.method==='POST'&&pathname==='/search'){
    if(!internalReady){fail(res,503,'Medya hizmeti başlatılıyor');return;}
@@ -173,6 +194,7 @@ const server=http.createServer(async(req,res)=>{
     const ticket=randomBytes(24).toString('hex');
     media.set(ticket,{video,audio,expires:Date.now()+RELAY_TTL_MS});
     pending.set(clientIp(req),{ticket,expires:Date.now()+PENDING_TTL_MS});
+    diagnostics.delete(clientIp(req));
     while(pending.size>15)pending.delete(pending.keys().next().value);
     while(media.size>5)media.delete(media.keys().next().value);
     respond(res,{success:true,seconds:8,format:'h264-annexb+adts-aac',videoBytes:video.length,audioBytes:audio.length,

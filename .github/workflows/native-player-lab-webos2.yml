@@ -1,5 +1,5 @@
 name: Build Native Player Lab webOS 2
-run-name: XIPTV Native Player Lab v0.3.5 Build #${{ github.run_number }}
+run-name: XIPTV Native Player Lab v0.3.6 Build #${{ github.run_number }}
 on:
   push:
     branches:
@@ -54,6 +54,7 @@ jobs:
       - name: Check isolated HLS bridge implementation
         run: |
           node --check native-player-lab/relay.mjs
+          node -e "const fs=require('fs'),s=fs.readFileSync('native-player-lab/relay.mjs','utf8');if(!s.includes('pathname===\x27/diag\x27')||!s.includes('pending clip collected'))process.exit(1)"
           node -e "const fs=require('fs');const relay=fs.readFileSync('native-player-lab/relay.mjs','utf8'),c=fs.readFileSync('native-player-lab/source_fetch.c','utf8');if(!relay.includes('pathname===\x27/pending\x27')||!relay.includes('pending.set(clientIp(req)')||!c.includes('take_pending(token)'))process.exit(1)"
           node -e 'const fs=require("fs");const x=fs.readFileSync("native-player-lab/launcher/index.html","utf8");const js=x.split("<script>")[1].split("</script>")[0];new Function(js);if(!x.includes("M3U Linkini Yukle")||!x.includes("Film Ara")||!x.includes("localStorage.setItem")||!x.includes("id=\"search\"")||!x.includes("account-panel"))process.exit(1);'
           node --check lg-media-service/server.mjs
@@ -84,13 +85,13 @@ jobs:
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/ndl/icon.png
           cp upstream-samples/assets/icons/smp-acb-webos2.png native-stage/acb/icon.png
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/auto/icon.png
-          node -e "require('fs').writeFileSync('native-stage/auto/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.auto',version:'0.3.5',vendor:'XIPTV Play',type:'native',main:'media-lab-auto',title:'XIPTV Player Lab Auto NDL ACB',icon:'icon.png',iconColor:'#4CAF50',bgColor:'#4CAF50'}))"
+          node -e "require('fs').writeFileSync('native-stage/auto/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.auto',version:'0.3.6',vendor:'XIPTV Play',type:'native',main:'media-lab-auto',title:'XIPTV Player Lab Auto NDL ACB',icon:'icon.png',iconColor:'#4CAF50',bgColor:'#4CAF50'}))"
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/ndl/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/acb/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/auto/
           cp native-player-lab/launcher/index.html native-stage/launcher/index.html
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/launcher/icon.png
-          node -e "require('fs').writeFileSync('native-stage/launcher/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.launcher',version:'0.3.5',vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Native HLS Lab',icon:'icon.png',disableBackHistoryAPI:true}))"
+          node -e "require('fs').writeFileSync('native-stage/launcher/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.launcher',version:'0.3.6',vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Native HLS Lab',icon:'icon.png',disableBackHistoryAPI:true}))"
           node -e "let a=require('./native-stage/ndl/appinfo.json'),b=require('./native-stage/acb/appinfo.json');if(a.id!=='com.xiptvplay.playerlab.ndl'||b.id!=='com.xiptvplay.playerlab.acb.webos2'||a.type!=='native'||b.type!=='native')process.exit(1)"
       - name: Package dedicated native IPKs with current CLI
         run: |

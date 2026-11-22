@@ -100,3 +100,19 @@ the TV browser's localStorage *in plaintext*. There is a "clear saved details"
 button, and a checkbox for users who do not want persistent credentials.
 The login data is transmitted to the isolated Render endpoint in the HTTPS
 POST body; the provider-specific hop follows the source URL scheme.
+
+## v0.3.6 — Gray-screen diagnostic, compare v0.2.1
+
+The owner confirmed v0.2.1 Build #5 actually showed picture and sound on
+the TV with the offline synthetic clip. v0.3.x began showing gray then exiting
+after HLS integration. Regressions must be diagnosed in the added network
+handoff and downloaded elementary streams; do not rewrite working NDL/ACB.
+
+Adds temporary phase-only (no credentials or stream URLs) diagnostic reports
+to the isolated Render service: missing pending clip, TLS/network failure,
+download/format failure, NDL/ACB first-frame status. After testing, reopen the
+Native HLS Lab launcher and select "Son Auto Hatasini Goster". It shows the
+latest phase from the same internet exit address. A missing report is
+inconclusive because older webOS curl may fail TLS before reporting.
+
+This is instrumentation, not a verified playback fix.

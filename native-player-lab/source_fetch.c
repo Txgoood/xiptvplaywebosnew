@@ -64,6 +64,32 @@ static int magic(const char *p,int video){
  return b[0]==0xff&&(b[1]&0xf0)==0xf0;
 }
 #define LAB_PENDING "https://xiptvplay-native-lab.onrender.com/pending"
+#define LAB_DIAG "https://xiptvplay-native-lab.onrender.com/diag"
+void lab_report(const char *phase,int code){
+ char data[128];
+ snprintf(data,sizeof(data),"{\"phase\":\"%s\",\"code\":%d}",phase,code);
+ if(curl_global_init(CURL_GLOBAL_DEFAULT)!=0)return;
+ CURL *c=curl_easy_init();
+ if(c){
+  curl_easy_setopt(c,CURLOPT_URL,LAB_DIAG);
+  curl_easy_setopt(c,CURLOPT_POSTFIELDS,data);
+  curl_easy_setopt(c,CURLOPT_POSTFIELDSIZE,(long)strlen(data));
+  struct curl_slist *headers=NULL;
+  headers=curl_slist_append(headers,"Content-Type: application/json");
+  curl_easy_setopt(c,CURLOPT_HTTPHEADER,headers);
+  curl_easy_setopt(c,CURLOPT_TIMEOUT,5L);
+  curl_easy_setopt(c,CURLOPT_CONNECTTIMEOUT,3L);
+  curl_easy_setopt(c,CURLOPT_NOSIGNAL,1L);
+  curl_easy_setopt(c,CURLOPT_FOLLOWLOCATION,0L);
+  curl_easy_setopt(c,CURLOPT_SSL_VERIFYPEER,1L);
+  curl_easy_setopt(c,CURLOPT_SSL_VERIFYHOST,2L);
+  curl_easy_setopt(c,CURLOPT_PROTOCOLS,(long)CURLPROTO_HTTPS);
+  CURLcode rc=curl_easy_perform(c);
+  fprintf(stderr,"[lab-diag] %s %d (report=%d)\n",phase,code,(int)rc);
+  curl_slist_free_all(headers);curl_easy_cleanup(c);
+ }
+ curl_global_cleanup();
+}
 struct pending_response {char text[256];size_t count;};
 static size_t pending_sink(char *ptr,size_t size,size_t nmemb,void *data){
  struct pending_response *p=data;
@@ -89,13 +115,17 @@ static int take_pending(char token[49]){
  curl_easy_setopt(c,CURLOPT_PROTOCOLS,(long)CURLPROTO_HTTPS);
  CURLcode result=curl_easy_perform(c);long http=0;
  curl_easy_getinfo(c,CURLINFO_RESPONSE_CODE,&http);curl_easy_cleanup(c);
- if(result!=CURLE_OK||http!=200){fprintf(stderr,"[lab] pending request code=%d http=%ld\n",(int)result,http);return 0;}
+ if(result!=CURLE_OK||http!=200){
+  fprintf(stderr,"[lab] pending request code=%d http=%ld\n",(int)result,http);
+  lab_report(result==CURLE_OK?"pending_none":"pending_network",result==CURLE_OK?(int)http:(int)result);
+  return 0;
+ }
  const char *pfx="\"token\":\"";const char *where=strstr(p.text,pfx);
  if(!where)return 0;
  where+=strlen(pfx);
  if(strlen(where)<49||where[48]!='\"')return 0;
  for(int i=0;i<48;i++)if(!ishex(where[i]))return 0;
- memcpy(token,where,48);token[48]=0;return 1;
+ memcpy(token,where,48);token[48]=0;lab_report("pending_ok",0);return 1;
 }
 /* Return 0 = offline test; 1 = remote prepared; -1 = attempted but failed. */
 int lab_fetch_launch(int argc,char **argv,char *video,size_t vlen,char *audio,size_t alen){
@@ -123,7 +153,12 @@ int lab_fetch_launch(int argc,char **argv,char *video,size_t vlen,char *audio,si
  if(curl_global_init(CURL_GLOBAL_DEFAULT)!=0)return -1;
  int ok=fetch(vurl,video)&&fetch(aurl,audio)&&magic(video,1)&&magic(audio,0);
  curl_global_cleanup();
- if(!ok){unlink(video);unlink(audio);fprintf(stderr,"[lab] real provider clip not usable\n");return -1;}
+ if(!ok){
+  unlink(video);unlink(audio);
+  fprintf(stderr,"[lab] real provider clip not usable\n");
+  lab_report("clip_invalid",0);return -1;
+ }
+ lab_report("native_ready",0);
  fprintf(stderr,"[lab] downloaded provider-derived H264+AAC pair\n");
  return 1;
 }
