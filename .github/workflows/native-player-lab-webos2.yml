@@ -50,19 +50,37 @@ jobs:
           set -euo pipefail
           (cd /tmp && ./arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh)
           python3 native-player-lab/patch_upstream.py upstream-samples
-      - name: Compile and package NDL and Starfish ACB
+      - name: Compile both ARM hardware decoder executables
         run: |
           set -euo pipefail
           cmake -S upstream-samples -B upstream-samples/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/tmp/arm-webos-linux-gnueabi_sdk-buildroot/share/buildroot/toolchainfile.cmake
-          cmake --build upstream-samples/build --target media-ndl-esplayer-ipk media-smp-acb-webos2-ipk --parallel 2
-          test -s upstream-samples/build/dist/com.xiptvplay.playerlab.ndl_0.1.0_arm.ipk
-          test -s upstream-samples/build/dist/com.xiptvplay.playerlab.acb.webos2_0.1.0_arm.ipk
+          cmake --build upstream-samples/build --target media-ndl-esplayer media-smp-acb-webos2 --parallel 2
           file upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer | grep -q ARM
           file upstream-samples/build/media/smp/acb/media-smp-acb-webos2 | grep -q ARM
+      - name: Stage native apps with generated appinfo
+        run: |
+          set -euo pipefail
+          mkdir -p native-stage/ndl native-stage/acb webos-lab-artifacts
+          cp upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer native-stage/ndl/
+          cp upstream-samples/build/media/smp/acb/media-smp-acb-webos2 native-stage/acb/
+          cp upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer-appinfo.json native-stage/ndl/appinfo.json
+          cp upstream-samples/build/media/smp/acb/media-smp-acb-webos2-appinfo.json native-stage/acb/appinfo.json
+          cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/ndl/icon.png
+          cp upstream-samples/assets/icons/smp-acb-webos2.png native-stage/acb/icon.png
+          cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/ndl/
+          cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/acb/
+          node -e "let a=require('./native-stage/ndl/appinfo.json'),b=require('./native-stage/acb/appinfo.json');if(a.id!=='com.xiptvplay.playerlab.ndl'||b.id!=='com.xiptvplay.playerlab.acb.webos2'||a.type!=='native'||b.type!=='native')process.exit(1)"
+      - name: Package dedicated native IPKs with current CLI
+        run: |
+          set -euo pipefail
+          ares-package native-stage/ndl -o webos-lab-artifacts
+          ares-package native-stage/acb -o webos-lab-artifacts
+          find webos-lab-artifacts -maxdepth 1 -type f -name '*.ipk' -printf '%f: %s bytes\\n'
+          test "$(find webos-lab-artifacts -maxdepth 1 -type f -name '*.ipk' | wc -l)" -eq 2
       - name: Upload two separate native IPKs
         uses: actions/upload-artifact@v4
         with:
           name: xiptvplay-native-player-lab-webos2
-          path: upstream-samples/build/dist/com.xiptvplay.playerlab.*_0.1.0_arm.ipk
+          path: webos-lab-artifacts/*.ipk
           if-no-files-found: error
           retention-days: 14
