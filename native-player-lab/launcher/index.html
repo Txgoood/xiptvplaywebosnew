@@ -25,7 +25,7 @@ button:disabled{opacity:.55}
 @media(max-height:620px){main{padding:5px 12px}h1{font-size:23px}label{margin-top:3px}input,select{height:36px}button{min-height:38px;padding:5px 12px}#status{min-height:36px}}
 </style></head><body><main>
 <h1>XIPTV Play — Native HLS Lab</h1>
-<small>v0.3.3 • webOS 2 • 8 saniyelik film testi</small>
+<small>v0.3.4 • webOS 2 • 8 saniyelik film testi</small>
 <form id="form">
 <div id="search-line"><label>Film Adi Ara<input id="query" type="text" autocomplete="off" placeholder="Film adini yaz"></label><button type="button" id="search">Film Ara</button></div>
 <div id="results-line"><label>Film Secimi<select id="results"><option value="">Once Film Ara'ya bas</option></select></label>
@@ -34,11 +34,11 @@ button:disabled{opacity:.55}
 <div id="status">Film adini arayip listeden sec. Hesabini girmediysen Baglanti Ayarlari'ni ac.</div>
 <div id="account-panel" class="hidden">
 <p class="note">M3U linkini bir kez girip Yukle'ye bas. HTTP kaynak korunur. Bilgileri TV'de hatirlatabilirsin.</p>
-<label style="width:98%">M3U Playlist Linki<input id="m3u" type="password" autocomplete="off" placeholder="http://sunucu:8080/get.php?username=..."></label>
-<button type="button" id="parse">M3U Linkini Yukle</button><br>
+<label style="width:98%">M3U Playlist Linki<input id="m3u" type="text" autocomplete="off" placeholder="http://sunucu:8080/get.php?username=..."></label>
+<button type="button" id="parse">M3U Linkini Yukle</button><button type="button" id="toggle-visibility">Yazilari Gizle</button><br>
 <label>IPTV Sunucu Adresi<input id="server" placeholder="http://sunucu:8080" autocomplete="off" required></label>
 <label>Kullanici Adi<input id="username" autocomplete="off" required></label>
-<label>Sifre<input id="password" type="password" autocomplete="off" required></label>
+<label>Sifre<input id="password" type="text" autocomplete="off" required></label>
 <label>Kaynak Uzantisi<select id="ext"><option value="m3u8">m3u8 (HLS)</option><option value="mp4">mp4</option><option value="mkv">mkv</option><option value="ts">ts</option></select></label>
 <input id="kind" type="hidden" value="movie">
 <p class="note"><label style="width:100%"><input id="remember" type="checkbox" checked style="display:inline;width:22px;height:22px;vertical-align:middle"> Bilgilerimi TV'de hatirla (sifresiz saklanir; paylasilan TV'de kapat)</label></p>
@@ -51,6 +51,13 @@ button:disabled{opacity:.55}
 var endpoint='https://xiptvplay-native-lab.onrender.com';
 function by(id){return document.getElementById(id);}
 function msg(s){by('status').textContent=s;}
+by('toggle-visibility').onclick=function(){
+ var show=by('password').type==='password';
+ by('password').type=show?'text':'password';
+ by('m3u').type=show?'text':'password';
+ by('toggle-visibility').textContent=show?'Yazilari Gizle':'Yazilari Goster';
+};
+
 function setAccountOpen(open){by('account-panel').className=open?'':'hidden';}
 by('toggle-account').onclick=function(){setAccountOpen(by('account-panel').className==='hidden');};
 function hasAccount(){return !!(by('server').value&&by('username').value&&by('password').value);}

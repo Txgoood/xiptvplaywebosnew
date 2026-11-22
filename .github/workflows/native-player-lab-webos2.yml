@@ -1,5 +1,5 @@
 name: Build Native Player Lab webOS 2
-run-name: XIPTV Native Player Lab v0.3.3 Build #${{ github.run_number }}
+run-name: XIPTV Native Player Lab v0.3.4 Build #${{ github.run_number }}
 on:
   push:
     branches:
@@ -89,7 +89,7 @@ jobs:
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/auto/
           cp native-player-lab/launcher/index.html native-stage/launcher/index.html
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/launcher/icon.png
-          node -e "require('fs').writeFileSync('native-stage/launcher/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.launcher',version:'0.3.3',vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Native HLS Lab',icon:'icon.png',disableBackHistoryAPI:true}))"
+          node -e "require('fs').writeFileSync('native-stage/launcher/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.launcher',version:'0.3.4',vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Native HLS Lab',icon:'icon.png',disableBackHistoryAPI:true}))"
           node -e "let a=require('./native-stage/ndl/appinfo.json'),b=require('./native-stage/acb/appinfo.json');if(a.id!=='com.xiptvplay.playerlab.ndl'||b.id!=='com.xiptvplay.playerlab.acb.webos2'||a.type!=='native'||b.type!=='native')process.exit(1)"
       - name: Package dedicated native IPKs with current CLI
         run: |
