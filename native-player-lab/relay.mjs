@@ -14,11 +14,12 @@ const BRIDGE_PORT=31919;
 const PUBLIC_ORIGIN=process.env.NATIVE_LAB_PUBLIC_ORIGIN||'https://xiptvplay-native-lab.onrender.com';
 const FF_MPEG=path.join(path.dirname(fileURLToPath(import.meta.url)),'../lg-media-service/node_modules/@ffmpeg-installer/linux-x64/ffmpeg');
 const RELAY_TTL_MS=3*60*1000,MAX_BYTES=8*1024*1024,MAX_POST=1600;
+const MAX_CATALOG_BYTES=40*1024*1024;
 const media=new Map(),usage=new Map();
 let active=false,internalReady=false;
 if(!/^https:\/\/[a-z0-9.-]+\.onrender\.com$/.test(PUBLIC_ORIGIN))throw Error('Invalid public origin');
 process.env.PORT=String(BRIDGE_PORT);
-await import('../lg-media-service/server.mjs');
+const {validateHost}=await import('../lg-media-service/server.mjs');
 process.env.PORT=String(WEB_PORT);
 async function waitBackend(){
  for(let i=0;i<50;i++){
@@ -32,6 +33,45 @@ waitBackend().catch(e=>console.error('[lab] internal boot failed: '+e.message));
 function fail(res,status,message){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({success:false,error:message}));}
 function respond(res,data){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));}
 function safeToken(s){return /^[a-f0-9]{48}$/.test(s);}
+export function filterMovies(items,query){
+ if(!Array.isArray(items))return [];
+ const needle=String(query||'').trim().toLocaleLowerCase('tr');
+ if(needle.length<2||needle.length>80)return [];
+ const found=[];
+ for(const item of items){
+  if(found.length>=30)break;
+  if(!item||!/^[0-9]{1,12}$/.test(String(item.stream_id||'')))continue;
+  const title=String(item.name||'').slice(0,160);
+  if(!title.toLocaleLowerCase('tr').includes(needle))continue;
+  const extension=String(item.container_extension||'m3u8').toLowerCase();
+  found.push({id:String(item.stream_id),title,extension:['mp4','mkv','ts','m3u8'].includes(extension)?extension:'m3u8'});
+ }
+ return found;
+}
+async function fetchCatalog(raw){
+ const origin=await validateHost(String(raw.serverUrl||''),{username:raw.username,password:raw.password});
+ const endpoint=new URL('/player_api.php',origin);
+ endpoint.searchParams.set('username',String(raw.username||''));
+ endpoint.searchParams.set('password',String(raw.password||''));
+ endpoint.searchParams.set('action','get_vod_streams');
+ const controller=new AbortController();
+ const timeout=setTimeout(()=>controller.abort(),18000);
+ try{
+  const response=await fetch(endpoint,{redirect:'manual',signal:controller.signal,headers:{'Accept':'application/json','User-Agent':'XIPTV-NativeLab/0.3'}});
+  if(!response.ok||response.status>=300)throw Error('Katalog hizmeti HTTP '+response.status);
+  const declared=Number(response.headers.get('content-length')||0);
+  if(declared>MAX_CATALOG_BYTES)throw Error('Katalog boyutu test sınırını aşıyor');
+  const chunks=[];let count=0;
+  for await(const chunk of response.body){
+   count+=chunk.length;
+   if(count>MAX_CATALOG_BYTES)throw Error('Katalog boyutu test sınırını aşıyor');
+   chunks.push(chunk);
+  }
+  const parsed=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  if(!Array.isArray(parsed))throw Error('IPTV sağlayıcısı film kataloğu döndürmedi');
+  return parsed;
+ }finally{clearTimeout(timeout);}
+}
 function rate(ip){
  const key=String(ip||'unknown'),now=Date.now(),prev=usage.get(key);
  if(prev&&now-prev.ts<60000&&prev.count>=2)return false;
@@ -84,14 +124,25 @@ async function demux(bytes,kind){
 }
 const server=http.createServer(async(req,res)=>{
  try{
-  const origin=req.headers.origin;
-  // Native webOS packaged apps use file:// with a null origin.
-  if(origin==='null'){res.setHeader('Access-Control-Allow-Origin','null');res.setHeader('Vary','Origin');}
+  // Isolated test API has no cookies. webOS 2 uses app-specific Origin headers.
+  res.setHeader('Access-Control-Allow-Origin','*');
+  res.setHeader('Access-Control-Allow-Methods','POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers','Content-Type');
+  res.setHeader('Vary','Origin');
   if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Methods':'POST, GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type'});res.end();return;}
   const pathname=new URL(req.url||'/', 'http://localhost').pathname;
   if(req.method==='GET'&&pathname==='/health'){respond(res,{success:true,service:'native-lab-bridge',ready:internalReady,clipSeconds:8});return;}
+  if(req.method==='POST'&&pathname==='/search'){
+   if(!internalReady){fail(res,503,'Medya hizmeti başlatılıyor');return;}
+   if(!rate('search:'+req.socket.remoteAddress)){fail(res,429,'Bir dakika sonra tekrar arayın');return;}
+   const raw=await body(req);
+   const query=String(raw.query||'').trim();
+   if(query.length<2||query.length>80){fail(res,400,'Film adı en az iki karakter olmalı');return;}
+   const items=await fetchCatalog(raw);
+   respond(res,{success:true,results:filterMovies(items,query),searched:items.length});
+   return;
+  }
   if(req.method==='POST'&&pathname==='/prepare'){
-   if(origin&&origin!=='null'){fail(res,403,'Web origin not allowed');return;}
    if(!internalReady){fail(res,503,'Media service is starting');return;}
    if(active){fail(res,429,'Conversion already in progress');return;}
    if(!rate(req.socket.remoteAddress)){fail(res,429,'Try again after one minute');return;}

@@ -13,16 +13,23 @@ button{font-size:27px;margin-top:20px;padding:17px 26px;background:#006f91;color
 .note{font-size:19px;line-height:1.4;color:#b9cfde}
 </style></head><body><main>
 <h1>XIPTV Play — Native HLS Lab</h1>
-<small>v0.3.0 • webOS 2 • 8 saniyelik gercek film test akisi</small>
+<small>v0.3.2 • webOS 2 • 8 saniyelik gercek film test akisi</small>
 <p class="note">Bu ayri test programidir. Ana XIPTV Play uygulamasini degistirmez. Film servis bilgilerini sadece TV uzerinde gir; burada paylasma. Sifre kaydedilmez. Native Player Lab Auto IPK kurulu olmalidir.</p>
 <form id="form">
+<p class="note">Ilk kurulumda M3U linkini bir kez gir, bilgiler otomatik dolsun. IPTV sunucu adresi HTTP olabilir.</p>
+<label style="width:95%">M3U Playlist Linki (istege bagli)<input id="m3u" type="password" autocomplete="off" placeholder="http://sunucu:8080/get.php?username=..."></label>
+<p><button type="button" id="parse">M3U Linkini Yukle</button></p>
 <label>IPTV Sunucu Adresi<input id="server" placeholder="https://sunucu.example:8080" autocomplete="off" required></label>
 <label>Kullanici Adi<input id="username" autocomplete="off" required></label>
 <label>Sifre<input id="password" type="password" autocomplete="off" required></label>
-<label>Film / Bolum ID<input id="item" type="text" inputmode="numeric" required></label>
-<label>Tur<select id="kind"><option value="movie">Film</option><option value="series">Dizi bolumu</option></select></label>
+<p class="note"><label style="width:100%"><input id="remember" type="checkbox" checked style="display:inline;width:26px;height:26px;vertical-align:middle"> Bilgilerimi TV'de hatirla (yerel depolamada sifresiz saklanir; paylasilan TV'de kapat)</label></p>
+<p><button type="button" id="forget">TV'deki Hesap Bilgilerini Sil</button></p>
+<label>Film Adi Ara<input id="query" type="text" placeholder="Ornek: War Machine" autocomplete="off"></label>
+<label>Film Secimi<select id="results"><option value="">Once film adini arayin</option></select></label>
+<label>Secilen Film ID (otomatik)<input id="item" type="text" readonly required></label>
+<label>Tur<select id="kind"><option value="movie">Film</option></select></label>
 <label>Kaynak Uzantisi<select id="ext"><option value="m3u8">m3u8 (HLS)</option><option value="mp4">mp4</option><option value="mkv">mkv</option><option value="ts">ts</option></select></label>
-<p><button type="submit" id="go">Gercek Film Testi (8 sn)</button></p>
+<p><button type="button" id="search">Film Ara</button> <button type="submit" id="go">Secilen Filmi Test Et (8 sn)</button></p>
 </form>
 <div id="status">Hazir. Ilk once bilesik Native Player Lab Auto v0.3.0 IPK yuklenmeli.</div>
 <p class="note">Sonuclar: Sunucu H264/AAC parcalari hazirlar. Oynatici NDL ile baslar, gerekirse Starfish/ACB denenir. Bu surum tam film oynatma degildir.</p>
@@ -32,6 +39,87 @@ button{font-size:27px;margin-top:20px;padding:17px 26px;background:#006f91;color
 var endpoint='https://xiptvplay-native-lab.onrender.com';
 function by(id){return document.getElementById(id);}
 function msg(s){by('status').textContent=s;}
+var SETTINGS_KEY='xiptv-native-hls-lab-account-v1';
+function saveConnection(){
+ try{
+  if(!by('remember').checked){localStorage.removeItem(SETTINGS_KEY);return;}
+  var item={server:by('server').value.trim(),username:by('username').value,password:by('password').value};
+  if(!item.server||!item.username||!item.password)return;
+  localStorage.setItem(SETTINGS_KEY,JSON.stringify(item));
+ }catch(e){msg('TV bilgi saklayamadi, sonraki acilista tekrar girmek gerekebilir.');}
+}
+function restoreConnection(){
+ try{
+  var raw=localStorage.getItem(SETTINGS_KEY);
+  if(!raw)return;
+  var item=JSON.parse(raw);
+  by('server').value=item.server||'';
+  by('username').value=item.username||'';
+  by('password').value=item.password||'';
+  by('remember').checked=true;
+  msg('Kayitli IPTV baglantisi yuklendi. Film adini ara.');
+ }catch(e){}
+}
+by('forget').onclick=function(){
+ try{localStorage.removeItem(SETTINGS_KEY);}catch(e){}
+ by('server').value='';by('username').value='';by('password').value='';
+ by('m3u').value='';by('item').value='';by('remember').checked=false;
+ msg('TV'de kayitli hesap bilgileri temizlendi.');
+};
+by('parse').onclick=function(){
+ var link=by('m3u').value.trim();
+ var matched=/^(https?):\/\/([^\/?#]+)\/get\.php\?([^#]+)$/i.exec(link);
+ if(!matched){msg('http:// veya https:// ile baslayan get.php M3U linki gerekli.');return;}
+ var host=matched[1].toLowerCase()+'://'+matched[2],parts=matched[3].split('&'),fields={};
+ for(var i=0;i<parts.length;i++){
+  var equal=parts[i].indexOf('=');
+  if(equal<1)continue;
+  var k=parts[i].slice(0,equal),v=parts[i].slice(equal+1);
+  try{fields[decodeURIComponent(k)]=decodeURIComponent(v.replace(/\+/g,' '));}catch(e){}
+ }
+ if(!fields.username||!fields.password){msg('Linkte username/password alanlari bulunamadi.');return;}
+ by('server').value=host;
+ by('username').value=fields.username;
+ by('password').value=fields.password;
+ by('m3u').value='';
+ saveConnection();
+ msg('M3U linki alindi. Sunucu HTTP ise HTTP olarak korundu. Film adi yazip Film Ara sec.');
+};
+restoreConnection();
+by('results').onchange=function(){
+ var s=by('results'),option=s.options[s.selectedIndex];
+ by('item').value=option&&option.value||'';
+ if(option&&option.getAttribute('data-ext')){
+  // Provider may return HLS despite the container extension; keep known HLS default.
+  by('ext').value='m3u8';
+ }
+ if(by('item').value)msg('Film secildi: '+option.text+' (ID otomatik). Test duğmesine bas.');
+};
+by('search').onclick=function(){
+ var s=by('server').value.replace(/\s+/g,''),user=by('username').value,pass=by('password').value,q=by('query').value.trim();
+ if(!/^https?:\/\/[^\/?#]+\/?$/.test(s)||!user||!pass){msg('Once sunucu adresini, kullanici adini ve sifreyi doldur.');return;}
+ if(q.length<2){msg('Film adindan en az iki harf gir.');return;}
+ saveConnection();by('search').disabled=true;by('item').value='';
+ msg('IPTV film katalogunda araniyor...');
+ var xhr=new XMLHttpRequest();xhr.open('POST',endpoint+'/search',true);xhr.setRequestHeader('Content-Type','application/json');xhr.timeout=35000;
+ xhr.onreadystatechange=function(){
+  if(xhr.readyState!==4)return;
+  by('search').disabled=false;
+  var o={};try{o=JSON.parse(xhr.responseText);}catch(err){}
+  if(xhr.status!==200||!o.success){msg('Film aramasi basarisiz (HTTP '+xhr.status+'): '+(o.error||'Baglanti/katalog hatasi'));return;}
+  var select=by('results');
+  while(select.options.length)select.remove(0);
+  var items=o.results||[];
+  var header=document.createElement('option');header.value='';header.text=items.length?('Bulunan filmler: '+items.length):'Sonuc bulunamadi';select.add(header);
+  for(var i=0;i<items.length;i++){
+   var item=items[i],opt=document.createElement('option');opt.value=item.id;opt.text=item.title;opt.setAttribute('data-ext',item.extension);select.add(opt);
+  }
+  msg(items.length+' film bulundu. Film Secimi menusunden istedigini sec, sonra test et.');
+ };
+ xhr.onerror=function(){by('search').disabled=false;msg('Katalog aramasina baglanilamadi.');};
+ xhr.ontimeout=function(){by('search').disabled=false;msg('Katalog aramasi zaman asimi.');};
+ xhr.send(JSON.stringify({serverUrl:s.replace(/\/$/,''),username:user,password:pass,query:q}));
+};
 function launch(clip){
  msg('Medya hazirlandi ('+clip.videoBytes+' bayt video, '+clip.audioBytes+' bayt ses). Native motor aciliyor...');
  var payload={id:'com.xiptvplay.playerlab.auto',params:{videoUrl:clip.videoUrl,audioUrl:clip.audioUrl}};
@@ -57,7 +145,7 @@ by('form').onsubmit=function(e){
  if(!/^https?:\/\/[^\/?#]+\/?$/.test(s)||!/^\d{1,12}$/.test(id)){msg('Sunucu adresini ve sayisal film ID bilgisini kontrol et.');return false;}
  var user=by('username').value,pass=by('password').value;
  if(!user||!pass){msg('Kullanici adi ve sifre gerekli.');return false;}
- by('go').disabled=true;
+ saveConnection();by('go').disabled=true;
  msg('HLS kaynak analizi ve 8 saniyelik film donusumu basladi. Render ilk acilista yavas olabilir...');
  var xhr=new XMLHttpRequest();
  xhr.open('POST',endpoint+'/prepare',true);xhr.setRequestHeader('Content-Type','application/json');

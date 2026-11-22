@@ -80,3 +80,23 @@ Known uncertainties: old firmware HTTPS/libcurl compatibility, CORS in webOS
 web views, ability to launch the native package via PalmServiceBridge, and
 the exact provider's HLS `.txt` segment behavior. GitHub builds and
 a synthetic conversion test cannot replace actual on-TV validation.
+
+## v0.3.2 — User-facing account import and movie name discovery
+
+Fix HTTP 403 ("Web origin not allowed") for legacy packaged webOS origins.
+The **isolated** Native HLS Lab endpoint supports credentialless cross-origin
+requests (no cookies); unlike the production services it is separately rate-limited.
+Movie search fetches authenticated Xtream `get_vod_streams`, validates the
+provider host through existing LG-only account verification, returns up to
+30 movie titles and their numeric IDs. The user does not guess content IDs.
+Only movie search is implemented in this initial build, not series episodes.
+
+Launcher adds an optional `get.php?username=...&password=...` M3U URL importer.
+It parses and clears the link input and preserves the upstream scheme, including
+plain `http://` when that is the **provider** URL. TV-to-Render remains HTTPS.
+No username or password is baked into source, CI, IPK or Render environment.
+When the optional remember checkbox is checked, account details are stored in
+the TV browser's localStorage *in plaintext*. There is a "clear saved details"
+button, and a checkbox for users who do not want persistent credentials.
+The login data is transmitted to the isolated Render endpoint in the HTTPS
+POST body; the provider-specific hop follows the source URL scheme.
