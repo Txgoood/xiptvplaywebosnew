@@ -1,5 +1,5 @@
 name: Build Native Player Lab webOS 2
-run-name: XIPTV NDL Overlay Diagnostic v0.1.0 Build #${{ github.run_number }}
+run-name: XIPTV NDL-backed Single App v0.5.0 Build #${{ github.run_number }}
 on:
   push:
     branches:
@@ -37,6 +37,14 @@ jobs:
           SAMPLE_DURATION=10 upstream-samples/assets/make-sample.sh /tmp/native-lab.mp4 upstream-samples/assets
           test -s upstream-samples/assets/sample.h264
           test -s upstream-samples/assets/sample.aac
+      - name: Render static 10-second native hardware-plane menu background
+        run: |
+          set -euo pipefail
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i color=c=0x102838:s=640x360:r=25 -f lavfi -i anullsrc=r=48000:cl=stereo -t 10 -vf "drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='XIPTV PLAY - NATIVE MENU':fontcolor=white:fontsize=27:x=42:y=38,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='FILM ARA - FILM SEC - OYNAT':fontcolor=cyan:fontsize=22:x=42:y=135,drawtext=fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf:text='KUMANDA OK - SECIM     GERI - CIKIS':fontcolor=white:fontsize=15:x=42:y=290" -c:v libx264 -preset ultrafast -profile:v baseline -level 3.0 -pix_fmt yuv420p -x264-params bframes=0:keyint=50 -c:a aac -b:a 48k -ar 48000 -ac 2 -shortest /tmp/xiptv-menu.mp4
+          ffmpeg -hide_banner -loglevel error -y -i /tmp/xiptv-menu.mp4 -map 0:v:0 -c:v copy -bsf:v h264_mp4toannexb -f h264 /tmp/xiptv-menu.h264
+          ffmpeg -hide_banner -loglevel error -y -i /tmp/xiptv-menu.mp4 -map 0:a:0 -c:a copy -f adts /tmp/xiptv-menu.aac
+          test -s /tmp/xiptv-menu.h264
+          test -s /tmp/xiptv-menu.aac
       - name: Fetch unofficial native ARM toolchain
         uses: robinraju/release-downloader@v1.12
         with:
@@ -55,13 +63,15 @@ jobs:
       - name: Check isolated HLS bridge implementation
         run: |
           node --check native-player-lab/relay.mjs
+          python3 -c "from pathlib import Path; s=Path('native-player-lab/unified_native.c').read_text(); assert 'ndl_menu_start(&shell)' in s; assert 'ndl_menu_tick();' in s; assert 'ndl_menu_stop(&shell);' in s; assert 'SDL_SetWindowOpacity' not in s"
+          grep -q 'esplayer_load' native-player-lab/menu_background.c
+          grep -q 'esplayer_feed' native-player-lab/menu_background.c
           test -s native-player-lab/build_overlay_smoke.py
           test -s native-player-lab/display_smoke.c
           grep -q 'sdl_shell_open_window' native-player-lab/display_smoke.c
           if grep -E 'curl_|xiptv_ndl|xiptv_acb' native-player-lab/display_smoke.c; then exit 1; fi
           node -e "const s=require('fs').readFileSync('native-player-lab/unified_native.c','utf8');if(!s.includes('pairing_start')||!s.includes('search_movies')||!s.includes('play_movie'))process.exit(1)"
-          python3 -c "from pathlib import Path; s=Path('native-player-lab/unified_native.c').read_text(); assert 'SDL_WINDOW_SHOWN|SDL_WINDOW_FULLSCREEN' in s; assert 'open_menu_window()' in s; assert 'BOOT ENTERED' in s; assert 'FIRST FRAME PRESENT CALLED' in s"
-          python3 -c "from pathlib import Path; s=Path('native-player-lab/unified_native.c').read_text(); main=s.split('int main(int argc,char **argv){')[1]; assert main.index('open_menu_window()')<main.index('curl_global_init'); assert main.index('present();')<main.index('curl_global_init'); assert 'if(mode==0)pairing_start();' not in main"
+          python3 -c "from pathlib import Path; s=Path('native-player-lab/unified_native.c').read_text(); main=s.split('int main(int argc,char **argv){')[1]; assert main.index('ndl_menu_start(&shell)')<main.index('curl_global_init'); assert main.index('present();')<main.index('curl_global_init'); assert 'if(mode==0)pairing_start();' not in main"
           node -e "const fs=require('fs'),s=fs.readFileSync('native-player-lab/relay.mjs','utf8');if(!s.includes('pathname===\x27/diag\x27')||!s.includes('pending clip collected'))process.exit(1)"
           node -e "const fs=require('fs');const relay=fs.readFileSync('native-player-lab/relay.mjs','utf8'),c=fs.readFileSync('native-player-lab/source_fetch.c','utf8');if(!relay.includes('pathname===\x27/pending\x27')||!relay.includes('pending.set(clientIp(req)')||!c.includes('take_pending(token)'))process.exit(1)"
           node -e 'const fs=require("fs");const x=fs.readFileSync("native-player-lab/launcher/index.html","utf8");const js=x.split("<script>")[1].split("</script>")[0];new Function(js);if(!x.includes("M3U Linkini Yukle")||!x.includes("Film Ara")||!x.includes("localStorage.setItem")||!x.includes("id=\"search\"")||!x.includes("account-panel"))process.exit(1);'
@@ -108,9 +118,11 @@ jobs:
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/acb/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/auto/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/unified/
+          cp /tmp/xiptv-menu.h264 native-stage/unified/menu.h264
+          cp /tmp/xiptv-menu.aac native-stage/unified/menu.aac
           node -e "require('fs').writeFileSync('native-stage/overlay-smoke/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.overlay-smoke',version:'0.1.0',vendor:'XIPTV Play',type:'native',main:'media-lab-overlay-smoke',title:'XIPTV NDL Video Uzeri Menu Test',icon:'icon.png',iconColor:'#123456'}))"
           node -e "require('fs').writeFileSync('native-stage/display-smoke/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.display-smoke',version:'0.1.0',vendor:'XIPTV Play',type:'native',main:'media-lab-display-smoke',title:'XIPTV SDL Ekran Testi',icon:'icon.png',iconColor:'#123456'}))"
-          node -e "require('fs').writeFileSync('native-stage/unified/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.unified',version:'0.4.2',vendor:'XIPTV Play',type:'native',main:'media-lab-unified',title:'XIPTV Native HLS Lab Tek Uygulama',icon:'icon.png',iconColor:'#116B86',bgColor:'#0C1C2D'}))"
+          node -e "require('fs').writeFileSync('native-stage/unified/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.unified',version:'0.5.0',vendor:'XIPTV Play',type:'native',main:'media-lab-unified',title:'XIPTV Native HLS Lab Tek Uygulama',icon:'icon.png',iconColor:'#116B86',bgColor:'#0C1C2D'}))"
           cp native-player-lab/launcher/index.html native-stage/launcher/index.html
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/launcher/icon.png
           node -e "require('fs').writeFileSync('native-stage/launcher/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.launcher',version:'0.3.6',vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Native HLS Lab',icon:'icon.png',disableBackHistoryAPI:true}))"

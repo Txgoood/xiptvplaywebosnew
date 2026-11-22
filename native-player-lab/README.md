@@ -227,3 +227,33 @@ logs: app startup or incompatible binary remains possible.
 
 This test does not use provider credentials, Render, internet or film
 catalogue. Android, production webOS, and pinned Build #5 not modified.
+
+## v0.5.0 — NDL-backed single native app (experimental)
+
+The user verified NDL Build #21 plays real picture and sound on LG webOS 2.0.
+All previous unified (0.4.0–0.4.2) startup gray screens bypassed the NDL
+hardware pipeline. v0.5.0 changes the same `com.xiptvplay.playerlab.unified`
+package to initialize the NDL esplayer and the **same** upstream SDL window
+sequence as the known-good NDL sample *before* presenting the menu. The
+network and film catalogue actions occur only after that pipeline is up.
+A static, H264/AAC, ten-second hardware-plane menu video is packaged and
+looped in native ARM with monotonic presentation timestamps. The SDL menu
+attempts to render on top of the existing compositor in the same process;
+only TV testing can establish whether dynamically drawn text is visible
+over the NDL hardware plane. The static menu instruction text is encoded
+directly in the H264 background to offer a visible fallback even when SDL
+overlays are unavailable.
+
+User-visible intended interaction: first launch phone pairing using
+`https://xiptvplay-native-lab.onrender.com/pair`, remote keyboard film
+name search, select a catalogue item, press OYNAT, prepare 8s H264/AAC
+via isolated Render, download short-lived clip by HTTPS and play with the
+original NDL/ACB entrypoints. Menu NDL video is unloaded before playback and
+reinitialized afterward. No second application, native launcher IPC,
+hard-coded IPTV credential, or modification of the production LG/Android app.
+
+Known risks: webOS2 may not composite SDL overlay above hardware video,
+old firmware TLS/libcurl may fail, NDL loop stability and codec transitions
+are not validated, fixed 640x360/25fps metadata is provisional. CI confirms
+ARM linking and IPK packaging, not real IPTV playback. The user must first
+confirm that menu text and remote focus are visible before trying playback.

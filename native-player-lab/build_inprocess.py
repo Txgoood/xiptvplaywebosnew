@@ -46,9 +46,11 @@ base=Path(__file__).parent
 (folder/"auto_entry.c").write_bytes((base/"inprocess_auto.c").read_bytes())
 (folder/"source_fetch.c").write_bytes((base/"source_fetch.c").read_bytes())
 (folder/"unified_native.c").write_bytes((base/"unified_native.c").read_bytes())
+(folder/"menu_background.c").write_bytes((base/"menu_background.c").read_bytes())
+(folder/"menu_background.h").write_bytes((base/"menu_background.h").read_bytes())
 cmake.write_text(cmake.read_text()+'''
 add_executable(media-lab-unified
-        unified_native.c source_fetch.c
+        unified_native.c menu_background.c source_fetch.c
         ndl_entry.c acb_entry.c
         ../../ndl/esplayer/esplayer.c acb_plane.c)
 target_compile_definitions(media-lab-unified PRIVATE ACB_ATTACH_SINK_EARLY=1)

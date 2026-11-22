@@ -1,5 +1,5 @@
 /*
- * XIPTV Play Native HLS Lab v0.4.2 — one LG webOS 2 native ARM app.
+ * XIPTV Play Native HLS Lab v0.5.0 — one LG webOS 2 native ARM app.
  * SDL remote-only catalogue, phone one-time account pairing, NDL->ACB playback.
  * No shell, browser bridge, fork/exec, or embedded upstream credentials.
  * This is an experimental 8 second clip player, not a complete IPTV player.
@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include "sdl_shell.h"
 #include "app_launch.h"
+#include "menu_background.h"
 #define ROOT "https://xiptvplay-native-lab.onrender.com"
 #define MAX_BODY (4*1024*1024)
 #define RESULT_MAX 18
@@ -39,26 +40,6 @@ static char message[256]="";
 static sdl_shell shell;
 static FILE *bootlog=NULL;
 static void trace(const char *what){if(bootlog){fprintf(bootlog,"%s\n",what);fflush(bootlog);}fprintf(stderr,"[unified] %s\n",what);}
-static bool open_menu_window(void){
- /* Deliberately NOT sdl_shell_open_window: it creates a transparent video-plane
-  * punch-through surface. Menu rendering needs an opaque compositor surface. */
- SDL_memset(&shell,0,sizeof(shell));
- trace("SDL_INIT_VIDEO beginning");
- if(SDL_InitSubSystem(SDL_INIT_VIDEO)!=0){trace(SDL_GetError());return false;}
- SDL_DisplayMode dm;
- if(SDL_GetCurrentDisplayMode(0,&dm)!=0){trace(SDL_GetError());return false;}
- shell.display_width=dm.w;shell.display_height=dm.h;
- trace("SDL creating opaque full-screen window");
- shell.window=SDL_CreateWindow("XIPTV Native Menu",SDL_WINDOWPOS_UNDEFINED,SDL_WINDOWPOS_UNDEFINED,dm.w,dm.h,SDL_WINDOW_SHOWN|SDL_WINDOW_FULLSCREEN);
- if(!shell.window){trace(SDL_GetError());return false;}
- SDL_SetWindowOpacity(shell.window,1.0f);
- shell.renderer=SDL_CreateRenderer(shell.window,-1,SDL_RENDERER_SOFTWARE);
- if(!shell.renderer){trace("software renderer unavailable; trying accelerated");shell.renderer=SDL_CreateRenderer(shell.window,-1,SDL_RENDERER_ACCELERATED);}
- if(!shell.renderer){trace(SDL_GetError());return false;}
- SDL_SetRenderDrawBlendMode(shell.renderer,SDL_BLENDMODE_NONE);
- trace("MENU SDL WINDOW READY");
- return true;
-}
 static int mode=0; /* 0 pair, 1 catalogue, 2 keyboard */
 static int focus=0,keyboard_cursor=0;
 static char account_file[PATH_MAX];
@@ -129,7 +110,7 @@ static void present(void){
  int w=shell.display_width,h=shell.display_height;
  SDL_SetRenderDrawColor(shell.renderer,6,19,31,255);SDL_RenderClear(shell.renderer);
  rect(0,0,w,94,13,42,60);
- draw(28,23,"XIPTV NATIVE HLS LAB  V0.4.2",3,241,248,250);
+ draw(28,23,"XIPTV NATIVE HLS LAB  V0.5.0",3,241,248,250);
  if(mode==0){
   draw(40,126,"TEK SEFERLIK HESAP BAGLAMA",3,228,235,251);
   draw(40,180,"TELEFON TARAYICISINDA AC",3,167,212,234);
@@ -299,7 +280,7 @@ static int play_movie(void){
  int remote=lab_fetch_launch(2,argv,vpath,sizeof(vpath),apath,sizeof(apath));
  if(remote!=1){snprintf(message,sizeof(message),"INDIRME BASARISIZ. HATA KODU %d",remote);return 0;}
  /* Native NDL opens its own SDL window; close menu before handing video plane over. */
- sdl_shell_close(&shell);
+ ndl_menu_stop(&shell);
  char *playargs[]={"media-lab-unified","--video",vpath,"--audio",apath,"--fps","25","--size","640x360",NULL};
  xiptv_ndl_first_frame=0;
  int result=xiptv_ndl_main(9,playargs);
@@ -310,7 +291,7 @@ static int play_movie(void){
   worked=xiptv_smp_first_frame;
  }
  lab_fetch_cleanup(vpath,apath);
- if(!sdl_shell_preinit()||!open_menu_window())return -1;
+ if(!ndl_menu_start(&shell))return -1;
  snprintf(message,sizeof(message),worked?"VIDEO GOSTERILDI. MENUYE DONULDU":"GIRIS CALISTI ANCAK ILK GORUNTU YOK");
  (void)result;return worked;
 }
@@ -352,12 +333,12 @@ int main(int argc,char **argv){
  (void)argc;(void)argv;
  bootlog=fopen("/tmp/xiptv-native-unified-boot.log","w");
  trace("BOOT ENTERED");
- /* Display the first native frame before any HTTP or TLS work. */
- if(!sdl_shell_preinit()||!open_menu_window())return 12;
+ /* Confirmed NDL decoder/video plane comes first; SDL overlay shares same window. */
+ if(!ndl_menu_start(&shell))return 12;
  mode=load_account()?1:0;
  snprintf(message,sizeof(message),mode?"FILM ADI GIR VE ARA":"OK BASARAK ESLESTIRME KODU AL");
  present();
- trace("FIRST FRAME PRESENT CALLED");
+ trace("NDL-BACKED FIRST MENU FRAME PRESENT CALLED");
  if(curl_global_init(CURL_GLOBAL_DEFAULT)!=0){
   snprintf(message,sizeof(message),"AG MOTORU BASLATILAMADI. MENU CALISIYOR");
   present();
@@ -380,9 +361,10 @@ int main(int argc,char **argv){
     query[n]=0;
    }
   }
-  present();SDL_Delay(35);
+  ndl_menu_tick();
+  present();SDL_Delay(24);
  }
- sdl_shell_close(&shell);
+ ndl_menu_stop(&shell);
  curl_global_cleanup();
  trace("EXIT CLEAN");
  if(bootlog)fclose(bootlog);
