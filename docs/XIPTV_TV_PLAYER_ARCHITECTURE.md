@@ -55,3 +55,8 @@ Make VOD playback independent of a provider's file extension, host redirects and
 - Film HLS native başarısızsa en fazla bir Xtream MP4 alternatifi denenir; film için eski HLS proxy tekrarı yapılmaz. Dizi HLS'nin mevcut kurtarma yolu, Live TV'nin motoru ve hesap bağlantısı korunur.
 - UI, eski Render LG servisindeki HLS uyumsuzluğu için ayrı tanılama mesajı gösterir. IPK dağıtımı bağımsız Render servisinin dağıtımı değildir.
 - Sekiz saniyelik MP4 denemesinin gerçek LG'de çalıştığı henüz doğrulanmadı. Tam film dönüştürme, uzun seek, ses ve altyazı geçişleri daha sonraki ayrı test kapısıdır.
+
+## v1.0.81 — 8-second MP4 transport/Blob diagnostic
+- The LG TV reported MEDIA_ERR_SRC_NOT_SUPPORTED (error 4) for the completed 8-second H.264/AAC clip. Render logs did not show the expected MP4 clip GET request; this is a clue, not proof, of media URL transport failure.
+- Only the 8-second MP4 test now attempts direct playback, and on startup error or 18-second stall downloads the already prepared clip as a bounded 4 MB Blob and retries the local object URL. No live-TV pipeline changes, no long video downloads.
+- Successful HTMLVideoElement `playing` is only an indication of startup; user must verify visible frames and audio on actual LG hardware. Blob and direct paths remain experimental. This is not full-length transcoding or universal format support.

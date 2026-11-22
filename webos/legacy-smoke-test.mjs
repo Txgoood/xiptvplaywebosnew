@@ -343,3 +343,8 @@ assert.equal(elements.video.src,'');
 console.log('PASS: ES5 script startup, Magic Remote, local MP4, proxy, HLS MIME, MP4 MIME, blob test, stop');
 
 assert(profileScript.includes('window.XIPTVTheme.applyProfile'), 'Profile switch must restore selected theme');
+
+const lgMediaProbe=fs.readFileSync('webos-package/tv-lg-media.js','utf8');
+new vm.Script(lgMediaProbe,{filename:'tv-lg-media.js'});
+assert(lgMediaProbe.includes('Blob GET HTTP'),'LG MP4 diagnostics must include bounded blob fallback');
+assert(lgMediaProbe.includes('4*1024*1024'),'Memory diagnostic must be limited to 4 MB');

@@ -292,45 +292,83 @@
  }
  function playMp4Clip(){
   if(!ctx||!session||!session.token){
-    if(mp4Button)mp4Button.disabled=false;
-    compatMessage('MP4 testi için önce film/dizi analizi gerekli.');
-    return;
+   if(mp4Button)mp4Button.disabled=false;
+   compatMessage('MP4 testi için önce film/dizi analizi gerekli.');return;
   }
   var clipToken=session.token,sequence=scanSequence;
-  compatMessage('MP4 test parçası hazırlanıyor (8 saniyelik tamamlanmış H.264/AAC dosyası). Bu işlem birkaç saniye sürebilir…');
+  compatMessage('8 saniyelik MP4 hazırlanıyor. Bu işlem ağ bağlantısına bağlı olarak sürebilir…');
   request('POST','/compat-mp4/prepare/'+clipToken,null,function(err,data){
-    if(sequence!==scanSequence)return;
-    if(err||!data||!data.success||!data.path){
-      if(mp4Button)mp4Button.disabled=false;
-      compatMessage('MP4 hazırlanamadı: '+(err?err.message:'sunucu geçerli dosya üretmedi.'));
-      return;
-    }
-    // The file has finished encoding and is served like an ordinary MP4,
-    // with Content-Length, Range and complete moov metadata.
-    var fileUrl=url+data.path,success=false,finished=false;
-    function cleanup(){video.removeEventListener('error',onError,false);video.removeEventListener('playing',onPlaying,false);if(compatTimer){clearTimeout(compatTimer);compatTimer=null;}}
-    function onError(){
-      if(finished)return;finished=true;
-      var code=video.error&&Number(video.error.code)||0;cleanup();
-      if(mp4Button)mp4Button.disabled=false;
-      compatMessage('MP4 8 sn testi açılamadı: TV kodu '+code+'. Sunucu hazır MP4 üretmişti; LG aktarımı incelenmeli.');
-    }
-    function onPlaying(){
-      if(finished)return;finished=true;success=true;cleanup();
-      if(mp4Button)mp4Button.disabled=false;
-      compatMessage('MP4 8 sn testi oynuyor! Görüntü ve sesi doğrulayın. Bu yalnızca kısa uyumluluk testidir.');
-    }
+   if(sequence!==scanSequence)return;
+   if(err||!data||!data.success||!data.path){
+    if(mp4Button)mp4Button.disabled=false;
+    compatMessage('MP4 hazırlanamadı: '+(err?err.message:'Sunucu dosya üretmedi.'));return;
+   }
+   var fileUrl=url+data.path,finished=false,stage='direct',blobUrl='',xhr=null;
+   function release(){
+    video.removeEventListener('error',onError,false);
+    video.removeEventListener('playing',onPlaying,false);
+    if(compatTimer){clearTimeout(compatTimer);compatTimer=null;}
+    if(xhr){try{xhr.abort();}catch(e){}xhr=null;}
+    if(blobUrl&&window.URL&&window.URL.revokeObjectURL){try{window.URL.revokeObjectURL(blobUrl);}catch(e){}blobUrl='';}
+    if(mp4Button)mp4Button.disabled=false;
+   }
+   function finish(message){
+    if(finished)return;finished=true;release();compatMessage(message);
+   }
+   function onPlaying(){
+    if(finished)return;
+    // playing is not proof of decoded frames on webOS 2: require a human check.
+    var mode=stage==='blob'?'Blob MP4':'doğrudan MP4';
+    // Keep object URL alive until source is replaced so video can continue reading it.
+    if(stage==='blob')blobUrl='';
+    finish(mode+' başlatıldı. Ekranda gerçekten görüntü/ses olup olmadığını kontrol edin.');
+   }
+   function loadBlob(){
+    if(finished||sequence!==scanSequence)return;
+    stage='loading-blob';
+    compatMessage('LG doğrudan MP4 açamadı. Hazır 8 sn dosyası belleğe alınıp Blob olarak deneniyor…');
+    if(!window.URL||!window.URL.createObjectURL){finish('Blob URL desteklenmiyor. TV Hata 4; webOS 2 aktarım sınırlaması olabilir.');return;}
+    var x=new XMLHttpRequest();xhr=x;
     try{
-      if(window.XIPTVSeriesSourceCleanup)window.XIPTVSeriesSourceCleanup();
-      video.pause();video.removeAttribute('src');video.load();
-      if(window.XIPTVPlaybackInfo){window.XIPTVPlaybackInfo.transport='compat-mp4';window.XIPTVPlaybackInfo.extension='mp4';}
-      video.addEventListener('error',onError,false);
-      video.addEventListener('playing',onPlaying,false);
-      compatTimer=setTimeout(function(){onError();},24000);
-      video.src=fileUrl;video.load();
-      var p=video.play();if(p&&p.catch)p.catch(function(){});
-      compatMessage('MP4 hazır ('+data.bytes+' bayt). TV oynatıcısı deneniyor…');
-    }catch(e){onError();}
+     x.open('GET',fileUrl,true);x.responseType='blob';x.timeout=23000;
+     x.onload=function(){
+      if(finished||sequence!==scanSequence)return;
+      var file=x.response,limit=4*1024*1024;
+      if(x.status!==200&&x.status!==206){finish('Blob GET: HTTP '+x.status+'. TV hazır MP4 dosyasını indiremedi.');return;}
+      if(!file||!file.size||file.size>limit){finish('Blob GET: MP4 dosyası boş veya 4 MB sınırını aşıyor.');return;}
+      try{
+       blobUrl=window.URL.createObjectURL(file);
+       video.pause();video.removeAttribute('src');video.load();
+       stage='blob';video.src=blobUrl;video.load();
+       compatMessage('Blob GET HTTP '+x.status+' ('+file.size+' bayt). LG Blob MP4 çözücüsü deneniyor…');
+       if(compatTimer)clearTimeout(compatTimer);
+       compatTimer=setTimeout(function(){finish('Blob MP4 15 sn içinde görüntü başlatamadı.');},15000);
+       var p=video.play();if(p&&p.catch)p.catch(function(){finish('Blob MP4 oynatma isteği reddedildi.');});
+      }catch(e){finish('Blob MP4 başlatılamadı: TV WebKit Blob URL desteklemiyor olabilir.');}
+     };
+     x.onerror=function(){finish('Blob GET ağ hatası. Hazır MP4 dosyası TV üzerinden indirilemedi.');};
+     x.ontimeout=function(){finish('Blob GET zaman aşımı. MP4 aktarımını kontrol edin.');};
+     x.send(null);
+    }catch(e){finish('Blob indirme başlatılamadı: eski WebKit API desteği yetersiz olabilir.');}
+   }
+   function onError(){
+    if(finished||stage==='loading-blob')return;
+    var code=Number(video.error&&video.error.code)||0;
+    if(stage==='direct'){loadBlob();return;}
+    finish('Blob MP4 testi başarısız: LG Hata '+code+'. Video biçimi veya Blob medya desteği incelenmeli.');
+   }
+   try{
+    if(window.XIPTVSeriesSourceCleanup)window.XIPTVSeriesSourceCleanup();
+    if(window.XIPTVVODRecovery&&window.XIPTVVODRecovery.stop)window.XIPTVVODRecovery.stop();
+    video.pause();video.removeAttribute('src');video.load();
+    if(window.XIPTVPlaybackInfo){window.XIPTVPlaybackInfo.transport='compat-mp4';window.XIPTVPlaybackInfo.extension='mp4';}
+    video.addEventListener('error',onError,false);
+    video.addEventListener('playing',onPlaying,false);
+    compatTimer=setTimeout(function(){if(!finished&&stage==='direct')loadBlob();},18000);
+    video.src=fileUrl;video.load();
+    var p=video.play();if(p&&p.catch)p.catch(function(){if(!finished&&stage==='direct')loadBlob();});
+    compatMessage('MP4 hazır ('+data.bytes+' bayt). Önce doğrudan aktarım deneniyor…');
+   }catch(e){if(!finished)loadBlob();}
   },100000);
  }
  if(mp4Button)mp4Button.onclick=function(){
