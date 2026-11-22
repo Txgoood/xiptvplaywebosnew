@@ -208,7 +208,67 @@ const server=http.createServer(async(req,res)=>{
    found.used=true;
    respond(res,{success:true});return;
   }
-  const pairMatch=pathname.match(/^\\/pair\\/status\\/([a-f0-9]{48})$/);
+  const pairMatch=pathname.match(new RegExp('^/pair/status/([a-f0-9]{48})
+  if(req.method==='GET'&&pairMatch){
+   const key=pairMatch[1],found=pairs.get(key);
+   if(!found||found.expires<Date.now()){pairs.delete(key);fail(res,404,'Pair expired');return;}
+   if(!found.account){respond(res,{success:true,ready:false});return;}
+   pairs.delete(key);
+   respond(res,{success:true,ready:true,account:found.account});return;
+  }
+  if(req.method==='POST'&&pathname==='/search'){
+   if(!internalReady){fail(res,503,'Medya hizmeti başlatılıyor');return;}
+   if(!rate('search:'+req.socket.remoteAddress)){fail(res,429,'Bir dakika sonra tekrar arayın');return;}
+   const raw=await body(req);
+   const query=String(raw.query||'').trim();
+   if(query.length<2||query.length>80){fail(res,400,'Film adı en az iki karakter olmalı');return;}
+   const items=await fetchCatalog(raw);
+   respond(res,{success:true,results:filterMovies(items,query),searched:items.length});
+   return;
+  }
+  if(req.method==='POST'&&pathname==='/prepare'){
+   if(!internalReady){fail(res,503,'Media service is starting');return;}
+   if(active){fail(res,429,'Conversion already in progress');return;}
+   if(!rate(req.socket.remoteAddress)){fail(res,429,'Try again after one minute');return;}
+   const raw=await body(req);
+   const data={serverUrl:raw.serverUrl,username:raw.username,password:raw.password,kind:raw.kind,id:raw.id,extension:raw.extension};
+   if(!['movie','series'].includes(data.kind)||!/^\d{1,12}$/.test(String(data.id||''))){fail(res,400,'Invalid content selection');return;}
+   if(!['m3u8','mp4','mkv','ts'].includes(String(data.extension||''))){fail(res,400,'Invalid extension');return;}
+   active=true;
+   try{
+    const scan=await innerJson('/tracks',data);
+    if(!safeToken(scan.token))throw Error('Unexpected session id');
+    const clip=await innerJson('/compat-mp4/prepare/'+scan.token,{});
+    if(!/^\/compat-mp4\/file\/[a-f0-9]{48}\.mp4$/.test(clip.path))throw Error('Invalid clip path');
+    const bytes=await innerBytes(clip.path);
+    const [video,audio]=await Promise.all([demux(bytes,'video'),demux(bytes,'audio')]);
+    const ticket=randomBytes(24).toString('hex');
+    media.set(ticket,{video,audio,expires:Date.now()+RELAY_TTL_MS});
+    pending.set(clientIp(req),{ticket,expires:Date.now()+PENDING_TTL_MS});
+    diagnostics.delete(clientIp(req));
+    while(pending.size>15)pending.delete(pending.keys().next().value);
+    while(media.size>5)media.delete(media.keys().next().value);
+    respond(res,{success:true,seconds:8,format:'h264-annexb+adts-aac',videoBytes:video.length,audioBytes:audio.length,
+      videoUrl:PUBLIC_ORIGIN+'/media/'+ticket+'/video.h264',audioUrl:PUBLIC_ORIGIN+'/media/'+ticket+'/audio.aac',
+      expiresIn:180});
+   }finally{active=false;}
+   return;
+  }
+  const matched=pathname.match(/^\/media\/([a-f0-9]{48})\/(video\.h264|audio\.aac)$/);
+  if(req.method==='GET'&&matched){
+   const [,ticket,name]=matched,clip=media.get(ticket);
+   if(!clip||clip.expires<Date.now()){fail(res,404,'Clip expired');return;}
+   const bytes=name==='video.h264'?clip.video:clip.audio;
+   res.writeHead(200,{'Content-Type':name==='video.h264'?'video/h264':'audio/aac','Content-Length':bytes.length,
+     'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'});
+   res.end(bytes);return;
+  }
+  fail(res,404,'Not found');
+ }catch(e){console.warn('[lab] request rejected: '+String(e.message||'error').replace(/https?:\/\/\S+/g,'[url]').slice(0,80));fail(res,502,'Kaynak hazırlanamadı: '+String(e.message||'error').replace(/https?:\/\/\S+/g,'[url]').slice(0,100));}
+});
+if(process.env.NODE_ENV!=='test')server.listen(WEB_PORT,'0.0.0.0',()=>console.log('[lab] bridge listening on '+WEB_PORT));
+export {server,safeToken};
+));
   if(req.method==='GET'&&pairMatch){
    const key=pairMatch[1],found=pairs.get(key);
    if(!found||found.expires<Date.now()){pairs.delete(key);fail(res,404,'Pair expired');return;}
