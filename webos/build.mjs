@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
 const nativeVariant=process.env.WEBOS_VARIANT==='native';
+// AI Test package (alternative engine): separate app id, built only from the ai-alt/* branch workflow.
+const experimentVariant=process.env.WEBOS_VARIANT==='experiment';
 const root=process.cwd(), out=path.join(root,nativeVariant?'webos-package-native':'webos-package');
 fs.rmSync(out,{recursive:true,force:true});
 fs.cpSync(path.join(root,'dist'),out,{recursive:true});
@@ -12,6 +14,13 @@ const info=nativeVariant
   ?{id:'com.xiptvplay.tv.native',version:VERSION,disableBackHistoryAPI:true,vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Play Native',icon:'icon.png',resolution:'1920x1080'}
   :{id:'com.xiptvplay.tv',version:VERSION,disableBackHistoryAPI:true,trustLevel:'netcast',vendorExtension:{allowCrossDomain:true},vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Play',icon:'icon.png',resolution:'1920x1080'};
 fs.writeFileSync(path.join(out,'appinfo.json'),JSON.stringify(info,null,2));
+const AI_TEST_VERSION='1.0.90';
+if(experimentVariant){
+  // Same trust level as the main package (CORS off) so the TV can inspect provider streams directly.
+  const exp={id:'com.xiptvplay.tv.experiment',version:AI_TEST_VERSION,disableBackHistoryAPI:true,trustLevel:'netcast',vendorExtension:{allowCrossDomain:true},vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Play TV AI Test',icon:'icon.png',resolution:'1920x1080'};
+  fs.writeFileSync(path.join(out,'appinfo.json'),JSON.stringify(exp,null,2));
+  fs.copyFileSync(path.join(root,'webos/tv-ai-engine.js'),path.join(out,'tv-ai-engine.js'));
+}
 fs.copyFileSync(path.join(root,'webos/tv-remote.js'),path.join(out,'tv-remote.js'));
 fs.copyFileSync(path.join(root,'webos/tv-catalog-navigation.js'),path.join(out,'tv-catalog-navigation.js'));
 fs.copyFileSync(path.join(root,'webos/tv-playlist-input.js'),path.join(out,'tv-playlist-input.js'));
@@ -45,6 +54,10 @@ if(process.env.WEBOS_LEGACY === 'true') html=fs.readFileSync(path.join(root,'web
 html=html.replace(/__BUILD_NUMBER__/g,String(process.env.GITHUB_RUN_NUMBER||'yerel'));
 html=html.replace('</head>','<script src="./pkg-info.js"></script></head>');
 fs.writeFileSync(path.join(out,'pkg-info.js'),"window.XIPTV_PKG='"+(nativeVariant?'native':'netcast')+"';");
+if(experimentVariant){
+  // Shown version must match appinfo; the engine script loads last, after tv-lg-media.js and tv-iptv.js.
+  html=html.split('v'+VERSION).join('v'+AI_TEST_VERSION+' AI Test').replace('</body>','<script src="./tv-ai-engine.js"></script></body>');
+}
 fs.writeFileSync(file,html);
 // Harici görsel araçlara gerek olmadan 80x80 RGB PNG simgesi.
 const w=80,h=80,raw=Buffer.alloc(h*(1+w*3));for(let y=0;y<h;y++)for(let x=0;x<w;x++){let i=y*(1+w*3)+1+x*3;let on=x>24&&x<61&&Math.abs(y-40)<(x-24)*0.64;raw[i]=on?0:14;raw[i+1]=on?240:28;raw[i+2]=on?255:38;}

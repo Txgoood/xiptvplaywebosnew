@@ -286,6 +286,8 @@
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.beforePlay)window.XIPTVCatalogLayout.beforePlay();
     var suffix=ext|| (kind==='live'?'m3u8':'mp4');
     var playbackServer=(kind==='series'&&sourceServer)||server;
+    // AI Test build only: apply a learned "extension/scheme that worked" rule. No-op when the engine is absent.
+    if(!useProxy&&window.XIPTVAIEngine&&window.XIPTVAIEngine.adjust){var aiAdjust=window.XIPTVAIEngine.adjust(kind,playbackServer,suffix);if(aiAdjust){playbackServer=aiAdjust.server;suffix=aiAdjust.ext;}}
     var directUrl=playbackServer.replace(/\/$/,'')+'/'+kind+'/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.'+suffix;
     var url=useProxy?BASE+'/api/iptv/proxy?url='+encodeURIComponent(directUrl):directUrl;
     var isVod=kind==='series'||kind==='movie';
