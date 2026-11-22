@@ -62,4 +62,16 @@ target_link_libraries(media-lab-unified PRIVATE
 set_target_properties(media-lab-unified PROPERTIES INSTALL_RPATH "$ORIGIN" BUILD_WITH_INSTALL_RPATH TRUE)
 '''.replace("@{",chr(36)+"{"))
 
+
+(folder/"display_smoke.c").write_bytes((base/"display_smoke.c").read_bytes())
+cmake.write_text(cmake.read_text()+'''
+# Deliberately isolated from all media decoders and curl/network.
+# Uses the same SDL shell implementation as v0.2.1 Build #5.
+add_executable(media-lab-display-smoke display_smoke.c)
+target_link_libraries(media-lab-display-smoke PRIVATE media-common-sdl)
+set_target_properties(media-lab-display-smoke PROPERTIES
+        INSTALL_RPATH "$ORIGIN"
+        BUILD_WITH_INSTALL_RPATH TRUE)
+''')
+
 print("Single-process native motor with tokenized HTTPS H264/AAC feed prepared")

@@ -173,3 +173,33 @@ in `/tmp/xiptv-native-unified-boot.log` for developer diagnostics.
 First frame is still drawn before network operations. This is an unverified
 candidate: passing GitHub CI cannot establish that webOS 2 compositor shows
 an opaque SDL surface. Original v0.2.1 Build #5 remains untouched.
+
+## Diagnostic v0.1.0 (isolated SDL display smoke test)
+
+The user's LG 49UF8507-ZB still shows only a gray screen on unified native
+v0.4.0, v0.4.1, and v0.4.2. Previously the **offline media decoder** v0.2.1
+Build #5 displayed video *and audio*. We have not been able to obtain
+`/tmp/xiptv-native-unified-boot.log` because the connected MSI computer is
+offline. Rather than changing the video decoder again, this build creates an
+**entirely isolated SDL diagnostic** executable and IPK:
+
+`com.xiptvplay.playerlab.display-smoke_0.1.0_arm.ipk`
+
+This uses the same upstream `sdl_shell_preinit` and `sdl_shell_open_window`
+as the working v0.2.1 sample (not the custom opaque window variant). It
+links only `media-common-sdl`; **no libcurl, network calls, NDL, Starfish
+or credentials** are involved. It paints a dark-blue screen with blue,
+red/green, and green bars and an animated white box. Press OK to toggle
+the middle bar from red to green; Back exits. The process records minimal
+events in `/tmp/xiptv-native-smoke.log`.
+
+Interpretation:
+- Bars visible and respond to OK: native SDL renderer works; investigate
+  the unified menu binary/dependencies/initialization, not the TV display.
+- Gray persists: suspect SDL compositor path/launch/runtime dependencies.
+  Capture the native device's launcher/journal logs before further coding.
+- No log file: app may fail to launch or be killed before main; inspect
+  platform logs rather than assuming a drawing issue.
+
+This is an **unverified device test**, not a fixed movie player. Never
+replace known-good v0.2.1 Build #5 or modify main XIPTV/Android.
