@@ -208,7 +208,8 @@ const server=http.createServer(async(req,res)=>{
    found.used=true;
    respond(res,{success:true});return;
   }
-  const pairMatch=pathname.match(new RegExp('^/pair/status/([a-f0-9]{48})
+  const candidate=pathname.startsWith('/pair/status/')?pathname.slice('/pair/status/'.length):'';
+  const pairMatch=candidate.length===48 && candidate.split('').every(ch=>'0123456789abcdef'.includes(ch))?[pathname,candidate]:null;
   if(req.method==='GET'&&pairMatch){
    const key=pairMatch[1],found=pairs.get(key);
    if(!found||found.expires<Date.now()){pairs.delete(key);fail(res,404,'Pair expired');return;}
