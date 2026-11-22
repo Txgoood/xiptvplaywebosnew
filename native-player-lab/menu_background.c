@@ -49,7 +49,7 @@ bool ndl_menu_start(sdl_shell *shell){
  if(!esplayer_load(player,&params,shell->display_width,shell->display_height)){
   logphase("ESPLAYER_LOAD_FAIL");goto fail;
  }
- loaded=true;origin=pacer_now_ns();offset=0;
+ loaded=true;origin=0;offset=0;
  hv=es_file_next(video,&next_video);ha=es_file_next(audio,&next_audio);
  logphase("MENU_NDL_READY");
  return true;
@@ -69,11 +69,12 @@ void ndl_menu_tick(void){
   bool v=hv&&(!ha||next_video.pts_ns<=next_audio.pts_ns);
   es_sample *sample=v?&next_video:&next_audio;
   const int64_t pts=offset+sample->pts_ns;
-  if(pacer_now_ns()<origin+pts)break;
+  if(origin!=0 && pacer_now_ns()<origin+pts)break;
   esplayer_feed_result rc=esplayer_feed(player,sample->data,sample->size,pts,
                   v?ESPLAYER_STREAM_VIDEO:ESPLAYER_STREAM_AUDIO);
   if(rc==ESPLAYER_FEED_BUFFER_FULL)break;
   if(rc!=ESPLAYER_FEED_OK){logphase("MENU_FEED_FAILED");break;}
+  if(origin==0){origin=pacer_now_ns()-pts;logphase("MENU_FIRST_FEED_ACCEPTED");}
   if(v)hv=es_file_next(video,&next_video);
   else ha=es_file_next(audio,&next_audio);
  }

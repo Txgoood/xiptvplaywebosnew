@@ -1,5 +1,5 @@
 /*
- * XIPTV Play Native HLS Lab v0.5.0 — one LG webOS 2 native ARM app.
+ * XIPTV Play Native HLS Lab v0.5.1 — one LG webOS 2 native ARM app.
  * SDL remote-only catalogue, phone one-time account pairing, NDL->ACB playback.
  * No shell, browser bridge, fork/exec, or embedded upstream credentials.
  * This is an experimental 8 second clip player, not a complete IPTV player.
@@ -106,11 +106,15 @@ static void field(int y,const char *caption,int active){
 }
 static void present(void){
  if(!shell.renderer)return;
+ /* Hardware NDL picture lives UNDER the SDL surface. Clear fully transparent:
+    v0.5.0 used alpha=255 and concealed the hardware plane as gray/opaque. */
  SDL_SetRenderDrawBlendMode(shell.renderer,SDL_BLENDMODE_NONE);
  int w=shell.display_width,h=shell.display_height;
- SDL_SetRenderDrawColor(shell.renderer,6,19,31,255);SDL_RenderClear(shell.renderer);
+ SDL_SetRenderDrawColor(shell.renderer,0,0,0,0);
+ SDL_RenderClear(shell.renderer);
+ SDL_SetRenderDrawBlendMode(shell.renderer,SDL_BLENDMODE_BLEND);
  rect(0,0,w,94,13,42,60);
- draw(28,23,"XIPTV NATIVE HLS LAB  V0.5.0",3,241,248,250);
+ draw(28,23,"XIPTV NATIVE HLS LAB  V0.5.1",3,241,248,250);
  if(mode==0){
   draw(40,126,"TEK SEFERLIK HESAP BAGLAMA",3,228,235,251);
   draw(40,180,"TELEFON TARAYICISINDA AC",3,167,212,234);

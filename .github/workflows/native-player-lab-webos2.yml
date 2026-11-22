@@ -1,5 +1,5 @@
 name: Build Native Player Lab webOS 2
-run-name: XIPTV NDL-backed Single App v0.5.0 Build #${{ github.run_number }}
+run-name: XIPTV NDL-backed Single App v0.5.1 Build #${{ github.run_number }}
 on:
   push:
     branches:
@@ -66,6 +66,8 @@ jobs:
           python3 -c "from pathlib import Path; s=Path('native-player-lab/unified_native.c').read_text(); assert 'ndl_menu_start(&shell)' in s; assert 'ndl_menu_tick();' in s; assert 'ndl_menu_stop(&shell);' in s; assert 'SDL_SetWindowOpacity' not in s"
           grep -q 'esplayer_load' native-player-lab/menu_background.c
           grep -q 'esplayer_feed' native-player-lab/menu_background.c
+          grep -q 'if(origin==0)' native-player-lab/menu_background.c
+          grep -q 'SDL_SetRenderDrawColor(shell.renderer,0,0,0,0)' native-player-lab/unified_native.c
           test -s native-player-lab/build_overlay_smoke.py
           test -s native-player-lab/display_smoke.c
           grep -q 'sdl_shell_open_window' native-player-lab/display_smoke.c
@@ -122,7 +124,7 @@ jobs:
           cp /tmp/xiptv-menu.aac native-stage/unified/menu.aac
           node -e "require('fs').writeFileSync('native-stage/overlay-smoke/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.overlay-smoke',version:'0.1.0',vendor:'XIPTV Play',type:'native',main:'media-lab-overlay-smoke',title:'XIPTV NDL Video Uzeri Menu Test',icon:'icon.png',iconColor:'#123456'}))"
           node -e "require('fs').writeFileSync('native-stage/display-smoke/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.display-smoke',version:'0.1.0',vendor:'XIPTV Play',type:'native',main:'media-lab-display-smoke',title:'XIPTV SDL Ekran Testi',icon:'icon.png',iconColor:'#123456'}))"
-          node -e "require('fs').writeFileSync('native-stage/unified/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.unified',version:'0.5.0',vendor:'XIPTV Play',type:'native',main:'media-lab-unified',title:'XIPTV Native HLS Lab Tek Uygulama',icon:'icon.png',iconColor:'#116B86',bgColor:'#0C1C2D'}))"
+          node -e "require('fs').writeFileSync('native-stage/unified/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.unified',version:'0.5.1',vendor:'XIPTV Play',type:'native',main:'media-lab-unified',title:'XIPTV Native HLS Lab Tek Uygulama',icon:'icon.png',iconColor:'#116B86',bgColor:'#0C1C2D'}))"
           cp native-player-lab/launcher/index.html native-stage/launcher/index.html
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/launcher/icon.png
           node -e "require('fs').writeFileSync('native-stage/launcher/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.launcher',version:'0.3.6',vendor:'XIPTV Play',type:'web',main:'index.html',title:'XIPTV Native HLS Lab',icon:'icon.png',disableBackHistoryAPI:true}))"
