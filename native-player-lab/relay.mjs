@@ -15,7 +15,8 @@ const PUBLIC_ORIGIN=process.env.NATIVE_LAB_PUBLIC_ORIGIN||'https://xiptvplay-nat
 const FF_MPEG=path.join(path.dirname(fileURLToPath(import.meta.url)),'../lg-media-service/node_modules/@ffmpeg-installer/linux-x64/ffmpeg');
 const RELAY_TTL_MS=3*60*1000,MAX_BYTES=8*1024*1024,MAX_POST=1600;
 const MAX_CATALOG_BYTES=40*1024*1024;
-const media=new Map(),usage=new Map();
+const media=new Map(),usage=new Map(),pending=new Map();
+const PENDING_TTL_MS=90*1000;
 let active=false,internalReady=false;
 if(!/^https:\/\/[a-z0-9.-]+\.onrender\.com$/.test(PUBLIC_ORIGIN))throw Error('Invalid public origin');
 process.env.PORT=String(BRIDGE_PORT);
@@ -33,6 +34,11 @@ waitBackend().catch(e=>console.error('[lab] internal boot failed: '+e.message));
 function fail(res,status,message){res.writeHead(status,{'Content-Type':'application/json','Cache-Control':'no-store'});res.end(JSON.stringify({success:false,error:message}));}
 function respond(res,data){res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});res.end(JSON.stringify(data));}
 function safeToken(s){return /^[a-f0-9]{48}$/.test(s);}
+function clientIp(req){
+ const forwarded=String(req.headers['x-forwarded-for']||'');
+ const first=forwarded.split(',')[0].trim();
+ return first&&first.length<=64?first:String(req.socket.remoteAddress||'');
+}
 export function filterMovies(items,query){
  if(!Array.isArray(items))return [];
  const needle=String(query||'').trim().toLocaleLowerCase('tr');
@@ -132,6 +138,12 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='OPTIONS'){res.writeHead(204,{'Access-Control-Allow-Methods':'POST, GET, OPTIONS','Access-Control-Allow-Headers':'Content-Type'});res.end();return;}
   const pathname=new URL(req.url||'/', 'http://localhost').pathname;
   if(req.method==='GET'&&pathname==='/health'){respond(res,{success:true,service:'native-lab-bridge',ready:internalReady,clipSeconds:8});return;}
+  if(req.method==='GET'&&pathname==='/pending'){
+   const ip=clientIp(req),task=pending.get(ip);
+   if(!task||task.expires<Date.now()||!media.has(task.ticket)){pending.delete(ip);fail(res,404,'No recent clip for this network');return;}
+   pending.delete(ip);
+   respond(res,{success:true,token:task.ticket});return;
+  }
   if(req.method==='POST'&&pathname==='/search'){
    if(!internalReady){fail(res,503,'Medya hizmeti başlatılıyor');return;}
    if(!rate('search:'+req.socket.remoteAddress)){fail(res,429,'Bir dakika sonra tekrar arayın');return;}
@@ -160,6 +172,8 @@ const server=http.createServer(async(req,res)=>{
     const [video,audio]=await Promise.all([demux(bytes,'video'),demux(bytes,'audio')]);
     const ticket=randomBytes(24).toString('hex');
     media.set(ticket,{video,audio,expires:Date.now()+RELAY_TTL_MS});
+    pending.set(clientIp(req),{ticket,expires:Date.now()+PENDING_TTL_MS});
+    while(pending.size>15)pending.delete(pending.keys().next().value);
     while(media.size>5)media.delete(media.keys().next().value);
     respond(res,{success:true,seconds:8,format:'h264-annexb+adts-aac',videoBytes:video.length,audioBytes:audio.length,
       videoUrl:PUBLIC_ORIGIN+'/media/'+ticket+'/video.h264',audioUrl:PUBLIC_ORIGIN+'/media/'+ticket+'/audio.aac',
