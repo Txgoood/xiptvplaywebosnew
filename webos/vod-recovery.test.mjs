@@ -62,3 +62,11 @@ test('changing source cancels old watchdog; empty VOD context is ignored',()=>{
  assert.equal((f.handlers.error||[]).length,0);
  assert.equal(f.win.XIPTVVODRecovery.start({kind:'series'}),false);
 });
+
+test('paused playback never restarts itself via watchdog',()=>{
+ const f=fixture();f.begin('movie','direct','mp4');
+ f.video.paused=true;
+ f.timers[f.timers.length-1].fn();
+ assert.equal((f.handlers.error||[]).length,0);
+ assert.equal(f.video.src,'');
+});

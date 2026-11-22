@@ -13,7 +13,7 @@
  function notify(s,message){if(typeof s.onStatus==='function')s.onStatus(message);}
  function arm(s){
   if(s.timer)clearTimeout(s.timer);
-  s.timer=setTimeout(function(){fail(s,'Görüntü ilerlemesi 18 saniye içinde algılanmadı',0);},18000);
+  s.timer=setTimeout(function(){if(current!==s)return;if(video.paused){stop();return;}fail(s,'Görüntü ilerlemesi 18 saniye içinde algılanmadı',0);},18000);
  }
  function fail(s,reason,code){
   if(current!==s||s.switching||s.played)return;

@@ -68,6 +68,8 @@ function beforePlay(){
  closeDrawer();
 }
 function exitPlayer(){
+ // Cancel the pending VOD retry before navigation changes the video source.
+ if(window.XIPTVVODRecovery&&window.XIPTVVODRecovery.stop)window.XIPTVVODRecovery.stop();
  if(window.XIPTVEpisodeNext&&window.XIPTVEpisodeNext.cancel)window.XIPTVEpisodeNext.cancel();
  var v=document.getElementById('video');
  try{v.pause();v.removeAttribute('src');v.load();}catch(e){}

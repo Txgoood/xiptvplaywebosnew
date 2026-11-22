@@ -242,6 +242,8 @@ assert(catalogLayout.includes('tv-category-drawer'));
 assert(catalogLayout.includes('tv-catalog-back'));
 assert(catalogLayout.includes('beforePlay'));
 assert(catalogLayout.includes('function exitPlayer()'),'Player must stop stream and restore focus');
+assert(catalogLayout.includes('XIPTVVODRecovery.stop()'),'Exiting player must cancel pending VOD retry');
+assert(html.includes('src="./tv-vod-recovery.js"'),'VOD module must be packaged');
 assert(catalogLayout.includes('function goBack()'),'Back must return to parent category');
 assert(iptvScript.includes('window.XIPTVCatalogLayout.goBack()'),'Remote Back must delegate to category history');
 assert(catalogLayout.includes('playingScroll'),'Returning from playback must restore scroll');
