@@ -203,3 +203,27 @@ Interpretation:
 
 This is an **unverified device test**, not a fixed movie player. Never
 replace known-good v0.2.1 Build #5 or modify main XIPTV/Android.
+
+## NDL overlay diagnostic v0.1.0 (single IPK, no provider data)
+
+The standalone SDL smoke app closed immediately on the LG TV. That does not
+prove SDL drawing fails: the known-good v0.2.1 player uses a hardware
+NDL video plane, while the smoke app omits it. To eliminate that difference,
+this test **copies the pinned known-good NDL entrypoint** unmodified except
+for two solid colored SDL rectangles submitted on the same SDL renderer
+*after the normal transparent initial frame*. The sample H.264/AAC media,
+NDL initialization, playback loop, and app metadata format remain identical
+to the working decoder sample. The original binary is unchanged.
+
+Only install `com.xiptvplay.playerlab.overlay-smoke_0.1.0_arm.ipk` from the
+diagnostic artifact. Expected: ten seconds of the same animated test video
+and audible tone as Build #5, with cyan bar near top and red bar near bottom.
+If video/audio appear but bars do not, hardware plane is fine but SDL
+overlay composition is not; use a separate TV-native web menu instead of
+assuming SDL overlay is viable. If video/audio and bars both work, migrate
+unified UI onto the known-good NDL + renderer initialization without
+creating another SDL window. If even video does not play, obtain device
+logs: app startup or incompatible binary remains possible.
+
+This test does not use provider credentials, Render, internet or film
+catalogue. Android, production webOS, and pinned Build #5 not modified.

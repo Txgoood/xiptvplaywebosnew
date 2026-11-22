@@ -1,5 +1,5 @@
 name: Build Native Player Lab webOS 2
-run-name: XIPTV Display Smoke Diagnostic v0.1.0 Build #${{ github.run_number }}
+run-name: XIPTV NDL Overlay Diagnostic v0.1.0 Build #${{ github.run_number }}
 on:
   push:
     branches:
@@ -51,9 +51,11 @@ jobs:
           (cd /tmp && ./arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh)
           python3 native-player-lab/patch_upstream.py upstream-samples
           python3 native-player-lab/build_inprocess.py upstream-samples
+          python3 native-player-lab/build_overlay_smoke.py upstream-samples
       - name: Check isolated HLS bridge implementation
         run: |
           node --check native-player-lab/relay.mjs
+          test -s native-player-lab/build_overlay_smoke.py
           test -s native-player-lab/display_smoke.c
           grep -q 'sdl_shell_open_window' native-player-lab/display_smoke.c
           if grep -E 'curl_|xiptv_ndl|xiptv_acb' native-player-lab/display_smoke.c; then exit 1; fi
@@ -69,8 +71,9 @@ jobs:
         run: |
           set -euo pipefail
           cmake -S upstream-samples -B upstream-samples/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/tmp/arm-webos-linux-gnueabi_sdk-buildroot/share/buildroot/toolchainfile.cmake
-          cmake --build upstream-samples/build --target media-ndl-esplayer media-smp-acb-webos2 media-lab-auto media-lab-unified media-lab-display-smoke --parallel 2
+          cmake --build upstream-samples/build --target media-ndl-esplayer media-smp-acb-webos2 media-lab-auto media-lab-unified media-lab-display-smoke media-lab-overlay-smoke --parallel 2
           file upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer | grep -q ARM
+          file upstream-samples/build/media/ndl/esplayer/media-lab-overlay-smoke | grep -q ARM
           file upstream-samples/build/media/smp/acb/media-smp-acb-webos2 | grep -q ARM
       - name: Verify single-process native auto player
         run: |
@@ -84,8 +87,9 @@ jobs:
       - name: Stage native apps with generated appinfo
         run: |
           set -euo pipefail
-          mkdir -p native-stage/ndl native-stage/acb native-stage/auto native-stage/launcher native-stage/unified native-stage/display-smoke webos-lab-artifacts
+          mkdir -p native-stage/ndl native-stage/acb native-stage/auto native-stage/launcher native-stage/unified native-stage/display-smoke native-stage/overlay-smoke webos-lab-artifacts
           cp upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer native-stage/ndl/
+          cp upstream-samples/build/media/ndl/esplayer/media-lab-overlay-smoke native-stage/overlay-smoke/
           cp upstream-samples/build/media/smp/acb/media-smp-acb-webos2 native-stage/acb/
           cp upstream-samples/build/media/smp/acb/media-lab-auto native-stage/auto/
           cp upstream-samples/build/media/smp/acb/media-lab-unified native-stage/unified/
@@ -93,15 +97,18 @@ jobs:
           cp upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer-appinfo.json native-stage/ndl/appinfo.json
           cp upstream-samples/build/media/smp/acb/media-smp-acb-webos2-appinfo.json native-stage/acb/appinfo.json
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/ndl/icon.png
+          cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/overlay-smoke/icon.png
           cp upstream-samples/assets/icons/smp-acb-webos2.png native-stage/acb/icon.png
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/auto/icon.png
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/unified/icon.png
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/display-smoke/icon.png
           node -e "require('fs').writeFileSync('native-stage/auto/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.auto',version:'0.3.6',vendor:'XIPTV Play',type:'native',main:'media-lab-auto',title:'XIPTV Player Lab Auto NDL ACB',icon:'icon.png',iconColor:'#4CAF50',bgColor:'#4CAF50'}))"
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/ndl/
+          cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/overlay-smoke/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/acb/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/auto/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/unified/
+          node -e "require('fs').writeFileSync('native-stage/overlay-smoke/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.overlay-smoke',version:'0.1.0',vendor:'XIPTV Play',type:'native',main:'media-lab-overlay-smoke',title:'XIPTV NDL Video Uzeri Menu Test',icon:'icon.png',iconColor:'#123456'}))"
           node -e "require('fs').writeFileSync('native-stage/display-smoke/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.display-smoke',version:'0.1.0',vendor:'XIPTV Play',type:'native',main:'media-lab-display-smoke',title:'XIPTV SDL Ekran Testi',icon:'icon.png',iconColor:'#123456'}))"
           node -e "require('fs').writeFileSync('native-stage/unified/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.unified',version:'0.4.2',vendor:'XIPTV Play',type:'native',main:'media-lab-unified',title:'XIPTV Native HLS Lab Tek Uygulama',icon:'icon.png',iconColor:'#116B86',bgColor:'#0C1C2D'}))"
           cp native-player-lab/launcher/index.html native-stage/launcher/index.html
@@ -117,8 +124,9 @@ jobs:
           ares-package native-stage/launcher -o webos-lab-artifacts
           ares-package native-stage/unified -o webos-lab-artifacts
           ares-package native-stage/display-smoke -o webos-lab-artifacts
+          ares-package native-stage/overlay-smoke -o webos-lab-artifacts
           find webos-lab-artifacts -maxdepth 1 -type f -name '*.ipk' -printf '%f: %s bytes\\n'
-          test "$(find webos-lab-artifacts -maxdepth 1 -type f -name '*.ipk' | wc -l)" -eq 6
+          test "$(find webos-lab-artifacts -maxdepth 1 -type f -name '*.ipk' | wc -l)" -eq 7
       - name: Upload Native Player Lab and standalone SDL diagnosis IPKs
         uses: actions/upload-artifact@v4
         with:
