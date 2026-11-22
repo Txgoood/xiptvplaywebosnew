@@ -149,3 +149,13 @@ operations may momentarily block UI; availability of SDL video reinit
 after media playback is not confirmed on real TV. CI compilation is not
 evidence that actual IPTV video plays. Original v0.2.1 Build #5 remains
 unchanged and is the known-good decoder baseline.
+
+## v0.4.1 — Boot-screen-first fix for gray screen
+
+User reported v0.4.0 unified IPK remains gray from launch. Its main
+previously initialized curl and synchronously requested the pairing code
+before the first SDL frame, which could block rendering on old TVs.
+This version opens SDL and presents the native menu **before** curl init,
+and obtains a code only on OK. Failures leave the menu visible rather
+than silently failing. This is an unverified candidate until device test.
+Do not change known-good v0.2.1 Build #5.

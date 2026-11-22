@@ -1,5 +1,5 @@
 /*
- * XIPTV Play Native HLS Lab v0.4.0 — one LG webOS 2 native ARM app.
+ * XIPTV Play Native HLS Lab v0.4.1 — one LG webOS 2 native ARM app.
  * SDL remote-only catalogue, phone one-time account pairing, NDL->ACB playback.
  * No shell, browser bridge, fork/exec, or embedded upstream credentials.
  * This is an experimental 8 second clip player, not a complete IPTV player.
@@ -105,14 +105,14 @@ static void present(void){
  int w=shell.display_width,h=shell.display_height;
  SDL_SetRenderDrawColor(shell.renderer,6,19,31,255);SDL_RenderClear(shell.renderer);
  rect(0,0,w,94,13,42,60);
- draw(28,23,"XIPTV NATIVE HLS LAB  V0.4.0",3,241,248,250);
+ draw(28,23,"XIPTV NATIVE HLS LAB  V0.4.1",3,241,248,250);
  if(mode==0){
   draw(40,126,"TEK SEFERLIK HESAP BAGLAMA",3,228,235,251);
   draw(40,180,"TELEFON TARAYICISINDA AC",3,167,212,234);
   draw(40,228,"XIPTVPLAY-NATIVE-LAB.ONRENDER.COM/PAIR",2,239,229,165);
   draw(40,280,"TV ESLESTIRME KODU",3,167,212,234);
   draw(40,325,*pair_code?pair_code:"KOD HAZIRLANIYOR",5,251,238,161);
-  field(425,"OK  BAGLANTIYI KONTROL ET",1);
+  field(425,*pair_token?"OK  BAGLANTIYI KONTROL ET":"OK  ESLESTIRME KODU AL",focus==0);
   field(484,"ASAGI  YENI KOD AL",focus==1);
  }else if(mode==2){
   draw(40,126,"FILM ADINI YAZ  OK HARF SEC  BACK BITIR",3,231,234,250);
@@ -297,7 +297,7 @@ static int isback(const SDL_Event *ev){
 static void key_press(SDL_Keycode key){
  if(mode==0){
   if(key==SDLK_DOWN||key==SDLK_UP){focus=1-focus;return;}
-  if(key==SDLK_RETURN||key==SDLK_KP_ENTER){if(focus)pairing_start();else pairing_check();}
+  if(key==SDLK_RETURN||key==SDLK_KP_ENTER){if(focus||!pair_token[0])pairing_start();else pairing_check();}
   return;
  }
  if(mode==2){
@@ -326,13 +326,15 @@ static void key_press(SDL_Keycode key){
 }
 int main(int argc,char **argv){
  (void)argc;(void)argv;
- if(curl_global_init(CURL_GLOBAL_DEFAULT)!=0)return 11;
- if(!sdl_shell_preinit()||!sdl_shell_open_window(&shell,"XIPTV Native HLS Lab")){
-  curl_global_cleanup();return 12;
- }
+ /* Display the first native frame before any HTTP or TLS work. */
+ if(!sdl_shell_preinit()||!sdl_shell_open_window(&shell,"XIPTV Native HLS Lab"))return 12;
  mode=load_account()?1:0;
- snprintf(message,sizeof(message),mode?"FILM ADI GIR VE ARA":"KOD ALMAK ICIN OK BAS");
- if(mode==0)pairing_start();
+ snprintf(message,sizeof(message),mode?"FILM ADI GIR VE ARA":"OK BASARAK ESLESTIRME KODU AL");
+ present();
+ if(curl_global_init(CURL_GLOBAL_DEFAULT)!=0){
+  snprintf(message,sizeof(message),"AG MOTORU BASLATILAMADI. MENU CALISIYOR");
+  present();
+ }
  int running=1;
  while(running){
   SDL_Event event;
