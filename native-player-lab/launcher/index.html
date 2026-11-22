@@ -2,43 +2,59 @@
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>XIPTV Native HLS Lab</title>
 <style>
-body{background:#091622;color:#eef7ff;font-family:Arial,sans-serif;font-size:24px;margin:0;padding:30px}
-h1{font-size:36px;margin:0 0 8px}small{font-size:18px;color:#9dd4ef}
-main{max-width:980px;margin:auto}
-label{display:inline-block;margin-top:18px;width:46%}
-input,select{display:block;margin:6px 0;padding:14px 10px;font-size:23px;color:#fff;background:#1b344b;border:2px solid #5685a6;border-radius:7px;width:95%;box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:#091622;color:#eef7ff;font-family:Arial,sans-serif}
+html{overflow-y:auto}body{font-size:20px;overflow-y:auto}
+main{box-sizing:border-box;width:100%;max-width:1100px;margin:0 auto;padding:12px 22px 28px}
+h1{font-size:28px;margin:2px 0 2px}small{font-size:14px;color:#9dd4ef}
+label{display:inline-block;vertical-align:top;width:48%;margin:8px 1% 0 0;font-size:17px}
+input,select{box-sizing:border-box;width:100%;height:43px;padding:6px;color:white;background:#1b344b;border:2px solid #5685a6;border-radius:6px;font-size:19px;margin-top:4px}
 input:focus,select:focus,button:focus{border-color:#43e4c5;outline:3px solid #43e4c5}
-button{font-size:27px;margin-top:20px;padding:17px 26px;background:#006f91;color:white;border:2px solid #92c6da;border-radius:9px}
-#status{background:#12283a;border:1px solid #4e7d93;padding:16px;margin-top:18px;white-space:pre-wrap;font-size:20px;min-height:64px}
-.note{font-size:19px;line-height:1.4;color:#b9cfde}
+button{box-sizing:border-box;background:#006f91;color:#fff;border:2px solid #92c6da;border-radius:7px;padding:9px 18px;font-size:19px;min-height:46px;margin:6px 8px 3px 0}
+button:disabled{opacity:.55}
+#status{box-sizing:border-box;background:#12283a;border:1px solid #4e7d93;padding:10px;margin-top:8px;white-space:pre-wrap;font-size:17px;min-height:43px}
+.note{font-size:15px;line-height:1.25;color:#b9cfde;margin:5px 0}
+#account-panel{background:#112438;border:1px solid #426b83;border-radius:8px;padding:10px;margin:7px 0}
+#account-panel.hidden{display:none}
+#search-line{margin:4px 0}
+#search-line label{width:66%;vertical-align:bottom}
+#search-line button{width:29%;vertical-align:bottom}
+#results-line label{width:49%}
+#action-row{margin:5px 0}
+#toggle-account{margin:5px 0}
+#app-foot{font-size:13px}
+@media(max-height:620px){main{padding:5px 12px}h1{font-size:23px}label{margin-top:3px}input,select{height:36px}button{min-height:38px;padding:5px 12px}#status{min-height:36px}}
 </style></head><body><main>
 <h1>XIPTV Play — Native HLS Lab</h1>
-<small>v0.3.2 • webOS 2 • 8 saniyelik gercek film test akisi</small>
-<p class="note">Bu ayri test programidir. Ana XIPTV Play uygulamasini degistirmez. Film servis bilgilerini sadece TV uzerinde gir; burada paylasma. Sifre kaydedilmez. Native Player Lab Auto IPK kurulu olmalidir.</p>
+<small>v0.3.3 • webOS 2 • 8 saniyelik film testi</small>
 <form id="form">
-<p class="note">Ilk kurulumda M3U linkini bir kez gir, bilgiler otomatik dolsun. IPTV sunucu adresi HTTP olabilir.</p>
-<label style="width:95%">M3U Playlist Linki (istege bagli)<input id="m3u" type="password" autocomplete="off" placeholder="http://sunucu:8080/get.php?username=..."></label>
-<p><button type="button" id="parse">M3U Linkini Yukle</button></p>
-<label>IPTV Sunucu Adresi<input id="server" placeholder="https://sunucu.example:8080" autocomplete="off" required></label>
+<div id="search-line"><label>Film Adi Ara<input id="query" type="text" autocomplete="off" placeholder="Film adini yaz"></label><button type="button" id="search">Film Ara</button></div>
+<div id="results-line"><label>Film Secimi<select id="results"><option value="">Once Film Ara'ya bas</option></select></label>
+<label>Secilen Film ID<input id="item" type="text" readonly required></label></div>
+<div id="action-row"><button type="submit" id="go">Secilen Filmi Test Et (8 sn)</button><button type="button" id="toggle-account">Baglanti Ayarlari</button></div>
+<div id="status">Film adini arayip listeden sec. Hesabini girmediysen Baglanti Ayarlari'ni ac.</div>
+<div id="account-panel" class="hidden">
+<p class="note">M3U linkini bir kez girip Yukle'ye bas. HTTP kaynak korunur. Bilgileri TV'de hatirlatabilirsin.</p>
+<label style="width:98%">M3U Playlist Linki<input id="m3u" type="password" autocomplete="off" placeholder="http://sunucu:8080/get.php?username=..."></label>
+<button type="button" id="parse">M3U Linkini Yukle</button><br>
+<label>IPTV Sunucu Adresi<input id="server" placeholder="http://sunucu:8080" autocomplete="off" required></label>
 <label>Kullanici Adi<input id="username" autocomplete="off" required></label>
 <label>Sifre<input id="password" type="password" autocomplete="off" required></label>
-<p class="note"><label style="width:100%"><input id="remember" type="checkbox" checked style="display:inline;width:26px;height:26px;vertical-align:middle"> Bilgilerimi TV'de hatirla (yerel depolamada sifresiz saklanir; paylasilan TV'de kapat)</label></p>
-<p><button type="button" id="forget">TV'deki Hesap Bilgilerini Sil</button></p>
-<label>Film Adi Ara<input id="query" type="text" placeholder="Ornek: War Machine" autocomplete="off"></label>
-<label>Film Secimi<select id="results"><option value="">Once film adini arayin</option></select></label>
-<label>Secilen Film ID (otomatik)<input id="item" type="text" readonly required></label>
-<label>Tur<select id="kind"><option value="movie">Film</option></select></label>
 <label>Kaynak Uzantisi<select id="ext"><option value="m3u8">m3u8 (HLS)</option><option value="mp4">mp4</option><option value="mkv">mkv</option><option value="ts">ts</option></select></label>
-<p><button type="button" id="search">Film Ara</button> <button type="submit" id="go">Secilen Filmi Test Et (8 sn)</button></p>
+<input id="kind" type="hidden" value="movie">
+<p class="note"><label style="width:100%"><input id="remember" type="checkbox" checked style="display:inline;width:22px;height:22px;vertical-align:middle"> Bilgilerimi TV'de hatirla (sifresiz saklanir; paylasilan TV'de kapat)</label></p>
+<button type="button" id="forget">TV'deki Hesap Bilgilerini Sil</button>
+</div>
 </form>
-<div id="status">Hazir. Ilk once bilesik Native Player Lab Auto v0.3.0 IPK yuklenmeli.</div>
-<p class="note">Sonuclar: Sunucu H264/AAC parcalari hazirlar. Oynatici NDL ile baslar, gerekirse Starfish/ACB denenir. Bu surum tam film oynatma degildir.</p>
-</main>
+<p id="app-foot" class="note">Ayri test programi. Ana XIPTV Play degismez. Yalnizca 8 saniyelik film klibi denenir.</p>
 <script>
 (function(){
 var endpoint='https://xiptvplay-native-lab.onrender.com';
 function by(id){return document.getElementById(id);}
 function msg(s){by('status').textContent=s;}
+function setAccountOpen(open){by('account-panel').className=open?'':'hidden';}
+by('toggle-account').onclick=function(){setAccountOpen(by('account-panel').className==='hidden');};
+function hasAccount(){return !!(by('server').value&&by('username').value&&by('password').value);}
+
 var SETTINGS_KEY='xiptv-native-hls-lab-account-v1';
 function saveConnection(){
  try{
@@ -83,9 +99,11 @@ by('parse').onclick=function(){
  by('password').value=fields.password;
  by('m3u').value='';
  saveConnection();
- msg('M3U linki alindi. Sunucu HTTP ise HTTP olarak korundu. Film adi yazip Film Ara sec.');
+ setAccountOpen(false);
+ msg('M3U linki alindi. Sunucu HTTP olarak korunduysa degistirilmedi. Film adi yaz ve Film Ara sec.');
 };
 restoreConnection();
+if(!hasAccount()){setAccountOpen(true);}else{setAccountOpen(false);}
 by('results').onchange=function(){
  var s=by('results'),option=s.options[s.selectedIndex];
  by('item').value=option&&option.value||'';
@@ -97,7 +115,7 @@ by('results').onchange=function(){
 };
 by('search').onclick=function(){
  var s=by('server').value.replace(/\s+/g,''),user=by('username').value,pass=by('password').value,q=by('query').value.trim();
- if(!/^https?:\/\/[^\/?#]+\/?$/.test(s)||!user||!pass){msg('Once sunucu adresini, kullanici adini ve sifreyi doldur.');return;}
+ if(!/^https?:\/\/[^\/?#]+\/?$/.test(s)||!user||!pass){setAccountOpen(true);msg('Once Baglanti Ayarlarina sunucu adresini, kullanici adini ve sifreyi gir.');return;}
  if(q.length<2){msg('Film adindan en az iki harf gir.');return;}
  saveConnection();by('search').disabled=true;by('item').value='';
  msg('IPTV film katalogunda araniyor...');
