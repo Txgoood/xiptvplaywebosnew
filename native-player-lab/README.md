@@ -159,3 +159,17 @@ This version opens SDL and presents the native menu **before** curl init,
 and obtains a code only on OK. Failures leave the menu visible rather
 than silently failing. This is an unverified candidate until device test.
 Do not change known-good v0.2.1 Build #5.
+
+## v0.4.2 — Isolated native menu surface diagnostic
+
+LG 49UF8507-ZB owner reports solid pale-gray screen on v0.4.1 before any
+menu text. Previously menu reused `sdl_shell_open_window()`, intentionally
+built for *transparent video-plane punch-through*. The unified app now
+separates the **opaque menu SDL window/renderer** from the original
+transparent hardware-video decoder windows. Menu requests a visible
+fullscreen window, full window opacity, software renderer with accelerated
+fallback, disables blend, and logs boot/window/first-present checkpoints
+in `/tmp/xiptv-native-unified-boot.log` for developer diagnostics.
+First frame is still drawn before network operations. This is an unverified
+candidate: passing GitHub CI cannot establish that webOS 2 compositor shows
+an opaque SDL surface. Original v0.2.1 Build #5 remains untouched.
