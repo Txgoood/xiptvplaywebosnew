@@ -19,3 +19,22 @@ technical testing only.
 CI success does not establish playback on LG 49UF8507-ZB. Install both via
 webOS Dev Manager, test NDL first, ACB second. No main XIPTV app, provider
 credentials, Render settings or Android project are changed.
+
+## v0.2.0 — Automatic NDL -> ACB fallback
+
+New standalone ARM native IPK: `com.xiptvplay.playerlab.auto`.
+The launcher first starts NDL Esplayer and waits up to 12 seconds for the
+actual `NDL_ESP_FIRST_FRAME_PRESENTED` callback. If no frame arrives
+or NDL exits early, it stops/reaps NDL and starts Starfish/ACB, which is
+confirmed by `SMP_EVENT_FRAMEREADY`. Engines never run concurrently.
+
+Once a real first-frame callback is received, the launcher stays on the
+successful engine until that clip exits. No switches during normal playback
+or user exit. Existing two standalone apps are also packaged separately.
+
+CI runs Linux host fallback simulations (failed child, first-frame success,
+timeout), but only a real LG test can establish webOS native compatibility.
+
+IMPORTANT: This version still plays a 10-second offline H.264/AAC sample.
+It has **not** integrated provider HLS/Xtream, audio tracks or subtitle
+selection; automatic fallback currently applies to decoder startup only.
