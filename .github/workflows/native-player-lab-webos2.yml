@@ -1,0 +1,68 @@
+name: Build Native Player Lab webOS 2
+run-name: XIPTV Native Player Lab v0.1.0 Build #${{ github.run_number }}
+on:
+  push:
+    branches:
+      - feat/native-player-lab-webos2-20261122
+    paths:
+      - 'native-player-lab/**'
+      - '.github/workflows/native-player-lab-webos2.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-webos2:
+    name: Build NDL and ACB native ARM engines
+    runs-on: ubuntu-22.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout XIPTV experiment branch
+        uses: actions/checkout@v4
+      - name: Checkout pinned upstream native decoder samples
+        uses: actions/checkout@v4
+        with:
+          repository: webosbrew/samples
+          ref: a8833ae3170283379fab08b463d3a177722c46c8
+          path: upstream-samples
+      - name: Install build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake ninja-build ffmpeg pkg-config
+          npm install -g @webos-tools/cli
+          ares-package --version
+      - name: Prepare ten-second offline H264 and AAC streams
+        run: |
+          set -euo pipefail
+          ffmpeg -hide_banner -loglevel error -y -f lavfi -i testsrc2=size=640x360:rate=25 -f lavfi -i sine=frequency=440:sample_rate=48000 -t 10 -c:v libx264 -preset ultrafast -profile:v baseline -level 3.0 -pix_fmt yuv420p -x264-params bframes=0:keyint=50 -c:a aac -b:a 96k -ar 48000 -ac 2 -shortest /tmp/native-lab.mp4
+          SAMPLE_DURATION=10 upstream-samples/assets/make-sample.sh /tmp/native-lab.mp4 upstream-samples/assets
+          test -s upstream-samples/assets/sample.h264
+          test -s upstream-samples/assets/sample.aac
+      - name: Fetch unofficial native ARM toolchain
+        uses: robinraju/release-downloader@v1.12
+        with:
+          repository: openlgtv/buildroot-nc4
+          tag: 2026.08-webos
+          fileName: arm-webos-linux-gnueabi_sdk-buildroot-x86_64.tar.gz
+          out-file-path: /tmp
+          extract: true
+      - name: Relocate SDK and assign isolated lab app IDs
+        run: |
+          set -euo pipefail
+          (cd /tmp && ./arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh)
+          python3 native-player-lab/patch_upstream.py upstream-samples
+      - name: Compile and package NDL and Starfish ACB
+        run: |
+          set -euo pipefail
+          cmake -S upstream-samples -B upstream-samples/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/tmp/arm-webos-linux-gnueabi_sdk-buildroot/share/buildroot/toolchainfile.cmake
+          cmake --build upstream-samples/build --target media-ndl-esplayer-ipk media-smp-acb-webos2-ipk --parallel 2
+          test -s upstream-samples/build/dist/com.xiptvplay.playerlab.ndl_0.1.0_arm.ipk
+          test -s upstream-samples/build/dist/com.xiptvplay.playerlab.acb.webos2_0.1.0_arm.ipk
+          file upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer | grep -q ARM
+          file upstream-samples/build/media/smp/acb/media-smp-acb-webos2 | grep -q ARM
+      - name: Upload two separate native IPKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: xiptvplay-native-player-lab-webos2
+          path: upstream-samples/build/dist/com.xiptvplay.playerlab.*_0.1.0_arm.ipk
+          if-no-files-found: error
+          retention-days: 14
