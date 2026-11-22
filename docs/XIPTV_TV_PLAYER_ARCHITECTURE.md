@@ -41,3 +41,9 @@ Make VOD playback independent of a provider's file extension, host redirects and
 - https://webostv.developer.lge.com/develop/guides/backward-compatibility
 - https://github.com/mac-lucky/webos-iptv-native
 - https://github.com/lennylxx/webos-iptv-player
+
+## v1.0.78 (Build after #298) — VOD transport recovery groundwork
+- Film and series start with the selected native URL. If no meaningful time progress and an initial source fails or stalls, at most one retry uses the existing Render IPTV proxy. This is scoped to VOD and does not run on Live TV.
+- Proxy is a transport fallback, **not** a decoder or transcoder. If LG still reports error 4 (unsupported codec/container), the player explicitly offers the existing experimental compatibility/MP4 clip tests. Those tests are not full-length playback.
+- webOS 2 detection uses advancing currentTime, not readyState or a lone playing event. Startup retries stop after decoded progress, so later runtime network errors cannot cause hidden source switches.
+- Full FFmpeg remux, continuous HLS transcode, audio switching and seeking across converted sources remain later phases, pending deployment validation and actual LG hardware testing. No claims of universal codec support.

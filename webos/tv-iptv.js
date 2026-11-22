@@ -330,6 +330,7 @@
     document.getElementById('tv-now-playing').textContent=String(name||'Video');
     window.XIPTVTV.beforePlay(kind,id,url,name);
     if(window.XIPTVPlayerUI){window.XIPTVPlayerUI.closeMenu();window.XIPTVPlayerUI.update();}
+    if(window.XIPTVVODRecovery&&window.XIPTVVODRecovery.stop)window.XIPTVVODRecovery.stop();
     if(window.XIPTVLGMedia&&window.XIPTVLGMedia.setSource)window.XIPTVLGMedia.setSource(kind==='live'?null:{serverUrl:playbackServer,username:username,password:password,kind:kind,id:id,extension:suffix,originalUrl:url});
     if(window.XIPTVAltPlayer&&window.XIPTVAltPlayer.beforeSourceChange)window.XIPTVAltPlayer.beforeSourceChange();
     // Release the previous stream first: many IPTV accounts allow only one connection.
@@ -445,6 +446,18 @@
     function startPlayback(){
       if(started)return;started=true;
       try{
+        // New VOD-only bounded recovery: direct -> proxy once if no decoded progress.
+        // The existing series HLS->MP4 path and all live channels remain untouched.
+        if(isVod&&!(kind==='series'&&suffix==='m3u8'&&!useProxy)&&window.XIPTVVODRecovery&&window.XIPTVVODRecovery.start){
+          window.XIPTVVODRecovery.start({
+            kind:kind,extension:suffix,directUrl:directUrl,
+            proxyPrefix:BASE+'/api/iptv/proxy',initialTransport:useProxy?'proxy':'direct',
+            playbackInfo:window.XIPTVPlaybackInfo,onStatus:function(note){
+              say(note);
+              if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.notice)window.XIPTVPlayerUI.notice(note,'error');
+            }
+          });
+        }
         video.src=url;video.load();video.play();
         say('Oynatılıyor: '+String(name||'Video')+' | '+suffix.toUpperCase()+(useProxy?' · Render proxy':' · doğrudan')+' • Görüntü/ses desteği yayına bağlıdır.');
       }catch(e){say('Oynatma hatası: '+e.message);}
