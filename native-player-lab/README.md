@@ -38,3 +38,14 @@ timeout), but only a real LG test can establish webOS native compatibility.
 IMPORTANT: This version still plays a 10-second offline H.264/AAC sample.
 It has **not** integrated provider HLS/Xtream, audio tracks or subtitle
 selection; automatic fallback currently applies to decoder startup only.
+
+## v0.2.1 — Gray-screen repair candidate
+
+The previous automatic launcher created subprocesses using fork/exec.
+User TV test: gray display, then automatic exit. The replacement bundles
+both decoders into one native ARM executable and starts NDL first, falling
+back to Starfish/ACB if no first-frame callback occurs. No second process
+or filesystem marker is needed. Actual TV confirmation is still required.
+
+The two standalone apps are included separately and remain undisturbed.
+IPTV / HLS stream fetching remains outside of the current sample player.

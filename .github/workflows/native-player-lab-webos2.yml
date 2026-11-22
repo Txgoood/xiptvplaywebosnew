@@ -1,5 +1,5 @@
 name: Build Native Player Lab webOS 2
-run-name: XIPTV Native Player Lab v0.2.0 Build #${{ github.run_number }}
+run-name: XIPTV Native Player Lab v0.2.1 Build #${{ github.run_number }}
 on:
   push:
     branches:
@@ -50,35 +50,35 @@ jobs:
           set -euo pipefail
           (cd /tmp && ./arm-webos-linux-gnueabi_sdk-buildroot/relocate-sdk.sh)
           python3 native-player-lab/patch_upstream.py upstream-samples
+          python3 native-player-lab/build_inprocess.py upstream-samples
+          sed -i '/^add_executable(media-lab-auto/i webos_userland_provide(libndl-directmedia2 NDL_DM2_LIBRARIES NDL_DM2_INCLUDE_DIRS)' upstream-samples/media/smp/acb/CMakeLists.txt
       - name: Compile both ARM hardware decoder executables
         run: |
           set -euo pipefail
           cmake -S upstream-samples -B upstream-samples/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/tmp/arm-webos-linux-gnueabi_sdk-buildroot/share/buildroot/toolchainfile.cmake
-          cmake --build upstream-samples/build --target media-ndl-esplayer media-smp-acb-webos2 --parallel 2
+          cmake --build upstream-samples/build --target media-ndl-esplayer media-smp-acb-webos2 media-lab-auto --parallel 2
           file upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer | grep -q ARM
           file upstream-samples/build/media/smp/acb/media-smp-acb-webos2 | grep -q ARM
-      - name: Run host fallback tests
-        run: bash native-player-lab/test-auto-engine.sh
-      - name: Compile ARM automatic engine launcher
+      - name: Verify single-process native auto player
         run: |
           set -euo pipefail
-          /tmp/arm-webos-linux-gnueabi_sdk-buildroot/bin/arm-webos-linux-gnueabi-gcc -std=c11 -O2 -Wall -Wextra native-player-lab/auto_engine.c -o /tmp/player-lab-auto
-          file /tmp/player-lab-auto | grep -q ARM
+          file upstream-samples/build/media/smp/acb/media-lab-auto | grep -q ARM
+          grep -q 'xiptv_ndl_main' upstream-samples/media/smp/acb/auto_entry.c
+          grep -q 'xiptv_acb_main' upstream-samples/media/smp/acb/auto_entry.c
+          if grep -E 'fork\(|execv\(' upstream-samples/media/smp/acb/auto_entry.c; then exit 1; fi
       - name: Stage native apps with generated appinfo
         run: |
           set -euo pipefail
           mkdir -p native-stage/ndl native-stage/acb native-stage/auto webos-lab-artifacts
           cp upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer native-stage/ndl/
           cp upstream-samples/build/media/smp/acb/media-smp-acb-webos2 native-stage/acb/
-          cp /tmp/player-lab-auto native-stage/auto/
-          cp upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer native-stage/auto/
-          cp upstream-samples/build/media/smp/acb/media-smp-acb-webos2 native-stage/auto/
+          cp upstream-samples/build/media/smp/acb/media-lab-auto native-stage/auto/
           cp upstream-samples/build/media/ndl/esplayer/media-ndl-esplayer-appinfo.json native-stage/ndl/appinfo.json
           cp upstream-samples/build/media/smp/acb/media-smp-acb-webos2-appinfo.json native-stage/acb/appinfo.json
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/ndl/icon.png
           cp upstream-samples/assets/icons/smp-acb-webos2.png native-stage/acb/icon.png
           cp upstream-samples/assets/icons/ndl-esplayer.png native-stage/auto/icon.png
-          node -e "require('fs').writeFileSync('native-stage/auto/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.auto',version:'0.2.0',vendor:'XIPTV Play',type:'native',main:'player-lab-auto',title:'XIPTV Player Lab Auto NDL ACB',icon:'icon.png',iconColor:'#4CAF50',bgColor:'#4CAF50'}))"
+          node -e "require('fs').writeFileSync('native-stage/auto/appinfo.json',JSON.stringify({id:'com.xiptvplay.playerlab.auto',version:'0.2.1',vendor:'XIPTV Play',type:'native',main:'media-lab-auto',title:'XIPTV Player Lab Auto NDL ACB',icon:'icon.png',iconColor:'#4CAF50',bgColor:'#4CAF50'}))"
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/ndl/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/acb/
           cp upstream-samples/assets/sample.h264 upstream-samples/assets/sample.aac native-stage/auto/
