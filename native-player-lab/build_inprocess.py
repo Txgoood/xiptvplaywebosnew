@@ -45,4 +45,21 @@ cmake=folder/"CMakeLists.txt";cmake.write_text(cmake.read_text()+extra)
 base=Path(__file__).parent
 (folder/"auto_entry.c").write_bytes((base/"inprocess_auto.c").read_bytes())
 (folder/"source_fetch.c").write_bytes((base/"source_fetch.c").read_bytes())
+(folder/"unified_native.c").write_bytes((base/"unified_native.c").read_bytes())
+cmake.write_text(cmake.read_text()+'''
+add_executable(media-lab-unified
+        unified_native.c source_fetch.c
+        ndl_entry.c acb_entry.c
+        ../../ndl/esplayer/esplayer.c acb_plane.c)
+target_compile_definitions(media-lab-unified PRIVATE ACB_ATTACH_SINK_EARLY=1)
+target_include_directories(media-lab-unified SYSTEM PRIVATE
+        @{ACBAPI_INCLUDE_DIRS} @{NDL_DM2_INCLUDE_DIRS} @{LABCURL_INCLUDE_DIRS})
+target_include_directories(media-lab-unified PRIVATE ../../ndl/esplayer)
+target_link_directories(media-lab-unified PRIVATE @{ACBAPI_LIBRARY_DIRS} @{LABCURL_LIBRARY_DIRS})
+target_link_libraries(media-lab-unified PRIVATE
+        media-smp-common-legacy-nouserdata media-common-sdl
+        @{ACBAPI_LIBRARIES} @{NDL_DM2_LIBRARIES} @{LABCURL_LIBRARIES})
+set_target_properties(media-lab-unified PROPERTIES INSTALL_RPATH "$ORIGIN" BUILD_WITH_INSTALL_RPATH TRUE)
+'''.replace("@{",chr(36)+"{"))
+
 print("Single-process native motor with tokenized HTTPS H264/AAC feed prepared")

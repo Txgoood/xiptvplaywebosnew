@@ -15,7 +15,8 @@ const PUBLIC_ORIGIN=process.env.NATIVE_LAB_PUBLIC_ORIGIN||'https://xiptvplay-nat
 const FF_MPEG=path.join(path.dirname(fileURLToPath(import.meta.url)),'../lg-media-service/node_modules/@ffmpeg-installer/linux-x64/ffmpeg');
 const RELAY_TTL_MS=3*60*1000,MAX_BYTES=8*1024*1024,MAX_POST=1600;
 const MAX_CATALOG_BYTES=40*1024*1024;
-const media=new Map(),usage=new Map(),pending=new Map(),diagnostics=new Map();
+const media=new Map(),usage=new Map(),pending=new Map(),diagnostics=new Map(),pairs=new Map();
+const PAIR_TTL=10*60*1000;
 const DIAG_TTL=10*60*1000;
 const PENDING_TTL_MS=90*1000;
 let active=false,internalReady=false;
@@ -164,6 +165,56 @@ const server=http.createServer(async(req,res)=>{
    if(!row||Date.now()-row.updatedAt>DIAG_TTL){respond(res,{success:true,found:false});return;}
    respond(res,{success:true,found:true,phase:row.phase,code:row.code});
    return;
+  }
+  if(req.method==='GET'&&pathname==='/pair'){
+   const html=`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>XIPTV Native Baglanti</title>
+   <style>body{font:19px Arial;background:#0b1c2d;color:white;max-width:560px;margin:30px auto;padding:15px}input,button{display:block;box-sizing:border-box;width:100%;padding:15px;font-size:20px;margin:10px 0;border-radius:7px}button{background:#007a92;color:white}small{color:#bdd}</style>
+   <h2>XIPTV Native Player - TV Hesap Bagla</h2><small>Bu sayfa sadece test icindir. Kodu TV ekranindan al. Baglanti bilgileri bir kez native uygulamaya aktarilir.</small>
+   <input id="code" placeholder="TV'deki 8 karakterlik kod" maxlength="8" autocomplete="off">
+   <input id="m3u" placeholder="http://sunucu:8080/get.php?username=...&password=..." autocomplete="off">
+   <button id="go">TV'ye Hesabi Aktar</button><p id="status"></p><script>
+   document.getElementById('go').onclick=function(){
+    var val=document.getElementById('m3u').value.trim(),c=document.getElementById('code').value.trim().toUpperCase();
+    var match=/^(https?):\\/\\/([^\\/?#]+)\\/get\\.php\\?([^#]+)$/i.exec(val);
+    if(!match){document.getElementById('status').textContent='Gecerli get.php M3U baglantisi girin';return;}
+    var params=new URLSearchParams(match[3]);
+    var data={code:c,serverUrl:match[1]+'://'+match[2],username:params.get('username'),password:params.get('password')};
+    if(!data.username||!data.password){document.getElementById('status').textContent='Linkte username/password bulunamadi';return;}
+    fetch('/pair/claim',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}).then(function(r){return r.json()}).then(function(o){document.getElementById('status').textContent=o.success?'Hesap TV uygulamasina aktarilabilir. TV ekraninda BAGLANTIYI KONTROL ET sec.':(o.error||'Baglanti hatasi');document.getElementById('m3u').value='';}).catch(function(){document.getElementById('status').textContent='Sunucuya baglanilamadi';});
+   };</script>`;
+   res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'self' 'unsafe-inline'; connect-src 'self'"});res.end(html);return;
+  }
+  if(req.method==='GET'&&pathname==='/pair/start'){
+   if(!rate('pair:'+clientIp(req))){fail(res,429,'Pairing too frequent');return;}
+   const token=randomBytes(24).toString('hex');
+   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+   const bytes=randomBytes(8);
+   const code=Array.from(bytes,x=>chars[x%chars.length]).join('');
+   pairs.set(token,{code,expires:Date.now()+PAIR_TTL,used:false,account:null});
+   while(pairs.size>60)pairs.delete(pairs.keys().next().value);
+   respond(res,{success:true,token,code,url:PUBLIC_ORIGIN+'/pair',expiresIn:600});return;
+  }
+  if(req.method==='POST'&&pathname==='/pair/claim'){
+   if(!rate('claim:'+clientIp(req))){fail(res,429,'Too many attempts');return;}
+   const raw=await body(req),code=String(raw.code||'').toUpperCase();
+   if(!/^[A-Z2-9]{8}$/.test(code)){fail(res,400,'Invalid pairing code');return;}
+   let found=null;
+   for(const [token,pair] of pairs){if(pair.code===code&&pair.expires>Date.now()&&!pair.used){found=pair;break;}}
+   if(!found){fail(res,404,'Code expired or unavailable');return;}
+   const serverUrl=String(raw.serverUrl||''),username=String(raw.username||''),password=String(raw.password||'');
+   if(username.length>160||password.length>160||!username||!password){fail(res,400,'Invalid account');return;}
+   await validateHost(serverUrl,{username,password});
+   found.account={serverUrl,username,password};
+   found.used=true;
+   respond(res,{success:true});return;
+  }
+  const pairMatch=pathname.match(/^\\/pair\\/status\\/([a-f0-9]{48})$/);
+  if(req.method==='GET'&&pairMatch){
+   const key=pairMatch[1],found=pairs.get(key);
+   if(!found||found.expires<Date.now()){pairs.delete(key);fail(res,404,'Pair expired');return;}
+   if(!found.account){respond(res,{success:true,ready:false});return;}
+   pairs.delete(key);
+   respond(res,{success:true,ready:true,account:found.account});return;
   }
   if(req.method==='POST'&&pathname==='/search'){
    if(!internalReady){fail(res,503,'Medya hizmeti başlatılıyor');return;}

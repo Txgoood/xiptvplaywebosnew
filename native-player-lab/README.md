@@ -116,3 +116,36 @@ latest phase from the same internet exit address. A missing report is
 inconclusive because older webOS curl may fail TLS before reporting.
 
 This is instrumentation, not a verified playback fix.
+
+## v0.4.0 — One native IPK: film search and first-frame-tested NDL/ACB
+
+This is an experimental *single application* for LG webOS 2.0:
+`com.xiptvplay.playerlab.unified_0.4.0_arm.ipk`.
+The entire user interface uses SDL2 in the same native ARM process as the
+two first-frame-tested media decoders. It does **not** launch a second app
+or depend on PalmServiceBridge.
+
+First-run setup: TV displays an eight-character short-lived pairing code.
+Open `https://xiptvplay-native-lab.onrender.com/pair` on a phone, enter
+the TV code and the Xtream M3U get.php playlist URL. Pairing credentials
+are sent once to the native app over HTTPS, then stored in a user-only
+plaintext file under its HOME folder; never embedded in the IPK or source.
+The server forgets pairing data when collected or expired. The same TV can
+then search titles using its remote-controlled on-screen keyboard and hit
+OYNAT to prepare, download and play a **test eight-second clip** through
+NDL, with ACB fallback only when the first-frame callback fails.
+
+Native UI and decoder run sequentially in one OS process; SDL is closed before
+opening the decoder's video plane and reinitialized after the clip ends.
+Search input and menu rendering are basic ASCII bitmap text, currently for
+technical testing, not the final polished XIPTV UI. Search requests are
+bounded and use the existing authenticated catalogue endpoint.
+
+Known limitations: webOS 2's HTTPS CA/curl compatibility must be tested;
+input via remote may be cumbersome; server-rendered 8-second clip still has
+fixed 640x360/25fps metadata that can mismatch original media; movie search
+only, not episodes; local credential storage is not encrypted; network
+operations may momentarily block UI; availability of SDL video reinit
+after media playback is not confirmed on real TV. CI compilation is not
+evidence that actual IPTV video plays. Original v0.2.1 Build #5 remains
+unchanged and is the known-good decoder baseline.
