@@ -367,7 +367,10 @@
         function onProgress(){
           if(!active)return;
           // Mark success only after genuine decoded media/data; not 'playing'.
-          if(video.readyState>=2&&(video.videoWidth>0||video.currentTime>0)){
+          // webOS 2.0 WebKit can keep readyState at HAVE_NOTHING despite playback.
+           // A timeupdate with advancing position or decoded video dimensions is
+           // stronger evidence than readyState on this TV.
+           if((Number(video.currentTime)||0)>0||(Number(video.videoWidth)||0)>0&&(Number(video.videoHeight)||0)>0){
             progressAt=new Date().getTime();
             if(info){info.retrying=false;info.terminal=false;}
             cleanup();
