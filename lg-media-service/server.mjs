@@ -34,6 +34,7 @@ const subtitleCache=new Map();
 const SUBTITLE_CACHE_TTL=10*60*1000;
 const MAX_SUBTITLE_CACHE_ENTRIES=8;
 const MAX_UPSTREAM_BYTES=85*1024*1024;
+const MAX_HLS_MANIFEST_BYTES=512*1024, MAX_HLS_RELAYS=6000;
 const MAX_SUBTITLE_INPUT_BYTES=2*1024*1024*1024;
 const MAX_SUBTITLE_OUTPUT_BYTES=2*1024*1024;
 let mediaProxyPort=0;
@@ -111,7 +112,7 @@ export function sourcePath(data,origin){
  const user=String(data.username||''),pass=String(data.password||'');
  if(!user||!pass||user.length>160||pass.length>160||/[\/\r\n]/.test(user+pass))throw Error('Xtream kimlik bilgisi geçersiz.');
  const ext=String(data.extension||'mp4').toLowerCase();
- if(!['mp4','mkv','avi','ts','mov','m4v'].includes(ext))throw Error('Dosya uzantısı desteklenmiyor.');
+ if(!['mp4','mkv','avi','ts','mov','m4v','m3u8'].includes(ext))throw Error('Dosya uzantısı desteklenmiyor.');
  return origin+'/'+data.kind+'/'+encodeURIComponent(user)+'/'+encodeURIComponent(pass)+'/'+id+'.'+ext;
 }
 /**
@@ -126,6 +127,38 @@ async function remotePublicAddress(u){
  const records=await lookup(u.hostname,{all:true,verbatim:true});
  if(!records.length||records.some(x=>!safeIp(x.address)))throw Error('Medya yönlendirmesi özel veya yerel bir IP adresine gidiyor.');
  return records[0].address;
+}
+/** 
+ * HLS manifests are rewritten exclusively for FFmpeg's localhost media relay.
+ * No original provider URL is exposed to the TV or to third parties by this route.
+ * Every media/key/variant URI is still validated by remotePublicAddress on GET.
+ */
+export function rewriteHlsManifest(input, origin, relay){
+ const source=String(input||'').replace(/^\uFEFF/,'');
+ if(!/^#EXTM3U(?:\r?\n|$)/.test(source))throw Error('HLS oynatma listesi geçersiz.');
+ if(Buffer.byteLength(source,'utf8')>MAX_HLS_MANIFEST_BYTES)throw Error('HLS oynatma listesi çok büyük.');
+ let count=0;
+ function convert(raw){
+  if(++count>MAX_HLS_RELAYS)throw Error('HLS parça sınırı aşıldı.');
+  let absolute;
+  try{absolute=new URL(raw,origin);}
+  catch(e){throw Error('HLS medya adresi geçersiz.');}
+  if(!['http:','https:'].includes(absolute.protocol)||absolute.username||absolute.password)throw Error('HLS medya protokolü reddedildi.');
+  return relay(absolute.toString(),absolute.pathname);
+ }
+ return source.split(/\r?\n/).map(line=>{
+  const trimmed=line.trim();
+  if(!trimmed)return line;
+  if(trimmed[0]!=='#')return convert(trimmed);
+  // EXT-X-KEY, EXT-X-MAP, EXT-X-MEDIA and variant subtitles.
+  return line.replace(/URI="([^"]+)"/g,(_match,uri)=>'URI="'+convert(uri)+'"');
+ }).join('\n');
+}
+function hlsMime(u,contentType){
+ const t=String(contentType||'').toLowerCase();
+ if(/mpegurl/.test(t))return true;
+ if(/^video\//.test(t)||/^audio\//.test(t))return false;
+ return /\.m3u8(?:$|\?)/i.test(u.pathname);
 }
 function relayMedia(url,req,res,ticket,remaining=2){
  (async()=>{
@@ -156,6 +189,41 @@ function relayMedia(url,req,res,ticket,remaining=2){
     ticket.lastError='Yayın sunucusu HTTP '+status+' döndürdü';
     response.resume();if(!res.headersSent){res.writeHead(502);res.end();}return;
    }
+   // Do not let FFmpeg load unverified playlist segment URLs directly. Instead
+   // use short-lived localhost-only relay tickets for every HLS URI.
+   if(ticket.isHls&&hlsMime(u,ticket.lastType)){
+    let length=0,parts=[],overflow=false;
+    response.on('data',chunk=>{
+     length+=chunk.length;
+     if(length>MAX_HLS_MANIFEST_BYTES){
+      overflow=true;response.destroy();
+      if(!res.headersSent){res.writeHead(413);res.end();}
+     }else parts.push(chunk);
+    });
+    response.on('end',()=>{
+     if(overflow||res.destroyed)return;
+     const staged=[];
+     try{
+      const manifest=rewriteHlsManifest(Buffer.concat(parts).toString('utf8'),u.toString(),(nextUrl,pathname)=>{
+       if(mediaTickets.size+staged.length>=MAX_HLS_RELAYS)throw Error('HLS oturum sınırı aşıldı.');
+       const key=randomBytes(24).toString('hex');
+       const m=/\.([a-z0-9]{1,8})$/i.exec(pathname);
+       staged.push([key,{url:nextUrl,expiry:ticket.expiry,bytes:0,maxBytes:MAX_UPSTREAM_BYTES,isHls:true,
+        lastStatus:0,lastType:'',lastError:''}]);
+       return proxyUrl(key)+'/media.'+(m?m[1]:'bin');
+      });
+      for(const [key,item] of staged)mediaTickets.set(key,item);
+      const output=Buffer.from(manifest,'utf8');
+      res.writeHead(200,{'Content-Type':'application/vnd.apple.mpegurl','Content-Length':String(output.length),'Cache-Control':'no-store'});
+      res.end(output);
+     }catch(e){
+      if(!res.headersSent){res.writeHead(422);res.end();}
+     }
+    });
+    response.on('error',()=>{if(!res.headersSent){res.writeHead(502);res.end();}});
+    res.on('close',()=>upstream.destroy());
+    return;
+   }
    const outHeaders={'Content-Type':String(response.headers['content-type']||'application/octet-stream')};
    for(const field of ['content-length','content-range','accept-ranges'])if(response.headers[field])outHeaders[field]=response.headers[field];
    res.writeHead(status,outHeaders);
@@ -175,7 +243,7 @@ function relayMedia(url,req,res,ticket,remaining=2){
  })().catch((err)=>{if(ticket)ticket.lastError=String(err&&err.message||'Yayın aktarma sorunu').replace(/https?:\/\/\S+/gi,'[url]').slice(0,100);if(!res.headersSent){res.writeHead(502);res.end();}});
 }
 const mediaProxy=http.createServer((req,res)=>{
- const match=String(req.url||'').match(/^\/([a-f0-9]{48})$/);
+ const match=new URL(req.url||'/', 'http://localhost').pathname.match(/^\/([a-f0-9]{48})(?:\/[a-zA-Z0-9_.-]{1,128})?$/);
  if(req.method!=='GET'||!match){res.writeHead(404);res.end();return;}
  const ticket=mediaTickets.get(match[1]);
  if(!ticket||ticket.expiry<Date.now()){res.writeHead(404);res.end();return;}
@@ -263,7 +331,7 @@ export function shouldBypassCrashedProbe(message,ticket){
  if(!ticket||ticket.lastError)return false;
  if(ticket.lastStatus!==200&&ticket.lastStatus!==206)return false;
  if(!/FFprobe sinyal SIGSEGV/.test(String(message||'')))return false;
- return /^(video\/mp2t|video\/x-matroska|video\/mp4)$/i.test(String(ticket.lastType||''));
+ return /^(video\/mp2t|video\/x-matroska|video\/mp4|application\/vnd\.apple\.mpegurl|application\/x-mpegurl)$/i.test(String(ticket.lastType||''));
 }
 function normalizeStreams(raw){
  const streams=(raw.streams||[]).filter(s=>s.codec_type==='video'||s.codec_type==='audio'||s.codec_type==='subtitle');
@@ -298,11 +366,11 @@ async function prepareMp4Clip(session,start){
  // Probe and conversion are independent upstream requests. Use a fresh
  // scoped relay ticket so a crashed probe cannot consume the clip byte quota.
  const clipToken=randomBytes(24).toString('hex');
- const clipTicket={url:session.url,expiry:Date.now()+120000,bytes:0,maxBytes:MAX_UPSTREAM_BYTES,lastStatus:0,lastType:'',lastError:'',purpose:'clip'};
+ const clipTicket={url:session.url,expiry:Date.now()+120000,bytes:0,maxBytes:MAX_UPSTREAM_BYTES,lastStatus:0,lastType:'',lastError:'',purpose:'clip',isHls:!!session.isHls};
  mediaTickets.set(clipToken,clipTicket);
  const outputPath=path.join(dir,'sample.mp4');
  const selectedAudio=session.streams.find(t=>t.type==='audio');
- const args=mp4ClipArgs(proxyUrl(clipToken),outputPath,start,selectedAudio?selectedAudio.index:null);
+ const args=mp4ClipArgs(proxyUrl(clipToken)+(session.isHls?'/playlist.m3u8':''),outputPath,start,selectedAudio?selectedAudio.index:null);
  let errText='',settled=false;
  try{
   await new Promise((resolve,reject)=>{
@@ -362,12 +430,12 @@ function sendStream(res,req,args,contentType,maxMs){
  res.on('close',()=>{if(!res.writableEnded)proc.kill('SIGKILL');});
 }
 function cleanup(){for(const [k,v] of sessions)if(v.expiry<Date.now()){sessions.delete(k);mediaTickets.delete(k);mp4Clips.delete(k);}for(const [k,v] of mediaTickets)if(v.expiry<Date.now())mediaTickets.delete(k);for(const [k,v] of mp4Clips)if(v.expiry<Date.now())mp4Clips.delete(k);}
-async function extractSubtitle(url,index){
+async function extractSubtitle(url,index,isHls=false){
  // Tam altyazı taraması için analiz kotasından ayrı bir medya bileti kullan.
  const token=randomBytes(24).toString('hex');
- mediaTickets.set(token,{url,expiry:Date.now()+90000,bytes:0,maxBytes:MAX_SUBTITLE_INPUT_BYTES});
+ mediaTickets.set(token,{url,expiry:Date.now()+90000,bytes:0,maxBytes:MAX_SUBTITLE_INPUT_BYTES,isHls});
  try{
-  const args=['-nostdin','-v','error','-xerror','-protocol_whitelist','http,tcp','-rw_timeout','12000000','-i',proxyUrl(token),'-map','0:'+index,'-c:s','webvtt','-f','webvtt','pipe:1'];
+  const args=['-nostdin','-v','error','-xerror','-protocol_whitelist','http,tcp','-rw_timeout','12000000','-i',proxyUrl(token)+(isHls?'/playlist.m3u8':''),'-map','0:'+index,'-c:s','webvtt','-f','webvtt','pipe:1'];
   const vtt=await collect(FFMPEG,args,90000,MAX_SUBTITLE_OUTPUT_BYTES);
   if(!vtt.startsWith('WEBVTT'))throw Error('Geçerli altyazı verisi üretilemedi.');
   return vtt;
@@ -395,10 +463,11 @@ const server=http.createServer(async(req,res)=>{
    const base=await validateHost(String(data.serverUrl||''),{username:data.username,password:data.password});
    const url=sourcePath(data,base);
    const token=randomBytes(24).toString('hex');
-   const ticket={url,expiry:Date.now()+SESSION_TTL,bytes:0,lastStatus:0,lastType:'',lastError:''};
+   const isHls=String(data.extension||'').toLowerCase()==='m3u8';
+   const ticket={url,expiry:Date.now()+SESSION_TTL,bytes:0,lastStatus:0,lastType:'',lastError:'',isHls};
    mediaTickets.set(token,ticket);
    let parsed=null,probeFallback=false;
-   try{parsed=await probeMedia(proxyUrl(token));}
+   try{parsed=await probeMedia(proxyUrl(token)+(isHls?'/playlist.m3u8':''));}
    catch(e){
       // Some providers label MKV files but return MPEG-TS. The bundled
       // ffprobe binary can crash with SIGSEGV on these streams.
@@ -417,7 +486,7 @@ const server=http.createServer(async(req,res)=>{
    const streams=normalizeStreams(parsed);
    cleanup();
    if(sessions.size>=MAX_SESSIONS)sessions.delete(sessions.keys().next().value);
-   sessions.set(token,{url,proxyUrl:proxyUrl(token),expiry:Date.now()+SESSION_TTL,streams});
+   sessions.set(token,{url,proxyUrl:proxyUrl(token)+(isHls?'/playlist.m3u8':''),isHls,expiry:Date.now()+SESSION_TTL,streams});
    json(res,200,{success:true,token,expiresIn:Math.floor(SESSION_TTL/1000),tracks:streams,probeFallback,playback:{method:'mpegts-copy',compatibility:'h264-aac-ts-360p',experimental:true}});
   }catch(e){error(res,400,String(e.message||'Analiz başarısız').slice(0,150));}
   finally{activeProbes--;}
@@ -492,7 +561,7 @@ const server=http.createServer(async(req,res)=>{
      return;
     }
     activeStreams++;
-    job=extractSubtitle(s.url,index).then(vtt=>{
+    job=extractSubtitle(s.url,index,!!s.isHls).then(vtt=>{
      if(subtitleCache.size>=MAX_SUBTITLE_CACHE_ENTRIES)subtitleCache.delete(subtitleCache.keys().next().value);
      subtitleCache.set(key,{vtt,expiry:Date.now()+SUBTITLE_CACHE_TTL});
      return vtt;

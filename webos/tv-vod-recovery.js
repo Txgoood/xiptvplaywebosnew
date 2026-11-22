@@ -18,13 +18,14 @@
  function fail(s,reason,code){
   if(current!==s||s.switching||s.played)return;
   if(s.phase==='direct'&&s.allowProxy){
-   s.switching=true;s.phase='proxy';s.observed=false;s.lastTime=0;
-   if(s.info){s.info.transport='proxy-auto';s.info.retrying=true;}
-   notify(s,'Film/dizi açılmadı; Render proxy üzerinden bir kez daha deneniyor. Canlı TV etkilenmez.');
+   var isHls=/\.m3u8(?:[?#]|$)/i.test(s.directUrl);
+   s.switching=true;s.phase=isHls?'mp4':'proxy';s.observed=false;s.lastTime=0;
+   if(s.info){s.info.transport=isHls?'native-mp4-fallback':'proxy-auto';s.info.retrying=true;if(isHls)s.info.extension='mp4';}
+   notify(s,isHls?'HLS bağlantısı TV tarafından açılamadı; Xtream MP4 kaynağı bir kez deneniyor.':'Film/dizi açılmadı; Render proxy üzerinden bir kez daha deneniyor. Canlı TV etkilenmez.');
    try{
     // Release the old provider connection before opening the next.
     video.pause();video.removeAttribute('src');video.load();
-    video.src=s.proxyPrefix+'?url='+encodeURIComponent(s.directUrl);
+    video.src=isHls?s.directUrl.replace(/\.m3u8(?=[?#]|$)/i,'.mp4'):s.proxyPrefix+'?url='+encodeURIComponent(s.directUrl);
     video.load();
     s.switching=false;arm(s);
     var p=video.play();if(p&&p.catch)p.catch(function(){if(current===s)fail(s,'Proxy oynatma reddedildi',0);});
@@ -55,7 +56,7 @@
   var s={phase:options.initialTransport==='proxy'?'proxy':'direct',
    directUrl:String(options.directUrl||''),proxyPrefix:String(options.proxyPrefix||''),
    onStatus:options.onStatus,info:options.playbackInfo||null,
-   allowProxy:options.initialTransport!=='proxy'&&/^(mp4|mkv|avi|ts|mov|m4v)$/.test(ext),
+   allowProxy:options.initialTransport!=='proxy'&&/^(mp4|mkv|avi|ts|mov|m4v|m3u8)$/.test(ext),
    observed:false,lastTime:0,played:false,switching:false,timer:null};
   if(!s.directUrl)return false;
   s.onError=function(){var code=Number(video.error&&video.error.code)||0;fail(s,'TV medya hatası '+code,code);};

@@ -222,7 +222,18 @@
     if(err&&!retried&&/analiz işlemi sürüyor/i.test(String(err.message))){retried=true;setTimeout(function(){if(thisScan===scanSequence)analyse();},4000);return;}
     busy=false;scanButton.disabled=false;
     if(err)pendingMkvOrdinal=null;
-    if(err){compatRequested=false;mp4Requested=false;if(mp4Button)mp4Button.disabled=false;if(compatButton)compatButton.disabled=false;say('LG medya servisi: '+url+' — '+err.message+'. MKV içi parçalar için üstteki “MKV:” girdileri doğrudan dosya başlığından okunur.');if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;}
+    if(err){
+     var isHls=String(ctx&&ctx.extension||'').toLowerCase()==='m3u8';
+     var outdated=isHls&&/Dosya uzantısı desteklenmiyor/i.test(String(err.message||''));
+     var message=outdated
+       ?'HLS (.m3u8) kaynak algılandı fakat Render LG medya servisi henüz HLS analizi desteklemiyor. Sunucu ayrıca güncellenmeden MP4 8 sn testi başlatılamaz.'
+       :isHls?'HLS analiz hatası: '+err.message+'. Playlist, medya parçaları veya sağlayıcı erişimi incelenmeli.'
+       :'LG medya servisi: '+err.message+'. MKV içi parçalar için “MKV:” girdileri doğrudan dosya başlığından okunur.';
+     compatRequested=false;mp4Requested=false;
+     if(mp4Button)mp4Button.disabled=false;if(compatButton)compatButton.disabled=false;
+     say(message);
+     if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();return;
+    }
     if(!data||!data.tracks){say('Parça listesi alınamadı.');return;}
     session=data;if(data.probeFallback){say('FFprobe çöktü; codec ve ses/altyazı bilgileri okunamadı. 1 video kaydı yalnızca geçici yer tutucu. Uyumlu video dönüştürme deneniyor…');}else{say(data.tracks.length+' parça bulundu: '+data.tracks.filter(function(t){return t.type==='audio';}).length+' ses, '+data.tracks.filter(function(t){return t.type==='subtitle';}).length+' altyazı. Desteklenmeyen altyazılar yalnızca bilgi amaçlıdır.');}
     if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();

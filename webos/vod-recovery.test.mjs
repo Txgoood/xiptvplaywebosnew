@@ -70,3 +70,13 @@ test('paused playback never restarts itself via watchdog',()=>{
  assert.equal((f.handlers.error||[]).length,0);
  assert.equal(f.video.src,'');
 });
+
+test('failed movie HLS tries a single MP4 URL, never repeats the same HLS proxy',()=>{
+ const f=fixture(),info=f.begin('movie','direct','m3u8').info;
+ f.video.error={code:4};f.video.emit('error');
+ assert.equal(info.transport,'native-mp4-fallback');
+ assert.match(f.video.src,/\/movie\/USER\/PASS\/9\.mp4$/);
+ f.video.error={code:4};f.video.emit('error');
+ assert.equal(info.terminal,true);
+ assert.equal(f.events.length,2);
+});

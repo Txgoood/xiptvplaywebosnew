@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';
-const {safeIp,normalizeStreams,sourcePath,probeArgs,parseProbePayload,isXtreamAuthorized,validateHost,compatibilityArgs,shouldBypassCrashedProbe,mp4ClipArgs,parseByteRange}=await import('./server.mjs');
+const {safeIp,normalizeStreams,sourcePath,probeArgs,parseProbePayload,isXtreamAuthorized,validateHost,compatibilityArgs,shouldBypassCrashedProbe,mp4ClipArgs,parseByteRange,rewriteHlsManifest}=await import('./server.mjs');
 test('blocks loopback, RFC1918 and link-local addresses',()=>{
  for(const ip of ['127.0.0.1','10.0.0.1','172.16.1.1','192.168.2.4','169.254.169.254','::1','fc00::2'])assert.equal(safeIp(ip),false,ip);
  assert.equal(safeIp('1.1.1.1'),true);
@@ -137,4 +137,34 @@ test('byte range parser supports full file and bounded partial content',()=>{
  assert.deepEqual(parseByteRange('bytes=-10',100),{start:90,end:99,status:206});
  assert.equal(parseByteRange('bytes=100-120',100),null);
  assert.equal(parseByteRange('bytes=bad',100),null);
+});
+
+test('sourcePath permits authenticated VOD HLS but never live HLS through LG media',()=>{
+ const location=sourcePath({kind:'movie',id:'42',extension:'m3u8',username:'a',password:'b'},'https://provider.example');
+ assert.equal(location,'https://provider.example/movie/a/b/42.m3u8');
+ assert.throws(()=>sourcePath({kind:'live',id:'42',extension:'m3u8',username:'a',password:'b'},'https://provider.example'));
+});
+test('rewrites HLS variants, media, encryption keys and subtitle URI attributes',()=>{
+ const input=['#EXTM3U','#EXT-X-VERSION:3','#EXT-X-KEY:METHOD=AES-128,URI="../secure/key.bin"',
+  '#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs",URI="subtitle.m3u8"',
+  '#EXTINF:6.0,','seg0.ts',
+  '#EXT-X-STREAM-INF:BANDWIDTH=1500000','https://cdn.example/video/variant.m3u8',
+  '#EXT-X-ENDLIST'].join('\n');
+ const links=[];
+ const out=rewriteHlsManifest(input,'https://provider.example/hls/list/master.m3u8',(address)=>{
+  links.push(address);return 'http://127.0.0.1:3101/'+String(links.length).padStart(48,'a')+'/media.ts';
+ });
+ assert.deepEqual(links,['https://provider.example/hls/secure/key.bin',
+  'https://provider.example/hls/list/subtitle.m3u8',
+  'https://provider.example/hls/list/seg0.ts',
+  'https://cdn.example/video/variant.m3u8']);
+ assert.equal(out.includes('https://provider.example'),false);
+ assert.equal(out.includes('https://cdn.example'),false);
+ assert.equal((out.match(/127.0.0.1/g)||[]).length,4);
+});
+test('HLS rewrite rejects non-manifests, unsafe protocols, and embedded credentials',()=>{
+ assert.throws(()=>rewriteHlsManifest('not HLS','https://example.org/a.m3u8',()=>''),/HLS oynatma listesi geçersiz/);
+ assert.throws(()=>rewriteHlsManifest('#EXTM3U\nfile:///etc/passwd','https://example.org/a.m3u8',()=>''),/HLS medya protokolü/);
+ assert.throws(()=>rewriteHlsManifest('#EXTM3U\ndata:text/plain,payload','https://example.org/a.m3u8',()=>''),/HLS medya protokolü/);
+ assert.throws(()=>rewriteHlsManifest('#EXTM3U\nhttps://user:pass@host.example/a.ts','https://example.org/a.m3u8',()=>''),/HLS medya protokolü/);
 });

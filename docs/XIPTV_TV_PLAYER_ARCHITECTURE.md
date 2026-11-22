@@ -47,3 +47,11 @@ Make VOD playback independent of a provider's file extension, host redirects and
 - Proxy is a transport fallback, **not** a decoder or transcoder. If LG still reports error 4 (unsupported codec/container), the player explicitly offers the existing experimental compatibility/MP4 clip tests. Those tests are not full-length playback.
 - webOS 2 detection uses advancing currentTime, not readyState or a lone playing event. Startup retries stop after decoded progress, so later runtime network errors cannot cause hidden source switches.
 - Full FFmpeg remux, continuous HLS transcode, audio switching and seeking across converted sources remain later phases, pending deployment validation and actual LG hardware testing. No claims of universal codec support.
+
+## v1.0.80 — HLS film tanılaması ve servis hazırlığı
+
+- Gerçek TV: VOD film uzantısı m3u8; Proxy HEAD HTTP 200 ve MIME application/vnd.apple.mpegurl görüldü. Eski LG medya servisi /tracks isteğini 'Dosya uzantısı desteklenmiyor' diyerek reddetti. Dönüştürme henüz çalışmamıştı.
+- VOD-only sunucu .m3u8 Xtream kaynaklarını kabul eder ve HLS segment/anahtar/altyazı URI'lerini yalnız localhost relay'e yazar; DNS özel ağ koruması her alt kaynakta devam eder.
+- Film HLS native başarısızsa en fazla bir Xtream MP4 alternatifi denenir; film için eski HLS proxy tekrarı yapılmaz. Dizi HLS'nin mevcut kurtarma yolu, Live TV'nin motoru ve hesap bağlantısı korunur.
+- UI, eski Render LG servisindeki HLS uyumsuzluğu için ayrı tanılama mesajı gösterir. IPK dağıtımı bağımsız Render servisinin dağıtımı değildir.
+- Sekiz saniyelik MP4 denemesinin gerçek LG'de çalıştığı henüz doğrulanmadı. Tam film dönüştürme, uzun seek, ses ve altyazı geçişleri daha sonraki ayrı test kapısıdır.

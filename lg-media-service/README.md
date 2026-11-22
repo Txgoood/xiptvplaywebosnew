@@ -43,3 +43,11 @@ Bu servis **normal Android backend'ine eklenmez**. Ayrı Render web hizmeti olar
 `GET /compat/:token?start=0` → Kullanıcı isteğiyle H.264 Baseline + AAC düşük çözünürlüklü deneme akışı (yalnız film/dizi; analiz oturumu gerekli).
 
 Video oynatımının webOS 2.2.3'te başarısı gerçek televizyonda doğrulanmalıdır. Dosya çözme veya DRM atlatma desteği yoktur.
+
+## HLS VOD analiz desteği (v1.0.80)
+
+- Yalnız film/dizi için .m3u8 Xtream kaynağı /tracks analizinde kabul edilir; canlı TV bu servise yönlendirilmez.
+- HLS manifestindeki varyant, segment, altyazı ve AES anahtar URI'leri FFmpeg için localhost relay biletleriyle değiştirilir. Her istekte güvenli DNS/IP kontrolü uygulanır.
+- FFprobe çökmesi ve medya türü sınırlı şekilde ele alınır. HTTP 200 codec uyumluluğunu kanıtlamaz.
+- /compat-mp4/prepare sadece 8 saniyelik H.264/AAC deneysel video üretir; tam film değildir.
+- Bu repo güncellense bile xiptvplay-lg-media.onrender.com servisi otomatik güncellenmez; gerçek Render kaynak depo/dal doğrulanmalı ve LG servisi ayrı yayımlanmalıdır. Android uygulamasına dokunmayın.
