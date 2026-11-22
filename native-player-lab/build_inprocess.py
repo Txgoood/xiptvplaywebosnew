@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from pathlib import Path
 import sys
-root=Path(sys.argv[1]); folder=root/"media"/"smp"/"acb"
+root=Path(sys.argv[1]);folder=root/"media"/"smp"/"acb"
 def modify(relative,old,new):
  p=root/relative;s=p.read_text()
- if s.count(old)!=1:raise SystemExit("Upstream layout changed: "+relative)
+ if s.count(old)!=1:raise SystemExit("Unexpected upstream code: "+relative+" / "+old)
  p.write_text(s.replace(old,new,1))
 modify("media/ndl/esplayer/esplayer.c","#include <pthread.h>","#include <pthread.h>\n#include <signal.h>\nvolatile sig_atomic_t xiptv_ndl_first_frame=0;")
 modify("media/ndl/esplayer/esplayer.c","if (event == NDL_ESP_END_OF_STREAM) {","if (event == NDL_ESP_FIRST_FRAME_PRESENTED) xiptv_ndl_first_frame=1;\n    if (event == NDL_ESP_END_OF_STREAM) {")
@@ -21,24 +21,28 @@ for relative,dest,entry,flag in [
  text=text.replace("return exit_code;", "return exit_code ? exit_code : ("+flag+" ? 0 : 3);",1)
  (folder/dest).write_text(text)
 extra='''
+# In-process fallback; no child processes, native app has one decoder session.
+webos_userland_provide(libndl-directmedia2 NDL_DM2_LIBRARIES NDL_DM2_INCLUDE_DIRS)
+pkg_check_modules(LABCURL REQUIRED libcurl)
 add_executable(media-lab-auto
-        auto_entry.c
-        ndl_entry.c
-        acb_entry.c
-        ../../ndl/esplayer/esplayer.c
-        acb_plane.c)
+        auto_entry.c source_fetch.c
+        ndl_entry.c acb_entry.c
+        ../../ndl/esplayer/esplayer.c acb_plane.c)
 target_compile_definitions(media-lab-auto PRIVATE ACB_ATTACH_SINK_EARLY=1)
 target_include_directories(media-lab-auto SYSTEM PRIVATE
-        @{ACBAPI_INCLUDE_DIRS} @{NDL_DM2_INCLUDE_DIRS})
+        @{ACBAPI_INCLUDE_DIRS} @{NDL_DM2_INCLUDE_DIRS} @{LABCURL_INCLUDE_DIRS})
 target_include_directories(media-lab-auto PRIVATE ../../ndl/esplayer)
-target_link_directories(media-lab-auto PRIVATE @{ACBAPI_LIBRARY_DIRS})
+target_link_directories(media-lab-auto PRIVATE
+        @{ACBAPI_LIBRARY_DIRS} @{LABCURL_LIBRARY_DIRS})
 target_link_libraries(media-lab-auto PRIVATE
         media-smp-common-legacy-nouserdata media-common-sdl
-        @{ACBAPI_LIBRARIES} @{NDL_DM2_LIBRARIES})
+        @{ACBAPI_LIBRARIES} @{NDL_DM2_LIBRARIES} @{LABCURL_LIBRARIES})
 set_target_properties(media-lab-auto PROPERTIES
         INSTALL_RPATH "$ORIGIN"
         BUILD_WITH_INSTALL_RPATH TRUE)
 '''.replace("@{",chr(36)+"{")
 cmake=folder/"CMakeLists.txt";cmake.write_text(cmake.read_text()+extra)
-(folder/"auto_entry.c").write_bytes(Path(__file__).with_name("inprocess_auto.c").read_bytes())
-print("Prepared combined native in-process motor")
+base=Path(__file__).parent
+(folder/"auto_entry.c").write_bytes((base/"inprocess_auto.c").read_bytes())
+(folder/"source_fetch.c").write_bytes((base/"source_fetch.c").read_bytes())
+print("Single-process native motor with tokenized HTTPS H264/AAC feed prepared")

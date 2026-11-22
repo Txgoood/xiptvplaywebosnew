@@ -49,3 +49,34 @@ or filesystem marker is needed. Actual TV confirmation is still required.
 
 The two standalone apps are included separately and remain undisturbed.
 IPTV / HLS stream fetching remains outside of the current sample player.
+
+## v0.3.0 — Actual provider HLS to native engine clip, isolated
+
+Four packages:
+- Auto native `com.xiptvplay.playerlab.auto_0.3.0_arm.ipk`.
+- Native HLS Lab browser `com.xiptvplay.playerlab.launcher_0.3.0_all.ipk`.
+- Previous standalone NDL/ACB packages, versions 0.2.0 (no change).
+
+The separately deployed `native-player-lab/relay.mjs` is the **only** bridge
+from an authenticated Xtream/HLS URL to the NDL/ACB player: it uses the LG
+media companion's existing validated `/tracks` and `/compat-mp4/prepare`,
+then demuxes the complete 8-second MP4 into H.264 Annex B + AAC ADTS.
+It returns two 48-hex-token short-lived media URLs, **never upstream
+password-bearing URLs**. The native C downloader accepts only URLs from the
+exact configured HTTPS test bridge, rejects redirects, bounds length,
+validates Annex-B/ADTS magic, and removes temporary files after playback.
+It does not need root.
+
+The launcher is a separate web app: on TV enter server origin, username,
+password, content ID (movie or individual series episode), and extension.
+Credentials are sent to the LG-only *test* bridge for Xtream validation and
+are not persisted in browser localStorage or native URL/launch params.
+The test must be used only with media the subscriber is authorized to watch.
+Install **both** Auto and Native HLS Lab IPKs. The unchanged XIPTV main app
+is not modified, and the test relay must be deployed separately on Render.
+No 8-second clip is claimed as full film playback.
+
+Known uncertainties: old firmware HTTPS/libcurl compatibility, CORS in webOS
+web views, ability to launch the native package via PalmServiceBridge, and
+the exact provider's HLS `.txt` segment behavior. GitHub builds and
+a synthetic conversion test cannot replace actual on-TV validation.

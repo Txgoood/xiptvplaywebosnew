@@ -1,0 +1,79 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XIPTV Native HLS Lab</title>
+<style>
+body{background:#091622;color:#eef7ff;font-family:Arial,sans-serif;font-size:24px;margin:0;padding:30px}
+h1{font-size:36px;margin:0 0 8px}small{font-size:18px;color:#9dd4ef}
+main{max-width:980px;margin:auto}
+label{display:inline-block;margin-top:18px;width:46%}
+input,select{display:block;margin:6px 0;padding:14px 10px;font-size:23px;color:#fff;background:#1b344b;border:2px solid #5685a6;border-radius:7px;width:95%;box-sizing:border-box}
+input:focus,select:focus,button:focus{border-color:#43e4c5;outline:3px solid #43e4c5}
+button{font-size:27px;margin-top:20px;padding:17px 26px;background:#006f91;color:white;border:2px solid #92c6da;border-radius:9px}
+#status{background:#12283a;border:1px solid #4e7d93;padding:16px;margin-top:18px;white-space:pre-wrap;font-size:20px;min-height:64px}
+.note{font-size:19px;line-height:1.4;color:#b9cfde}
+</style></head><body><main>
+<h1>XIPTV Play — Native HLS Lab</h1>
+<small>v0.3.0 • webOS 2 • 8 saniyelik gercek film test akisi</small>
+<p class="note">Bu ayri test programidir. Ana XIPTV Play uygulamasini degistirmez. Film servis bilgilerini sadece TV uzerinde gir; burada paylasma. Sifre kaydedilmez. Native Player Lab Auto IPK kurulu olmalidir.</p>
+<form id="form">
+<label>IPTV Sunucu Adresi<input id="server" placeholder="https://sunucu.example:8080" autocomplete="off" required></label>
+<label>Kullanici Adi<input id="username" autocomplete="off" required></label>
+<label>Sifre<input id="password" type="password" autocomplete="off" required></label>
+<label>Film / Bolum ID<input id="item" type="text" inputmode="numeric" required></label>
+<label>Tur<select id="kind"><option value="movie">Film</option><option value="series">Dizi bolumu</option></select></label>
+<label>Kaynak Uzantisi<select id="ext"><option value="m3u8">m3u8 (HLS)</option><option value="mp4">mp4</option><option value="mkv">mkv</option><option value="ts">ts</option></select></label>
+<p><button type="submit" id="go">Gercek Film Testi (8 sn)</button></p>
+</form>
+<div id="status">Hazir. Ilk once bilesik Native Player Lab Auto v0.3.0 IPK yuklenmeli.</div>
+<p class="note">Sonuclar: Sunucu H264/AAC parcalari hazirlar. Oynatici NDL ile baslar, gerekirse Starfish/ACB denenir. Bu surum tam film oynatma degildir.</p>
+</main>
+<script>
+(function(){
+var endpoint='https://xiptvplay-native-lab.onrender.com';
+function by(id){return document.getElementById(id);}
+function msg(s){by('status').textContent=s;}
+function launch(clip){
+ msg('Medya hazirlandi ('+clip.videoBytes+' bayt video, '+clip.audioBytes+' bayt ses). Native motor aciliyor...');
+ var payload={id:'com.xiptvplay.playerlab.auto',params:{videoUrl:clip.videoUrl,audioUrl:clip.audioUrl}};
+ if(typeof PalmServiceBridge==='function'){
+  try{
+   var bridge=new PalmServiceBridge();
+   bridge.onservicecallback=function(s){var o={};try{o=JSON.parse(s);}catch(e){}
+    if(o.returnValue===false)msg('Native uygulama acilamadi: '+(o.errorText||o.errorCode||'Bilinmeyen hata')+'. Auto IPK yuklu mu?');
+    else msg('Native Player Lab baslatma istegi gonderildi. TV ekranini kontrol et.');
+   };
+   bridge.call('luna://com.webos.applicationManager/launch',JSON.stringify(payload));
+   return;
+  }catch(e){msg('Uygulama yoneticisi hatasi: '+e.message);return;}
+ }
+ if(window.webOS&&window.webOS.service&&window.webOS.service.request){
+  window.webOS.service.request('luna://com.webos.applicationManager',{method:'launch',parameters:payload,onSuccess:function(){msg('Native oynatici baslatildi.');},onFailure:function(x){msg('Baslatma basarisiz: '+(x&&x.errorText||'yetki/uyumluluk'));}});
+ }else msg('Bu webOS surumunde PalmServiceBridge bulunamadi. Lutfen ekranin fotografini gonder.');
+}
+by('form').onsubmit=function(e){
+ if(e&&e.preventDefault)e.preventDefault();
+ if(by('go').disabled)return false;
+ var s=by('server').value.replace(/\s+/g,''),id=by('item').value.trim();
+ if(!/^https?:\/\/[^\/?#]+\/?$/.test(s)||!/^\d{1,12}$/.test(id)){msg('Sunucu adresini ve sayisal film ID bilgisini kontrol et.');return false;}
+ var user=by('username').value,pass=by('password').value;
+ if(!user||!pass){msg('Kullanici adi ve sifre gerekli.');return false;}
+ by('go').disabled=true;
+ msg('HLS kaynak analizi ve 8 saniyelik film donusumu basladi. Render ilk acilista yavas olabilir...');
+ var xhr=new XMLHttpRequest();
+ xhr.open('POST',endpoint+'/prepare',true);xhr.setRequestHeader('Content-Type','application/json');
+ xhr.timeout=115000;
+ xhr.onreadystatechange=function(){
+  if(xhr.readyState!==4)return;
+  by('go').disabled=false;
+  var o={};try{o=JSON.parse(xhr.responseText);}catch(err){}
+  if(xhr.status!==200||!o.success){msg('Film klibi hazirlanamadi (HTTP '+xhr.status+'): '+(o.error||'Sunucu/medya hatasi'));return;}
+  launch(o);
+ };
+ xhr.onerror=function(){by('go').disabled=false;msg('Render baglantisi basarisiz. Internet / CORS / HTTPS kontrol edilmeli.');};
+ xhr.ontimeout=function(){by('go').disabled=false;msg('Donusturme zaman asimi. Daha sonra tekrar dene.');};
+ xhr.send(JSON.stringify({serverUrl:s.replace(/\/$/,''),username:user,password:pass,kind:by('kind').value,id:id,extension:by('ext').value}));
+ return false;
+};
+})();
+</script>
+</body></html>
