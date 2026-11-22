@@ -256,7 +256,9 @@
   }
   function progressed(){
     if(completed)return;
-    if(video.readyState>=2&&video.currentTime>0){
+    // Legacy webOS 2.0 does not reliably update HTMLMediaElement.readyState.
+    // Actual playback position is the supported progress signal.
+    if((Number(video.currentTime)||0)>0){
       progress=true;completed=true;release();
       if(compatButton)compatButton.disabled=false;
       returnButton.style.display='inline-block';
