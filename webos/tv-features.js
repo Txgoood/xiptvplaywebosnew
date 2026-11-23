@@ -21,7 +21,7 @@
  }
  function hidden(kind,item,categoryName){
   if(!active()||!item)return false;
-  var catalog=window.XIPTVGlobalCatalog;
+  var catalog=window.XIPTVGlobalCatalog||(window.XIPTVTVHome&&window.XIPTVTVHome.catalog);
   var category=categoryName||item.category_name||item.category||'';
   if(!category&&catalog)category=map(kind,catalog)[String(item.category_id)]||'';
   var ids=item.category_ids||[];
