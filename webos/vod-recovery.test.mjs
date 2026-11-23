@@ -8,11 +8,21 @@ function fixture(){
  const video={
   src:'',currentTime:0,error:null,
   pause(){},load(){},play(){return undefined;},
+  appendChild(source){this.child=source;source.parentNode=this;},
+  removeChild(source){this.child=null;source.parentNode=null;},
   removeAttribute(field){if(field==='src')this.src='';},
   addEventListener(name,fn){(handlers[name]||(handlers[name]=[])).push(fn);},
   removeEventListener(name,fn){handlers[name]=(handlers[name]||[]).filter(x=>x!==fn);},
   emit(name){for(const fn of (handlers[name]||[]).slice())fn();}
  };
+ function makeSource(tag){
+  assert.equal(tag,'source');
+  return {
+   setAttribute(name,value){this[name]=value;},
+   addEventListener(name,fn){this[name]=fn;},
+   removeEventListener(name){delete this[name];}
+  };
+ }
  const win={};
  let next=0;
  class Request {
@@ -23,7 +33,7 @@ function fixture(){
   abort(){this.aborted=true;}
   respond(status,data){this.status=status;this.responseText=JSON.stringify(data);this.onload?.();}
  }
- const ctx={window:win,document:{getElementById:()=>video},XMLHttpRequest:Request,
+ const ctx={window:win,document:{getElementById:()=>video,createElement:makeSource},XMLHttpRequest:Request,
   setTimeout(fn){let t={id:++next,fn,cancelled:false};timers.push(t);return t.id;},
   clearTimeout(id){for(const t of timers)if(t.id===id)t.cancelled=true;}};
  vm.runInNewContext(script,ctx);
@@ -99,10 +109,15 @@ test('film and series HLS recover through a scoped relay before trying a real MP
   assert.equal(f.requests[0].url,'https://media.example/tv-hls');
   assert.equal(f.requests[0].body.kind,kind);
   f.requests[0].respond(200,{success:true,path});
-  assert.equal(f.video.src,'https://media.example'+path);
+  assert.equal(f.video.src,'');
+  assert.equal(f.video.child.src,'https://media.example'+path);
+  const [mime,options]=f.video.child.type.split(';mediaOption=');
+  assert.equal(mime,'application/vnd.apple.mpegurl');
+  assert.deepEqual(JSON.parse(decodeURI(options)),{mediaTransportType:'HLS'});
   assert.equal(info.transport,'lg-hls-relay');
-  f.video.emit('error');
+  f.video.child.error();
   assert.equal(f.requests[1].method,'GET');
+  assert.equal(f.video.child,null);
   assert.match(f.requests[1].url,/\/status$/);
   f.requests[1].respond(200,{playlistRequests:1,playlistsServed:1,segmentRequests:0,segmentsServed:0});
   assert.match(f.video.src,/\.mp4$/);
@@ -111,6 +126,17 @@ test('film and series HLS recover through a scoped relay before trying a real MP
   assert.match(f.events.at(-1),/Uyumlu HLS LG 4\. Liste gönderildi, video parçası istenmedi/);
   assert.equal(f.requests.length,2);
  }
+});
+
+test('a working HLS source remains attached until switching away from the player',()=>{
+ const f=fixture();f.begin('movie','direct','m3u8',true);
+ f.video.error={code:4};f.video.emit('error');
+ f.requests[0].respond(200,{success:true,path:'/tv-hls/'+'a'.repeat(48)+'/index.m3u8'});
+ f.video.currentTime=1;f.video.emit('timeupdate');
+ f.video.currentTime=2;f.video.emit('timeupdate');
+ assert.equal(typeof f.video.child.error,'undefined');
+ f.win.XIPTVVODRecovery.clearRelaySource();
+ assert.equal(f.video.child,null);
 });
 
 test('retired HLS preparation cannot replace a new channel and 404 falls back once',()=>{

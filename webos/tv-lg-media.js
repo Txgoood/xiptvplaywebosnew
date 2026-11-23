@@ -277,7 +277,10 @@
     }
   }
   try{
-    if(window.XIPTVVODRecovery&&window.XIPTVVODRecovery.stop)window.XIPTVVODRecovery.stop();
+    if(window.XIPTVVODRecovery){
+      window.XIPTVVODRecovery.stop();
+      window.XIPTVVODRecovery.clearRelaySource();
+    }
     // Clear the failed direct stream BEFORE attaching handlers for the new
     // compatible stream. A delayed error from the old source must not abort it.
     video.pause();video.removeAttribute('src');video.load();
@@ -358,7 +361,10 @@
     finish('Blob MP4 testi başarısız: LG Hata '+code+'. Video biçimi veya Blob medya desteği incelenmeli.');
    }
    try{
-    if(window.XIPTVVODRecovery&&window.XIPTVVODRecovery.stop)window.XIPTVVODRecovery.stop();
+    if(window.XIPTVVODRecovery){
+      window.XIPTVVODRecovery.stop();
+      window.XIPTVVODRecovery.clearRelaySource();
+    }
     video.pause();video.removeAttribute('src');video.load();
     if(window.XIPTVPlaybackInfo){window.XIPTVPlaybackInfo.transport='compat-mp4';window.XIPTVPlaybackInfo.extension='mp4';}
     video.addEventListener('error',onError,false);

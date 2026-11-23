@@ -2,12 +2,13 @@
  * This is not codec transcoding. Native/proxy retries cannot decode unsupported codecs.
  * Never attach this state machine to live-TV streams. */
 (function(root){
- var video=document.getElementById('video'),current=null;
+ var video=document.getElementById('video'),current=null,relaySource=null;
  function stop(){
   var s=current;current=null;
   if(!s||!video)return;
   if(s.timer)clearTimeout(s.timer);
   if(s.request){s.request.onload=s.request.onerror=s.request.ontimeout=null;s.request.abort();}
+  if(relaySource)relaySource.removeEventListener('error',s.onSourceError,false);
   video.removeEventListener('error',s.onError,false);
   video.removeEventListener('timeupdate',s.onProgress,false);
  }
@@ -29,20 +30,34 @@
    switchSource(s,'proxy','proxy-auto',s.proxyPrefix+'?url='+encodeURIComponent(s.directUrl));
    return;
   }
-  if(s.phase==='hls-relay'){inspectHls(s,code);return;}
+  if(s.phase==='hls-relay'){inspectHls(s,reason,code);return;}
   if(s.info){s.info.retrying=false;s.info.terminal=true;s.info.failureReason='VOD '+(code===4?'codec-or-format':'transport');}
   notify(s,'Film/dizi açılamadı ('+(code===4?'LG Hata 4: TV kaynağı açamadı':reason)+'). '+(s.hlsStatus?s.hlsStatus+' ':'')+'Oynatıcı Ayarları içindeki Uyumlu Oynat veya MP4 8 sn Test seçeneklerini deneyin.');
   stop();
  }
  function releaseSource(){
-  video.pause();video.removeAttribute('src');video.load();
+  video.pause();video.removeAttribute('src');
+  clearRelaySource();
+  video.load();
+ }
+ function clearRelaySource(){
+  if(!relaySource)return;
+  if(relaySource.parentNode===video)video.removeChild(relaySource);
+  relaySource=null;
  }
  function switchSource(s,phase,transport,url){
   s.switching=true;s.phase=phase;s.observed=false;s.lastTime=0;
   if(s.info){s.info.transport=transport;s.info.retrying=true;if(phase==='mp4')s.info.extension='mp4';}
   try{
    releaseSource();
-   video.src=url;video.load();
+   if(phase==='hls-relay'){
+    relaySource=document.createElement('source');
+    relaySource.setAttribute('src',url);
+    relaySource.setAttribute('type','application/vnd.apple.mpegurl;mediaOption='+encodeURI(JSON.stringify({mediaTransportType:'HLS'})));
+    relaySource.addEventListener('error',s.onSourceError,false);
+    video.appendChild(relaySource);
+   }else video.src=url;
+   video.load();
    s.switching=false;arm(s);
    var p=video.play();if(p&&p.catch)p.catch(function(){if(current===s&&s.phase===phase)fail(s,'Oynatma isteği reddedildi',0);});
   }catch(e){s.switching=false;fail(s,'Alternatif kaynak başlatılamadı',0);}
@@ -57,19 +72,19 @@
    var item=data.failedKind==='playlist'?'Liste':data.failedKind==='segment'?'Video parçası':'HLS dosyası';
    return item+' HTTP '+status+(upstream>=400&&upstream<=599?' / sağlayıcı HTTP '+upstream:'')+'.';
   }
-  if(!data.playlistRequests)return 'LG medya oynatıcısından liste isteği gelmedi.';
+  if(!data.playlistRequests)return 'LG medya oynatıcısından liste GET isteği gelmedi.';
   if(!data.playlistsServed)return 'Liste isteği tamamlanmadı.';
   if(!data.segmentRequests)return 'Liste gönderildi, video parçası istenmedi.';
   if(!data.segmentsServed)return 'Video parçası isteği tamamlanmadı.';
   return 'Video parçası gönderildi, görüntü başlayamadı.';
  }
- function inspectHls(s,code){
+ function inspectHls(s,reason,code){
   s.phase='hls-status';s.switching=true;
   clearTimeout(s.timer);s.timer=null;
   function complete(detail){
    if(current!==s||s.phase!=='hls-status')return;
    s.request=null;
-   s.hlsStatus=(code?'Uyumlu HLS LG '+code+'. ':'Uyumlu HLS zaman aşımı. ')+detail;
+   s.hlsStatus=(code?'Uyumlu HLS LG '+code:'Uyumlu HLS: '+reason)+'. '+detail;
    retryMp4(s);
   }
   try{
@@ -143,11 +158,12 @@
    observed:false,lastTime:0,played:false,switching:false,timer:null};
   if(!s.directUrl)return false;
   s.onError=function(){var code=Number(video.error&&video.error.code)||0;fail(s,'TV medya hatası '+code,code);};
+  s.onSourceError=function(){if(s.phase==='hls-relay')fail(s,'LG kaynak öğesini reddetti',Number(video.error&&video.error.code)||0);};
   s.onProgress=function(){progress(s);};
   current=s;
   video.addEventListener('error',s.onError,false);
   video.addEventListener('timeupdate',s.onProgress,false);
   arm(s);return true;
  }
- root.XIPTVVODRecovery={start:start,stop:stop};
+ root.XIPTVVODRecovery={start:start,stop:stop,clearRelaySource:clearRelaySource};
 })(window);
