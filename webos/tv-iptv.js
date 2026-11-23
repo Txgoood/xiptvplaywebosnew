@@ -447,6 +447,7 @@
     var ticket=++renderTicket,filterStarted=new Date().getTime();
     focusCache=null;
     clear(channels);
+    if(window.XIPTVCatalogNavigation)window.XIPTVCatalogNavigation.invalidate(channels);
     var count=0;
     var normalize=window.XIPTVGlobalSearch&&window.XIPTVGlobalSearch.normal||function(value){return String(value||'').toLowerCase();};
     var query=normalize(document.getElementById('tv-search').value||''),searchScope=document.getElementById('tv-search-scope').value;
