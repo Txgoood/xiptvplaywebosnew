@@ -2,10 +2,10 @@
  * This is not codec transcoding. Native/proxy retries cannot decode unsupported codecs.
  * Never attach this state machine to live-TV streams. */
 (function(root){
- var video=document.getElementById('video'),current=null,relaySource=null,localBridge=null;
+ var video=document.getElementById('video'),current=null,relaySource=null,localRequest=null;
  function closeLocal(){
-  var bridge=localBridge;localBridge=null;
-  if(bridge){bridge.onservicecallback=function(){};try{bridge.cancel();}catch(e){}}
+  var request=localRequest;localRequest=null;
+  if(request&&request.cancel){try{request.cancel();}catch(e){}}
  }
  function stop(keepPlayback){
   if(keepPlayback!==true)closeLocal();
@@ -25,11 +25,14 @@
  function fail(s,reason,code){
   if(current!==s||s.switching||s.played)return;
   var isHls=/\.m3u8(?:[?#]|$)/i.test(s.directUrl);
-  if(s.phase==='direct'&&s.allowProxy&&root.XIPTV_PKG==='native'&&typeof root.PalmServiceBridge==='function'){
+  if(s.phase==='direct'&&s.allowProxy&&root.XIPTV_PKG==='native'){
    prepareLocal(s);return;
   }
-  if(s.phase==='local-hls')closeLocal();
-  var needsFallback=s.phase==='direct'||s.phase==='local-hls';
+  if(s.phase==='local-hls'||s.phase==='hls-relay'){
+   switchSource(s,s.phase+'-url',s.info&&s.info.transport,s.hlsUrl);return;
+  }
+  if(s.phase==='local-hls-url')closeLocal();
+  var needsFallback=s.phase==='direct'||s.phase==='local-hls-url';
   if(needsFallback&&isHls&&s.hlsSource&&s.hlsBase){
    prepareHls(s);
    return;
@@ -40,9 +43,9 @@
    switchSource(s,'proxy','proxy-auto',s.proxyPrefix+'?url='+encodeURIComponent(s.directUrl));
    return;
   }
-  if(s.phase==='hls-relay'){inspectHls(s,reason,code);return;}
+  if(s.phase==='hls-relay-url'){inspectHls(s,reason,code);return;}
   if(s.info){s.info.retrying=false;s.info.terminal=true;s.info.failureReason='VOD '+(code===4?'codec-or-format':'transport');}
-  notify(s,'Film/dizi açılamadı ('+(code===4?'LG Hata 4: TV kaynağı açamadı':reason)+'). '+(s.localStatus?'TV içi oynatma: '+s.localStatus+'. ':'')+(s.hlsStatus||''));
+  notify(s,'Film/dizi açılamadı ('+(code===4?'LG Hata 4: TV kaynağı açamadı':reason)+'). TV içi oynatma: '+(s.localStatus||'bu pakette TV servisi bulunmuyor')+'. '+(s.hlsStatus||''));
   stop();
  }
  function releaseSource(){
@@ -61,9 +64,10 @@
   try{
    releaseSource();
    if(phase==='hls-relay'||phase==='local-hls'){
+    s.hlsUrl=url;
     relaySource=document.createElement('source');
     relaySource.setAttribute('src',url);
-    relaySource.setAttribute('type','application/vnd.apple.mpegurl;mediaOption='+encodeURI(JSON.stringify({mediaTransportType:'HLS'})));
+    relaySource.setAttribute('type','application/x-mpegurl');
     relaySource.addEventListener('error',s.onSourceError,false);
     video.appendChild(relaySource);
    }else video.src=url;
@@ -75,30 +79,51 @@
  function prepareLocal(s){
   clearTimeout(s.timer);s.phase='local-open';s.switching=true;
   if(s.info)s.info.retrying=true;
-  function unavailable(){
+  var request={cancel:null};
+  localRequest=request;
+  function unavailable(detail){
    if(current!==s||s.phase!=='local-open')return;
-   clearTimeout(s.timer);s.phase='local-hls';s.switching=false;
-   s.localStatus='yerel servis açılamadı';fail(s,'TV içi servis açılamadı',0);
+   clearTimeout(s.timer);s.phase='local-hls-url';s.switching=false;
+   s.localStatus=detail;fail(s,'TV içi servis açılamadı',0);
   }
-  try{
-   releaseSource();
-   var bridge=new root.PalmServiceBridge();localBridge=bridge;
-   s.timer=setTimeout(unavailable,6000);
-   bridge.onservicecallback=function(raw){
-    if(localBridge!==bridge||current!==s)return;
-    var data;try{data=JSON.parse(raw);}catch(e){unavailable();return;}
-    if(!data||!data.returnValue){unavailable();return;}
+  function receive(data){
+    if(localRequest!==request||current!==s)return;
+    if(!data||!data.returnValue){
+     var code=Number(data&&data.errorCode);
+     unavailable('TV servisi çağrısı başarısız'+(code?' (kod '+code+')':''));
+     return;
+    }
     if(s.phase==='local-open'&&/^http:\/\/127\.0\.0\.1:\d+\/[a-f0-9]{40}\/index\.m3u8$/.test(data.url||'')){
      s.localStatus='oynatıcı listeyi istemedi';
      switchSource(s,'local-hls','tv-local-hls',data.url);return;
     }
-    if(s.phase!=='local-hls')return;
+    if(s.phase!=='local-hls'&&s.phase!=='local-hls-url')return;
     var stages={'list-request':'liste istendi','list-ready':'liste sunuldu','media-request':'medya parçası istendi','media-bytes':'medya verisi geldi'};
     if(stages[data.stage])s.localStatus=stages[data.stage];
     else if(/^error-(list|ts|mp4|aac|vtt|data)-\d{3}$/.test(data.stage||''))s.localStatus=data.stage;
-   };
-   bridge.call('luna://com.xiptvplay.tv.native.vod/open',JSON.stringify({subscribe:true,url:s.directUrl}));
-  }catch(e){unavailable();}
+  }
+  var serviceUri='luna://com.xiptvplay.tv.native.vod';
+  var params={subscribe:true,url:s.directUrl};
+  try{
+   releaseSource();
+   s.timer=setTimeout(function(){unavailable('TV servisi 6 saniye içinde yanıt vermedi');},6000);
+   var api=root.webOS&&root.webOS.service;
+   if(api&&api.request){
+    var subscription=api.request(serviceUri,{method:'open',parameters:params,subscribe:true,onSuccess:receive,onFailure:receive});
+    request.cancel=function(){if(subscription&&subscription.cancel)subscription.cancel();};
+    if(localRequest!==request)request.cancel();
+   }else{
+    var Bridge=root.PalmServiceBridge||root.WebOSServiceBridge;
+    if(!Bridge){unavailable('webOS servis köprüsü bulunamadı');return;}
+    var bridge=new Bridge();
+    request.cancel=function(){bridge.onservicecallback=function(){};bridge.cancel();};
+    bridge.onservicecallback=function(raw){
+     var data;try{data=JSON.parse(raw);}catch(e){data=null;}
+     receive(data);
+    };
+    bridge.call(serviceUri+'/open',JSON.stringify(params));
+   }
+  }catch(e){unavailable('webOS servis bağlantısı başlatılamadı');}
  }
  function retryMp4(s){
   notify(s,'HLS açılmadı; sağlayıcının MP4 adresi bir kez deneniyor.');

@@ -147,11 +147,12 @@ test('film and series HLS recover through a scoped relay before trying a real MP
   f.requests[0].respond(200,{success:true,path});
   assert.equal(f.video.src,'');
   assert.equal(f.video.child.src,'https://media.example'+path);
-  const [mime,options]=f.video.child.type.split(';mediaOption=');
-  assert.equal(mime,'application/vnd.apple.mpegurl');
-  assert.deepEqual(JSON.parse(decodeURI(options)),{mediaTransportType:'HLS'});
+  assert.equal(f.video.child.type,'application/x-mpegurl');
   assert.equal(info.transport,'lg-hls-relay');
   f.video.child.error();
+  assert.equal(f.video.src,'https://media.example'+path);
+  assert.equal(f.requests.length,1);
+  f.video.emit('error');
   assert.equal(f.requests[1].method,'GET');
   assert.equal(f.video.child,null);
   assert.match(f.requests[1].url,/\/status$/);
@@ -173,6 +174,37 @@ test('a working HLS source remains attached until switching away from the player
  assert.equal(typeof f.video.child.error,'undefined');
  f.win.XIPTVVODRecovery.clearRelaySource();
  assert.equal(f.video.child,null);
+});
+
+test('missing native service bridge is visible after the relay fallback fails',()=>{
+ const f=fixture();
+ f.win.XIPTV_PKG='native';
+ f.begin('movie','direct','m3u8',true);
+ f.video.error={code:4};f.video.emit('error');
+ f.requests[0].respond(404,{});
+ f.video.emit('error');
+ assert.match(f.events.at(-1),/webOS servis köprüsü bulunamadı/);
+});
+
+test('native webOS service API opens a session and the URL retry keeps it alive',()=>{
+ const f=fixture();let options,cancelled=false;
+ f.win.XIPTV_PKG='native';
+ f.win.webOS={service:{request(uri,request){
+  assert.equal(uri,'luna://com.xiptvplay.tv.native.vod');
+  options=request;
+  return {cancel(){cancelled=true;}};
+ }}};
+ f.begin('movie','direct','m3u8',true);
+ f.video.error={code:4};f.video.emit('error');
+ const local='http://127.0.0.1:1234/'+'b'.repeat(40)+'/index.m3u8';
+ options.onSuccess({returnValue:true,url:local});
+ assert.equal(f.video.child.type,'application/x-mpegurl');
+ f.video.child.error();
+ assert.equal(f.video.src,local);
+ assert.equal(cancelled,false);
+ f.video.emit('error');
+ assert.equal(cancelled,true);
+ assert.equal(f.requests[0].url,'https://media.example/tv-hls');
 });
 
 test('retired HLS preparation cannot replace a new channel and 404 falls back once',()=>{
