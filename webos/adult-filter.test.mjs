@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const source=fs.readFileSync(new URL('./tv-features.js',import.meta.url),'utf8');
-const isolated=source.split('/* XIPTV Play')[0];
+const isolated=source.split('/* XIPTV TV companion controls')[0];
 function makeFilter(enabled=true,child=false){
  const document={getElementById:()=>({checked:enabled})};
  const window={XIPTVTV:{isChildProfile:()=>child},XIPTVGlobalCatalog:{
