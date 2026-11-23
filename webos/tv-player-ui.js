@@ -41,7 +41,7 @@
  function openMenu(kind){
   if(menuKind===kind&&menu.style.display!=='none'){closeMenu();return;}
   menuKind=kind;menu.innerHTML='';
-  var heading=document.createElement('div');heading.className='tv-menu-heading';heading.textContent=kind==='audio'?'Ses Parçası':kind==='subtitle'?'Altyazı':kind==='speed'?'Oynatma Hızı':'Oynatıcı Araçları';menu.appendChild(heading);
+  var heading=document.createElement('div');heading.className='tv-menu-heading';heading.textContent=kind==='audio'?'Ses Parçası':kind==='subtitle'?'Altyazı':kind==='speed'?'Oynatma Hızı':'Oynatma Ayarları';menu.appendChild(heading);
   var close=document.createElement('button');close.textContent='✕ Kapat';close.className='tv-menu-close';close.onclick=closeMenu;menu.appendChild(close);
   if(kind==='audio'||kind==='subtitle'){
    if(window.XIPTVTV&&window.XIPTVTV.refreshTracks)window.XIPTVTV.refreshTracks();
@@ -72,7 +72,7 @@
     b.onclick=function(){speed.value=String(rate);if(typeof speed.onchange==='function')speed.onchange();notice('Oynatma hızı '+rate+'x olarak istendi','info');closeMenu();};menu.appendChild(b);
    })(speeds[j]);
   }else{
-   var actions=[['← Geri — kataloğa dön','tv-player-back'],['Ses/altyazı yeniden tara','tv-lg-media-scan'],['MKV parça listesini yenile','tv-mkv-scan'],['Önceki oynatıcıya dön','tv-lg-native-return'],['Alternatif oynatıcı','tv-alt-player'],['Uyumlu Oynat (360p deneme)','tv-compat-play'],['MP4 8 sn Test','tv-compat-mp4'],['Gelişmiş teknik bilgiler','tv-controls-toggle']];
+   var actions=[['← Geri — kataloğa dön','tv-player-back'],['Ses parçası seç','tv-open-audio'],['Altyazı seç','tv-open-subtitle'],['Oynatma hızı','tv-open-speed'],['Gelişmiş oynatma bilgileri','tv-controls-toggle']];
    for(var k=0;k<actions.length;k++)(function(entry){
     var target=byId(entry[1]);if(!target||target.style.display==='none')return;
     var b=document.createElement('button');b.className='tv-menu-option';b.textContent=entry[0];
