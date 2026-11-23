@@ -1,0 +1,6 @@
+{
+  "name": "com.xiptvplay.tv.native.vod",
+  "version": "1.0.0",
+  "main": "service.js",
+  "description": "TV-local HLS playback service for XIPTV Play Native"
+}

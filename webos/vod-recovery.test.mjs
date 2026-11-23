@@ -85,9 +85,45 @@ test('changing source cancels old watchdog; empty VOD context is ignored',()=>{
 test('paused playback never restarts itself via watchdog',()=>{
  const f=fixture();f.begin('movie','direct','mp4');
  f.video.paused=true;
+ f.video.readyState=3;
  f.timers[f.timers.length-1].fn();
  assert.equal((f.handlers.error||[]).length,0);
  assert.equal(f.video.src,'');
+});
+
+test('TV-local HLS starts automatically, survives progress and closes on exit',()=>{
+ for(const kind of ['series','movie']){
+  const f=fixture();let bridge;
+  f.win.XIPTV_PKG='native';
+  f.win.PalmServiceBridge=function(){bridge=this;this.call=(uri,json)=>{
+   assert.match(uri,/native\.vod\/open$/);
+   assert.equal(JSON.parse(json).subscribe,true);
+   assert.match(JSON.parse(json).url,new RegExp('/'+kind+'/'));
+  };this.cancel=()=>{this.closed=true;};};
+  const info=f.begin(kind,'direct','m3u8',true).info;
+  f.video.paused=true;f.video.readyState=0;
+  f.timers.at(-1).fn();
+  const local='http://127.0.0.1:3456/'+'a'.repeat(40)+'/index.m3u8';
+  bridge.onservicecallback(JSON.stringify({returnValue:true,url:local}));
+  assert.equal(f.video.child.src,local);assert.equal(info.transport,'tv-local-hls');
+  f.video.currentTime=1;f.video.emit('timeupdate');
+  f.video.currentTime=2;f.video.emit('timeupdate');
+  assert.equal(bridge.closed,undefined);assert.equal(f.requests.length,0);
+  f.win.XIPTVVODRecovery.stop();assert.ok(bridge.closed);
+ }
+});
+
+test('service open timeout falls back once and ignores late replies',()=>{
+ const f=fixture();let bridge;
+ f.win.XIPTV_PKG='native';
+ f.win.PalmServiceBridge=function(){bridge=this;this.call=()=>{};this.cancel=()=>{};};
+ f.begin('movie','direct','m3u8',true);
+ f.video.emit('error');
+ const late=bridge.onservicecallback;
+ f.timers.at(-1).fn();
+ late(JSON.stringify({returnValue:true,url:'http://127.0.0.1:1234/'+'f'.repeat(40)+'/index.m3u8'}));
+ assert.equal(f.requests.length,1);assert.match(f.requests[0].url,/media.example\/tv-hls$/);
+ assert.ok(!f.video.child);
 });
 
 test('failed movie HLS tries a single MP4 URL, never repeats the same HLS proxy',()=>{

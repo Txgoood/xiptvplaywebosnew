@@ -2,8 +2,13 @@
  * This is not codec transcoding. Native/proxy retries cannot decode unsupported codecs.
  * Never attach this state machine to live-TV streams. */
 (function(root){
- var video=document.getElementById('video'),current=null,relaySource=null;
- function stop(){
+ var video=document.getElementById('video'),current=null,relaySource=null,localBridge=null;
+ function closeLocal(){
+  var bridge=localBridge;localBridge=null;
+  if(bridge){bridge.onservicecallback=function(){};try{bridge.cancel();}catch(e){}}
+ }
+ function stop(keepPlayback){
+  if(keepPlayback!==true)closeLocal();
   var s=current;current=null;
   if(!s||!video)return;
   if(s.timer)clearTimeout(s.timer);
@@ -15,16 +20,21 @@
  function notify(s,message){if(typeof s.onStatus==='function')s.onStatus(message);}
  function arm(s){
   if(s.timer)clearTimeout(s.timer);
-  s.timer=setTimeout(function(){if(current!==s)return;if(video.paused){stop();return;}fail(s,'Görüntü ilerlemesi 18 saniye içinde algılanmadı',0);},18000);
+  s.timer=setTimeout(function(){if(current!==s)return;if(video.paused&&video.readyState>=2){stop(true);return;}fail(s,'Görüntü ilerlemesi 18 saniye içinde algılanmadı',0);},18000);
  }
  function fail(s,reason,code){
   if(current!==s||s.switching||s.played)return;
   var isHls=/\.m3u8(?:[?#]|$)/i.test(s.directUrl);
-  if(s.phase==='direct'&&isHls&&s.hlsSource&&s.hlsBase){
+  if(s.phase==='direct'&&s.allowProxy&&root.XIPTV_PKG==='native'&&typeof root.PalmServiceBridge==='function'){
+   prepareLocal(s);return;
+  }
+  if(s.phase==='local-hls')closeLocal();
+  var needsFallback=s.phase==='direct'||s.phase==='local-hls';
+  if(needsFallback&&isHls&&s.hlsSource&&s.hlsBase){
    prepareHls(s);
    return;
   }
-  if(s.phase==='direct'&&s.allowProxy){
+  if(needsFallback&&s.allowProxy){
    if(isHls){retryMp4(s);return;}
    notify(s,'Film/dizi açılmadı; Render proxy üzerinden bir kez daha deneniyor.');
    switchSource(s,'proxy','proxy-auto',s.proxyPrefix+'?url='+encodeURIComponent(s.directUrl));
@@ -32,7 +42,7 @@
   }
   if(s.phase==='hls-relay'){inspectHls(s,reason,code);return;}
   if(s.info){s.info.retrying=false;s.info.terminal=true;s.info.failureReason='VOD '+(code===4?'codec-or-format':'transport');}
-  notify(s,'Film/dizi açılamadı ('+(code===4?'LG Hata 4: TV kaynağı açamadı':reason)+'). '+(s.hlsStatus?s.hlsStatus+' ':'')+'Oynatıcı Ayarları içindeki Uyumlu Oynat veya MP4 8 sn Test seçeneklerini deneyin.');
+  notify(s,'Film/dizi açılamadı ('+(code===4?'LG Hata 4: TV kaynağı açamadı':reason)+'). '+(s.localStatus?'TV içi oynatma: '+s.localStatus+'. ':'')+(s.hlsStatus||''));
   stop();
  }
  function releaseSource(){
@@ -50,7 +60,7 @@
   if(s.info){s.info.transport=transport;s.info.retrying=true;if(phase==='mp4')s.info.extension='mp4';}
   try{
    releaseSource();
-   if(phase==='hls-relay'){
+   if(phase==='hls-relay'||phase==='local-hls'){
     relaySource=document.createElement('source');
     relaySource.setAttribute('src',url);
     relaySource.setAttribute('type','application/vnd.apple.mpegurl;mediaOption='+encodeURI(JSON.stringify({mediaTransportType:'HLS'})));
@@ -61,6 +71,34 @@
    s.switching=false;arm(s);
    var p=video.play();if(p&&p.catch)p.catch(function(){if(current===s&&s.phase===phase)fail(s,'Oynatma isteği reddedildi',0);});
   }catch(e){s.switching=false;fail(s,'Alternatif kaynak başlatılamadı',0);}
+ }
+ function prepareLocal(s){
+  clearTimeout(s.timer);s.phase='local-open';s.switching=true;
+  if(s.info)s.info.retrying=true;
+  function unavailable(){
+   if(current!==s||s.phase!=='local-open')return;
+   clearTimeout(s.timer);s.phase='local-hls';s.switching=false;
+   s.localStatus='yerel servis açılamadı';fail(s,'TV içi servis açılamadı',0);
+  }
+  try{
+   releaseSource();
+   var bridge=new root.PalmServiceBridge();localBridge=bridge;
+   s.timer=setTimeout(unavailable,6000);
+   bridge.onservicecallback=function(raw){
+    if(localBridge!==bridge||current!==s)return;
+    var data;try{data=JSON.parse(raw);}catch(e){unavailable();return;}
+    if(!data||!data.returnValue){unavailable();return;}
+    if(s.phase==='local-open'&&/^http:\/\/127\.0\.0\.1:\d+\/[a-f0-9]{40}\/index\.m3u8$/.test(data.url||'')){
+     s.localStatus='oynatıcı listeyi istemedi';
+     switchSource(s,'local-hls','tv-local-hls',data.url);return;
+    }
+    if(s.phase!=='local-hls')return;
+    var stages={'list-request':'liste istendi','list-ready':'liste sunuldu','media-request':'medya parçası istendi','media-bytes':'medya verisi geldi'};
+    if(stages[data.stage])s.localStatus=stages[data.stage];
+    else if(/^error-(list|ts|mp4|aac|vtt|data)-\d{3}$/.test(data.stage||''))s.localStatus=data.stage;
+   };
+   bridge.call('luna://com.xiptvplay.tv.native.vod/open',JSON.stringify({subscribe:true,url:s.directUrl}));
+  }catch(e){unavailable();}
  }
  function retryMp4(s){
   notify(s,'HLS açılmadı; sağlayıcının MP4 adresi bir kez deneniyor.');
@@ -142,7 +180,7 @@
   if(t>s.lastTime+0.35){
    s.played=true;
    if(s.info){s.info.retrying=false;s.info.terminal=false;}
-   stop();return;
+   stop(true);return;
   }
   if(t<s.lastTime-1){s.lastTime=t;return;}
  }
@@ -158,7 +196,7 @@
    observed:false,lastTime:0,played:false,switching:false,timer:null};
   if(!s.directUrl)return false;
   s.onError=function(){var code=Number(video.error&&video.error.code)||0;fail(s,'TV medya hatası '+code,code);};
-  s.onSourceError=function(){if(s.phase==='hls-relay')fail(s,'LG kaynak öğesini reddetti',Number(video.error&&video.error.code)||0);};
+  s.onSourceError=function(event){if(event&&event.target!==relaySource)return;if(s.phase==='hls-relay'||s.phase==='local-hls')fail(s,'LG kaynak öğesini reddetti',Number(video.error&&video.error.code)||0);};
   s.onProgress=function(){progress(s);};
   current=s;
   video.addEventListener('error',s.onError,false);

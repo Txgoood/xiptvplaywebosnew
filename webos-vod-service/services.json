@@ -1,0 +1,7 @@
+{
+  "id": "com.xiptvplay.tv.native.vod",
+  "services": [{
+    "name": "com.xiptvplay.tv.native.vod",
+    "commands": [{"name": "open", "public": true}]
+  }]
+}

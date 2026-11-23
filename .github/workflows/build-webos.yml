@@ -1,5 +1,5 @@
 name: Build LG webOS IPK
-run-name: XIPTV Play LG webOS v1.0.84 Build #${{ github.run_number }} • ${{ github.event_name }}
+run-name: XIPTV Play LG webOS v1.0.85 Build #${{ github.run_number }} • ${{ github.event_name }}
 
 on:
   workflow_dispatch:
@@ -8,6 +8,7 @@ on:
       - main
     paths:
       - 'webos/**'
+      - 'webos-vod-service/**'
       - '.github/workflows/build-webos.yml'
 
 permissions:
@@ -49,6 +50,7 @@ jobs:
           node --test webos/playlist-input.test.mjs
           node --check webos/tv-vod-recovery.js
           node --test webos/vod-recovery.test.mjs
+          node --test webos/local-vod-service.test.mjs
           node --check webos/tv-iptv.js
           node --check webos/tv-catalog-navigation.js
           node --test webos/catalog-navigation.test.mjs
@@ -122,7 +124,7 @@ jobs:
             echo "Unsupported modern JavaScript module found in webOS 2 package"
             exit 1
           fi
-          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.84'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true||f.disableBackHistoryAPI!==true) process.exit(1)"
+          node -e "const f=require('./webos-package/appinfo.json'); if(f.type!=='web'||f.main!=='index.html'||f.id!=='com.xiptvplay.tv'||f.version!=='1.0.85'||f.trustLevel!=='netcast'||f.vendorExtension?.allowCrossDomain!==true||f.disableBackHistoryAPI!==true) process.exit(1)"
 
       - name: Run remote-control and playback UI smoke tests
         run: node webos/legacy-smoke-test.mjs
@@ -137,7 +139,7 @@ jobs:
           grep -q "XIPTV_PKG='native'" webos-package-native/pkg-info.js
           grep -q "XIPTV_PKG='netcast'" webos-package/pkg-info.js
           grep -q 'tv-mkv-tracks.js' webos-package-native/index.html
-          node -e "const f=require('./webos-package-native/appinfo.json'); if(f.id!=='com.xiptvplay.tv.native'||f.version!=='1.0.84'||f.trustLevel!==undefined||f.vendorExtension!==undefined||f.disableBackHistoryAPI!==true||f.title!=='XIPTV Play Native'||f.main!=='index.html') process.exit(1)"
+          node -e "const f=require('./webos-package-native/appinfo.json'); if(f.id!=='com.xiptvplay.tv.native'||f.version!=='1.0.85'||f.trustLevel!==undefined||f.vendorExtension!==undefined||f.disableBackHistoryAPI!==true||f.title!=='XIPTV Play Native'||f.main!=='index.html') process.exit(1)"
 
       - name: Install webOS CLI
         run: |
@@ -152,7 +154,10 @@ jobs:
           find webos-artifacts -maxdepth 1 -name '*.ipk' -type f -size +0c -print | tee /tmp/webos-ipk-list.txt
           test -s /tmp/webos-ipk-list.txt
           mkdir -p webos-artifacts-native
-          ares-package --no-minify ./webos-package-native -o ./webos-artifacts-native
+          ares-package --no-minify ./webos-package-native ./webos-vod-service -o ./webos-artifacts-native
+          native_ipk=$(find webos-artifacts-native -name '*.ipk' -print -quit)
+          ar p "$native_ipk" data.tar.gz | tar -tzf - > /tmp/webos-native-files.txt
+          grep -q '/services/com.xiptvplay.tv.native.vod/service.js$' /tmp/webos-native-files.txt
           find webos-artifacts-native -maxdepth 1 -name '*.ipk' -type f -size +0c -print | tee /tmp/webos-ipk-native-list.txt
           test -s /tmp/webos-ipk-native-list.txt
 
