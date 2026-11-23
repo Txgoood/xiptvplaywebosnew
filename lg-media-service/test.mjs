@@ -186,3 +186,16 @@ test('provider HLS aliases preserve variant, segment, key and subtitle roles',()
  ts[188]=0;
  assert.equal(hasTsSync(ts),false);
 });
+
+test('HLS identity AES-128 applies only to the encrypted segment sequence',()=>{
+ const manifest='#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI="key.txt"\n#EXTINF:5,\npart.txt\n#EXT-X-KEY:METHOD=NONE\n#EXTINF:5,\nclear.txt\n';
+ const assets=[];
+ rewriteHlsManifest(manifest,'http://provider.example/film.m3u8',(_url,path,kind,encrypted)=>{
+  assets.push([path,kind,encrypted]);return path;
+ });
+ assert.deepEqual(assets,[
+  ['/key.txt','asset',false],
+  ['/part.txt','segment',true],
+  ['/clear.txt','segment',false]
+ ]);
+});

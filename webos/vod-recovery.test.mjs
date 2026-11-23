@@ -19,7 +19,7 @@ function fixture(){
   constructor(){requests.push(this);}
   open(method,url){this.method=method;this.url=url;}
   setRequestHeader(){}
-  send(body){this.body=JSON.parse(body);}
+  send(body){this.body=body===null?null:JSON.parse(body);}
   abort(){this.aborted=true;}
   respond(status,data){this.status=status;this.responseText=JSON.stringify(data);this.onload?.();}
  }
@@ -102,10 +102,14 @@ test('film and series HLS recover through a scoped relay before trying a real MP
   assert.equal(f.video.src,'https://media.example'+path);
   assert.equal(info.transport,'lg-hls-relay');
   f.video.emit('error');
+  assert.equal(f.requests[1].method,'GET');
+  assert.match(f.requests[1].url,/\/status$/);
+  f.requests[1].respond(200,{playlistRequests:1,playlistsServed:1,segmentRequests:0,segmentsServed:0});
   assert.match(f.video.src,/\.mp4$/);
   f.video.emit('error');
   assert.equal(info.terminal,true);
-  assert.equal(f.requests.length,1);
+  assert.match(f.events.at(-1),/Uyumlu HLS LG 4\. Liste gönderildi, video parçası istenmedi/);
+  assert.equal(f.requests.length,2);
  }
 });
 

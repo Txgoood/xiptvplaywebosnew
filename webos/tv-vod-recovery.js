@@ -29,7 +29,7 @@
    switchSource(s,'proxy','proxy-auto',s.proxyPrefix+'?url='+encodeURIComponent(s.directUrl));
    return;
   }
-  if(s.phase==='hls-relay'){retryMp4(s);return;}
+  if(s.phase==='hls-relay'){inspectHls(s,code);return;}
   if(s.info){s.info.retrying=false;s.info.terminal=true;s.info.failureReason='VOD '+(code===4?'codec-or-format':'transport');}
   notify(s,'Film/dizi açılamadı ('+(code===4?'LG Hata 4: TV kaynağı açamadı':reason)+'). '+(s.hlsStatus?s.hlsStatus+' ':'')+'Oynatıcı Ayarları içindeki Uyumlu Oynat veya MP4 8 sn Test seçeneklerini deneyin.');
   stop();
@@ -51,6 +51,42 @@
   notify(s,'HLS açılmadı; sağlayıcının MP4 adresi bir kez deneniyor.');
   switchSource(s,'mp4','native-mp4-fallback',s.directUrl.replace(/\.m3u8(?=[?#]|$)/i,'.mp4'));
  }
+ function describeRelay(data){
+  var status=Number(data.failedStatus),upstream=Number(data.upstreamStatus);
+  if(status>=400&&status<=599){
+   var item=data.failedKind==='playlist'?'Liste':data.failedKind==='segment'?'Video parçası':'HLS dosyası';
+   return item+' HTTP '+status+(upstream>=400&&upstream<=599?' / sağlayıcı HTTP '+upstream:'')+'.';
+  }
+  if(!data.playlistRequests)return 'LG medya oynatıcısından liste isteği gelmedi.';
+  if(!data.playlistsServed)return 'Liste isteği tamamlanmadı.';
+  if(!data.segmentRequests)return 'Liste gönderildi, video parçası istenmedi.';
+  if(!data.segmentsServed)return 'Video parçası isteği tamamlanmadı.';
+  return 'Video parçası gönderildi, görüntü başlayamadı.';
+ }
+ function inspectHls(s,code){
+  s.phase='hls-status';s.switching=true;
+  clearTimeout(s.timer);s.timer=null;
+  function complete(detail){
+   if(current!==s||s.phase!=='hls-status')return;
+   s.request=null;
+   s.hlsStatus=(code?'Uyumlu HLS LG '+code+'. ':'Uyumlu HLS zaman aşımı. ')+detail;
+   retryMp4(s);
+  }
+  try{
+   releaseSource();
+   var xhr=new XMLHttpRequest();s.request=xhr;
+   xhr.open('GET',s.hlsBase+s.hlsPath.replace(/index\.m3u8$/,'status'),true);
+   xhr.timeout=4500;
+   xhr.onload=function(){
+    try{
+     if(xhr.status===200){complete(describeRelay(JSON.parse(xhr.responseText)));return;}
+    }catch(e){}
+    complete('Servis tanısı alınamadı.');
+   };
+   xhr.onerror=xhr.ontimeout=function(){complete('Servis tanısı alınamadı.');};
+   xhr.send(null);
+  }catch(e){complete('Servis tanısı alınamadı.');}
+ }
  function prepareHls(s){
   s.phase='preparing';s.switching=true;
   clearTimeout(s.timer);s.timer=null;
@@ -60,7 +96,7 @@
    if(current!==s||s.phase!=='preparing')return;
    s.request=null;
    if(path){
-    s.hlsStatus='Uyumlu HLS bağlantısı TV’de görüntü başlatamadı.';
+    s.hlsPath=path;
     switchSource(s,'hls-relay','lg-hls-relay',s.hlsBase+path);
    }else{
     s.hlsStatus='Uyumlu HLS bağlantısı hazırlanamadı ('+(status?'HTTP '+status:'ağ veya zaman aşımı')+').';

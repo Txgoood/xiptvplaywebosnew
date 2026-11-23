@@ -165,24 +165,28 @@ export function rewriteHlsManifest(input, origin, relay){
  if(!/^#EXTM3U(?:\r?\n|$)/.test(source))throw Error('HLS oynatma listesi geçersiz.');
  if(Buffer.byteLength(source,'utf8')>MAX_HLS_MANIFEST_BYTES)throw Error('HLS oynatma listesi çok büyük.');
  let count=0;
- function convert(raw,kind){
+ function convert(raw,kind,encrypted=false){
   if(++count>MAX_HLS_RELAYS)throw Error('HLS parça sınırı aşıldı.');
   let absolute;
   try{absolute=new URL(raw,origin);}
   catch(e){throw Error('HLS medya adresi geçersiz.');}
   if(!['http:','https:'].includes(absolute.protocol)||absolute.username||absolute.password)throw Error('HLS medya protokolü reddedildi.');
-  return relay(absolute.toString(),absolute.pathname,kind);
+  return relay(absolute.toString(),absolute.pathname,kind,encrypted);
  }
- let nextKind='asset';
+ let nextKind='asset',encrypted=false;
  return source.split(/\r?\n/).map(line=>{
   const trimmed=line.trim();
   if(!trimmed)return line;
   if(trimmed[0]!=='#'){
    const kind=nextKind;nextKind='asset';
-   return convert(trimmed,kind);
+   return convert(trimmed,kind,kind==='segment'&&encrypted);
   }
   if(trimmed.startsWith('#EXT-X-STREAM-INF:'))nextKind='playlist';
   if(trimmed.startsWith('#EXTINF:'))nextKind='segment';
+  if(trimmed.startsWith('#EXT-X-KEY:')){
+   const format=/(?:[:,])KEYFORMAT="([^"]+)"/.exec(trimmed);
+   if(!format||format[1]==='identity')encrypted=/(?:[:,])METHOD=AES-128(?:,|$)/.test(trimmed);
+  }
   // EXT-X-KEY, EXT-X-MAP, EXT-X-MEDIA and variant subtitles.
   const kind=/^#EXT-X-(?:MEDIA|I-FRAME-STREAM-INF):/.test(trimmed)?'playlist':'asset';
   return line.replace(/URI="([^"]+)"/g,(_match,uri)=>'URI="'+convert(uri,kind)+'"');
@@ -200,14 +204,14 @@ export function tvHlsAssetFormat(pathname,kind){
  const ext=/\.([a-z0-9]{1,8})$/i.exec(pathname);
  return {extension:ext?ext[1].toLowerCase():'bin'};
 }
-function tvHlsAsset(session,url,pathname,kind){
+function tvHlsAsset(session,url,pathname,kind,encrypted){
  const id=session.assets.length;
- const identity=kind+'\n'+url;
+ const identity=kind+'\n'+encrypted+'\n'+url;
  if(session.assetPaths.has(identity))return session.assetPaths.get(identity);
  if(id>=MAX_HLS_RELAYS)throw Error('HLS parça sınırı aşıldı.');
  const format=tvHlsAssetFormat(pathname,kind);
  const name=id+'.'+format.extension;
- session.assets.push({url,expiry:session.expiry,bytes:0,isHls:kind==='playlist'||format.extension==='m3u8',session,name,checkTs:format.checkTs});
+ session.assets.push({url,expiry:session.expiry,bytes:0,isHls:kind==='playlist'||format.extension==='m3u8',session,name,kind,tsMime:format.extension==='ts',checkTs:format.checkTs&&!encrypted});
  session.assetPaths.set(identity,name);
  return name;
 }
@@ -258,8 +262,8 @@ function relayMedia(url,req,res,ticket,remaining=2){
      if(overflow||res.destroyed)return;
      const staged=[];
      try{
-      const manifest=rewriteHlsManifest(Buffer.concat(parts).toString('utf8'),u.toString(),(nextUrl,pathname,kind)=>{
-       if(ticket.session)return tvHlsAsset(ticket.session,nextUrl,pathname,kind);
+      const manifest=rewriteHlsManifest(Buffer.concat(parts).toString('utf8'),u.toString(),(nextUrl,pathname,kind,encrypted)=>{
+       if(ticket.session)return ticket.session.playlistBase+tvHlsAsset(ticket.session,nextUrl,pathname,kind,encrypted);
        if(mediaTickets.size+staged.length>=MAX_HLS_RELAYS)throw Error('HLS oturum sınırı aşıldı.');
        const key=randomBytes(24).toString('hex');
        const m=/\.([a-z0-9]{1,8})$/i.exec(pathname);
@@ -279,7 +283,7 @@ function relayMedia(url,req,res,ticket,remaining=2){
     res.on('close',()=>upstream.destroy());
     return;
    }
-   const outHeaders={'Content-Type':ticket.checkTs?'video/mp2t':String(response.headers['content-type']||'application/octet-stream')};
+   const outHeaders={'Content-Type':ticket.tsMime?'video/mp2t':String(response.headers['content-type']||'application/octet-stream')};
    for(const field of ['content-length','content-range','accept-ranges'])if(response.headers[field])outHeaders[field]=response.headers[field];
    response.on('data',chunk=>{
     ticket.bytes+=chunk.length;
@@ -527,6 +531,14 @@ const server=http.createServer(async(req,res)=>{
   res.writeHead(204,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Max-Age':'600'});res.end();return;
  }
  const pathname=new URL(req.url||'/', 'http://localhost').pathname;
+ const hlsStatus=pathname.match(/^\/tv-hls\/([a-f0-9]{48})\/status$/);
+ if(req.method==='GET'&&hlsStatus){
+  if(limited(req,res))return;
+  const session=tvHlsSessions.get(hlsStatus[1]);
+  if(!session||session.expiry<Date.now()||session.idleUntil<Date.now()){error(res,404,'HLS oturumu bulunamadı.');return;}
+  json(res,200,session.stats);
+  return;
+ }
  const hlsAsset=pathname.match(/^\/tv-hls\/([a-f0-9]{48})\/(index\.m3u8|\d{1,4}\.[a-z0-9]{1,8})$/);
  if(hlsAsset&&(req.method==='GET'||req.method==='HEAD')){
   const session=tvHlsSessions.get(hlsAsset[1]),name=hlsAsset[2];
@@ -536,6 +548,20 @@ const server=http.createServer(async(req,res)=>{
    error(res,429,'HLS oturum sınırı aşıldı.');return;
   }
   session.active++;session.requests++;session.idleUntil=Date.now()+TV_HLS_IDLE;
+  const stats=session.stats;
+  if(req.method==='GET'&&asset.isHls)stats.playlistRequests++;
+  if(req.method==='GET'&&asset.kind==='segment')stats.segmentRequests++;
+  res.once('finish',()=>{
+   if(res.statusCode===200||res.statusCode===206){
+    if(req.method!=='GET')return;
+    if(asset.isHls)stats.playlistsServed++;
+    if(asset.kind==='segment')stats.segmentsServed++;
+   }else{
+    stats.failedKind=asset.isHls?'playlist':asset.kind;
+    stats.failedStatus=res.statusCode;
+    stats.upstreamStatus=asset.lastStatus||0;
+   }
+  });
   res.once('close',()=>{session.active--;});
   relayMedia(asset.url,req,res,asset);
   return;
@@ -554,10 +580,13 @@ const server=http.createServer(async(req,res)=>{
    for(const [key,session] of tvHlsSessions)if(session.root.url===url&&!session.active)tvHlsSessions.delete(key);
    if(tvHlsSessions.size>=TV_HLS_MAX_SESSIONS){error(res,429,'HLS oturum sınırı aşıldı.');return;}
    const token=randomBytes(24).toString('hex');
-   const session={expiry:Date.now()+TV_HLS_TTL,idleUntil:Date.now()+TV_HLS_IDLE,assets:[],assetPaths:new Map(),active:0,bytes:0,requests:0};
+   const route='/tv-hls/'+token+'/';
+   const publicOrigin=String(process.env.RENDER_EXTERNAL_URL||'').replace(/\/+$/,'');
+   const stats={playlistRequests:0,playlistsServed:0,segmentRequests:0,segmentsServed:0,failedKind:'',failedStatus:0,upstreamStatus:0};
+   const session={expiry:Date.now()+TV_HLS_TTL,idleUntil:Date.now()+TV_HLS_IDLE,assets:[],assetPaths:new Map(),active:0,bytes:0,requests:0,stats,playlistBase:publicOrigin+route};
    session.root={name:'index.m3u8',url,expiry:session.expiry,bytes:0,isHls:true,session};
    tvHlsSessions.set(token,session);
-   json(res,200,{success:true,path:'/tv-hls/'+token+'/index.m3u8'});
+   json(res,200,{success:true,path:route+'index.m3u8'});
   }catch(e){error(res,400,'HLS oturumu hazırlanamadı.');}
   finally{activeHlsPreparations--;}
   return;
