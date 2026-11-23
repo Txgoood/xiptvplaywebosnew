@@ -69,7 +69,9 @@ var ageLookupStarted=false;
 function shelf(node,items,type,limit){
  clear(node);
  if(!items||!items.length){setShelfVisibility(node,false);return;}
- for(var n=0;n<items.length&&n<limit;n++){(function(item){
+ var visible=0;for(var n=0;n<items.length&&visible<limit;n++){(function(item){
+   if(window.XIPTVTV&&window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(type==='films'?'movie':type==='series'?'series':'live',item))return;
+   visible++;
   var b=document.createElement('button');b.type='button';b.className='stitch-movie-tile';
   b.setAttribute('aria-label',String(item.name||item.title||'İçerik'));
   b._xiptvItem=item;b._xiptvType=type;
@@ -95,7 +97,8 @@ function recommendations(items,categories,pattern,limit,strict){
  for(i=0;i<items.length&&result.length<limit;i++){
   item=items[i];name=safeText(item.name||item.title);cat=safeText(map[String(item.category_id)]||'');
   text=name+' '+cat;
-  if(/xxx|adult|erotik|porno|18\+|yetişkin|horror|korku|gerilim|şiddet/i.test(text))continue;
+  if(window.XIPTVAdultFilter&&window.XIPTVAdultFilter.hidden((window.XIPTVGlobalCatalog&&categories===window.XIPTVGlobalCatalog.seriesCategories)?'series':'movie',item,cat))continue;
+   if(/horror|korku|gerilim|şiddet/i.test(text))continue;
   if(strict&&!/çocuk|cocuk|kids|kid|animation|animasyon|cartoon|çizgi|cizgi|family|aile|disney|pixar/i.test(cat))continue;
   if(!pattern.test(text))continue;
   key=String(item.stream_id||item.series_id||item.id||name);
@@ -122,6 +125,11 @@ function limitedPreview(catalog){
 window.XIPTVTVHome={catalog:null,preview:limitedPreview,refresh:function(){if(this.catalog)this.render(this.catalog);},render:function(catalog){
  this.catalog=catalog;
  var movies=catalog.vodStreams||[],series=catalog.seriesList||[],channels=catalog.liveStreams||[];
+  // Keep every home shelf, hero, favorites and resume list consistent with Settings.
+  function allowed(kind,item){return !(window.XIPTVAdultFilter&&window.XIPTVAdultFilter.hidden(kind,item))&&(!window.XIPTVTV||!window.XIPTVTV.isChildProfile||!window.XIPTVTV.isChildProfile()||window.XIPTVTV.isChildApproved(kind,item));}
+  movies=movies.filter(function(item){return allowed('movie',item);});
+  series=series.filter(function(item){return allowed('series',item);});
+  channels=channels.filter(function(item){return allowed('live',item);});
  var newIds=window.XIPTVTVHome.newItemIds||{movie:[],series:[]},newMovieMap={},newSeriesMap={},n;
  for(n=0;n<(newIds.movie||[]).length;n++)newMovieMap[String(newIds.movie[n])]=true;
  for(n=0;n<(newIds.series||[]).length;n++)newSeriesMap[String(newIds.series[n])]=true;
@@ -222,10 +230,12 @@ document.getElementById('tv-fav-live').onclick=function(){favMode('live');};docu
 document.getElementById('tv-nav-search').onclick=function(){open('films');document.getElementById('tv-search').click();};
 document.getElementById('tv-nav-profile').onclick=function(){open('live');document.getElementById('tv-profile-switch').click();};
 function settings(show){settingsPanel.style.display=show?'block':'none';if(show)document.getElementById('tv-settings-close').focus();}
+// Technical controls remain wired to the same IDs, but no longer crowd the player.
+(function(){var dev=document.getElementById('tv-developer-player-tools');if(!dev)return;var ids=['tv-series-proxy','tv-compat-play','tv-compat-mp4','tv-compat-status','tv-vod-diagnose','tv-vod-diagnostics','tv-alt-player','tv-alt-return','tv-alt-player-status','tv-try-ts-inplayer','tv-try-hls-inplayer'];for(var i=0;i<ids.length;i++){var el=document.getElementById(ids[i]);if(el){el.style.display=ids[i].indexOf('status')>=0||ids[i]==='tv-vod-diagnostics'?'none':'';dev.appendChild(el);}}})();
 document.getElementById('tv-nav-settings').onclick=function(){var p=document.getElementById('tv-settings-panel');settings(p.style.display==='none');document.getElementById('tv-favorites-panel').style.display='none';};
 document.addEventListener('click',function(e){var p=document.getElementById('tv-settings-panel'),b=document.getElementById('tv-nav-settings');if(p.style.display!=='none'&&!p.contains(e.target)&&!b.contains(e.target))settings(false);var q=document.getElementById('tv-favorites-panel'),fb=document.getElementById('tv-nav-fav');if(q.style.display!=='none'&&!q.contains(e.target)&&!fb.contains(e.target))q.style.display='none';},false);
 var FILTER_KEY='xiptv_webos2_category_filters_v1';
-function syncFilters(){document.getElementById('tv-tr-only').checked=document.getElementById('tv-settings-tr').checked;document.getElementById('tv-hide-adult').checked=document.getElementById('tv-settings-adult').checked;try{localStorage.setItem(FILTER_KEY,JSON.stringify({tr:document.getElementById('tv-settings-tr').checked,adult:document.getElementById('tv-settings-adult').checked}));}catch(e){}if(window.XIPTVTV&&window.XIPTVTV.refreshCategories)window.XIPTVTV.refreshCategories();}
+function syncFilters(){document.getElementById('tv-tr-only').checked=document.getElementById('tv-settings-tr').checked;document.getElementById('tv-hide-adult').checked=document.getElementById('tv-settings-adult').checked;try{localStorage.setItem(FILTER_KEY,JSON.stringify({tr:document.getElementById('tv-settings-tr').checked,adult:document.getElementById('tv-settings-adult').checked}));}catch(e){}if(window.XIPTVTV&&window.XIPTVTV.refreshCategories)window.XIPTVTV.refreshCategories();if(window.XIPTVTVHome)window.XIPTVTVHome.refresh();if(window.XIPTVGlobalSearch)window.XIPTVGlobalSearch.render();}
 try{var savedFilters=JSON.parse(localStorage.getItem(FILTER_KEY)||'{}');document.getElementById('tv-settings-tr').checked=!!savedFilters.tr;document.getElementById('tv-settings-adult').checked=!!savedFilters.adult;document.getElementById('tv-tr-only').checked=!!savedFilters.tr;document.getElementById('tv-hide-adult').checked=!!savedFilters.adult;}catch(e){}
 document.getElementById('tv-settings-tr').onchange=syncFilters;
 document.getElementById('tv-settings-adult').onchange=syncFilters;

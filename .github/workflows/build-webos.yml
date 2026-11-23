@@ -1,5 +1,5 @@
 name: Build LG webOS IPK
-run-name: XIPTV Play LG webOS v1.0.86 Build #${{ github.run_number }} • ${{ github.event_name }}
+run-name: XIPTV Play LG webOS v1.0.87 Build #${{ github.run_number }} • ${{ github.event_name }}
 
 on:
   workflow_dispatch:
@@ -46,6 +46,7 @@ jobs:
           node --check webos/tv-themes.js
           node --check webos/tv-metadata.js
           node --check webos/tv-features.js
+          node --test webos/adult-filter.test.mjs
           node --check webos/tv-playlist-input.js
           node --test webos/playlist-input.test.mjs
           node --check webos/tv-vod-recovery.js

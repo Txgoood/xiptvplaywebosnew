@@ -30,7 +30,7 @@ function openResult(kind,item){
  window.XIPTVTV.resumeSeriesFromHome=false;
  window.XIPTVTV.openItem(kind,item);
 }
-function canShow(kind,item){if(window.XIPTVTV&&window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(kind,item))return false;var adult=document.getElementById('tv-hide-adult'),tr=document.getElementById('tv-tr-only');var title=String(item.name||item.title||'');if(adult&&adult.checked&&/^(XXX|18\+|ADULT|🔞)/i.test(title))return false;if(tr&&tr.checked&&/\b(EN|US|UK)\b/i.test(title))return false;return true;}
+function canShow(kind,item){if(window.XIPTVTV&&window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(kind,item))return false;var adult=document.getElementById('tv-hide-adult'),tr=document.getElementById('tv-tr-only');var title=String(item.name||item.title||'');if(window.XIPTVAdultFilter&&window.XIPTVAdultFilter.hidden(kind,item))return false;if(tr&&tr.checked&&/\b(EN|US|UK)\b/i.test(title))return false;return true;}
 function render(){
  clear(results);var catalog=window.XIPTVGlobalCatalog,term=input.value.replace(/^\s+|\s+$/g,'');
  if(!catalog){results.appendChild(node('p','tv-global-hint','Katalog yükleniyor. Önce IPTV hesabına bağlanın.'));return;}

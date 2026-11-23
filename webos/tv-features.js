@@ -1,3 +1,35 @@
+/* Shared category/title filter for every surface; no network request and ES5 compatible. */
+(function(){
+ var lastCatalog=null, maps={};
+ function normalize(value){
+  return String(value===null||value===undefined?'':value).toLowerCase()
+   .replace(/[ıİ]/g,'i').replace(/ğ/g,'g').replace(/ü/g,'u').replace(/ş/g,'s').replace(/ö/g,'o').replace(/ç/g,'c');
+ }
+ // Match explicit adult descriptors, not accidental substrings in regular film names.
+ var adultPattern=/(^|[^a-z0-9])(xxx|adult|adults|18\s*\+|\+\s*18|18\s*plus|erotik|erotic|erotica|porno|porn|pornografi|pornography|seks|sex|sexual|nsfw|onlyfans|fetish|fetiş|nude|nudity|playboy|brazzers|yetişkin|yetiskin|🔞)(?=$|[^a-z0-9])/i;
+ function looksAdult(value){return adultPattern.test(normalize(value));}
+ function active(){
+  var checkbox=document.getElementById('tv-hide-adult');
+  return !!(checkbox&&checkbox.checked)||(!!(window.XIPTVTV&&window.XIPTVTV.isChildProfile&&window.XIPTVTV.isChildProfile()));
+ }
+ function map(kind,catalog){
+  if(catalog!==lastCatalog){lastCatalog=catalog;maps={};}
+  if(maps[kind])return maps[kind];
+  var categories=kind==='live'?catalog.liveCategories:kind==='series'?catalog.seriesCategories:catalog.vodCategories;
+  var found={};for(var i=0;i<(categories||[]).length;i++)found[String(categories[i].category_id)]=String(categories[i].category_name||'');
+  maps[kind]=found;return found;
+ }
+ function hidden(kind,item,categoryName){
+  if(!active()||!item)return false;
+  var catalog=window.XIPTVGlobalCatalog||(window.XIPTVTVHome&&window.XIPTVTVHome.catalog);
+  var category=categoryName||item.category_name||item.category||'';
+  if(!category&&catalog)category=map(kind,catalog)[String(item.category_id)]||'';
+  var ids=item.category_ids||[];
+  if(catalog&&ids&&ids.length){var names=map(kind,catalog);for(var i=0;i<ids.length;i++)if(looksAdult(names[String(ids[i])]))return true;}
+  return looksAdult(category)||looksAdult(item.name||item.title)||looksAdult(item.genre||item.genre_names||'');
+ }
+ window.XIPTVAdultFilter={active:active,looksAdult:looksAdult,hidden:hidden};
+})();
 /* XIPTV TV companion controls, ES5-safe. User data stays on this television. */
 (function(){
 var video=document.getElementById('video'),currentKey='',currentEpisodeKey='',scope='default',playingItem=null,playingMode='live',childProfile=false;
@@ -263,7 +295,7 @@ window.XIPTVTV={
  isChildProfile:function(){return childProfile;},
  isChildApproved:isChildApproved,
  setChildApproved:setChildApproved,
- canShowItem:function(mode,item){return !childProfile||isChildApproved(mode,item);},
+ canShowItem:function(mode,item){return !(window.XIPTVAdultFilter&&window.XIPTVAdultFilter.hidden(mode,item))&&(!childProfile||isChildApproved(mode,item));},
  setProfile:function(id,child){childProfile=!!child;scope=id||'default';favoriteCache=null;document.getElementById('tv-hide-adult').checked=!!child||document.getElementById('tv-settings-adult').checked;updateHeart();if(window.XIPTVTV.refresh)window.XIPTVTV.refresh();if(window.XIPTVTVHome&&window.XIPTVTVHome.refresh)window.XIPTVTVHome.refresh();},
  isFavorite:isFavorite,
  getFavoriteOrder:getFavoriteOrder,
