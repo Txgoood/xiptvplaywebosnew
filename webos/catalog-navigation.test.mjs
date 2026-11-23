@@ -46,3 +46,26 @@ test('Badges are skipped; focus scrolls selected poster into view',()=>{
  const visible=cards[18].getBoundingClientRect();assert(visible.bottom<=594);
  nav.focus(root,cards[0]);assert.equal(root.scrollTop,0);
 });
+
+test('Repeated directional moves reuse measurements until catalogue invalidates',()=>{
+ const {root,cards,nav}=grid(6,24);
+ let reads=0;
+ for(const button of cards){
+  const original=button.getBoundingClientRect;
+  button.getBoundingClientRect=()=>{reads++;return original();};
+ }
+ assert.equal(nav.target(root,cards[0],39),cards[1]);
+ const initial=reads;
+ assert.equal(initial,24);
+ assert.equal(nav.target(root,cards[1],40),cards[7]);
+ assert.equal(reads,initial,'no repeated layout measurements on remote key presses');
+ nav.invalidate(root);
+ assert.equal(nav.target(root,cards[1],40),cards[7]);
+ assert.equal(reads,initial+24,'a new page refreshes geometry');
+});
+test('Scrolling keeps cached relative positions and restores focus',()=>{
+ const {root,cards,nav}=grid(6,24);
+ nav.focus(root,cards[18]);
+ assert.equal(nav.target(root,cards[18],38),cards[12]);
+ assert.equal(nav.target(root,cards[12],40),cards[18]);
+});
