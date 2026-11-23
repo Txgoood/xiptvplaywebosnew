@@ -1,10 +1,13 @@
 /*
- * XIPTV Play Native HLS Lab v0.5.2 — one LG webOS 2 native ARM app.
+ * XIPTV Play Native HLS Lab v0.5.3 — one LG webOS 2 native ARM app.
  * SDL remote-only catalogue, phone one-time account pairing, NDL->ACB playback.
  * No shell, browser bridge, fork/exec, or embedded upstream credentials.
  * This is an experimental 8 second clip player, not a complete IPTV player.
  */
 #include <SDL.h>
+#ifdef HAVE_SDL_WEBOS
+#include <SDL_webOS.h>
+#endif
 #include <dlfcn.h>
 #include <ctype.h>
 #include <limits.h>
@@ -106,21 +109,23 @@ static void field(int y,const char *caption,int active){
 }
 static void present(void){
  if(!shell.renderer)return;
- /* Hardware NDL picture lives UNDER the SDL surface. Clear fully transparent:
-    v0.5.0 used alpha=255 and concealed the hardware plane as gray/opaque. */
+ /* The menu owns the SDL surface only after the NDL plane is released. */
  SDL_SetRenderDrawBlendMode(shell.renderer,SDL_BLENDMODE_NONE);
  int w=shell.display_width,h=shell.display_height;
- SDL_SetRenderDrawColor(shell.renderer,0,0,0,0);
- SDL_RenderClear(shell.renderer);
- SDL_SetRenderDrawBlendMode(shell.renderer,SDL_BLENDMODE_BLEND);
+ SDL_SetRenderDrawColor(shell.renderer,12,28,45,255);
+ if(SDL_RenderClear(shell.renderer)!=0){
+  static bool logged;
+  if(!logged){trace(SDL_GetError());logged=true;}
+  return;
+ }
  rect(0,0,w,94,13,42,60);
- draw(28,23,"XIPTV NATIVE HLS LAB  V0.5.2",3,241,248,250);
+ draw(28,23,"XIPTV NATIVE HLS LAB  V0.5.3",3,241,248,250);
  if(mode==0){
   draw(40,126,"TEK SEFERLIK HESAP BAGLAMA",3,228,235,251);
   draw(40,180,"TELEFON TARAYICISINDA AC",3,167,212,234);
   draw(40,228,"XIPTVPLAY-NATIVE-LAB.ONRENDER.COM/PAIR",2,239,229,165);
   draw(40,280,"TV ESLESTIRME KODU",3,167,212,234);
-  draw(40,325,*pair_code?pair_code:"KOD HAZIRLANIYOR",5,251,238,161);
+  draw(40,325,*pair_code?pair_code:"KOD BEKLENIYOR",5,251,238,161);
   field(425,*pair_token?"OK  BAGLANTIYI KONTROL ET":"OK  ESLESTIRME KODU AL",focus==0);
   field(484,"ASAGI  YENI KOD AL",focus==1);
  }else if(mode==2){
@@ -149,6 +154,16 @@ static void present(void){
  rect(0,h-80,w,78,14,41,58);
  draw(24,h-58,message,2,240,238,176);
  SDL_RenderPresent(shell.renderer);
+ static bool logged;
+ if(!logged){trace("SDL MENU FRAME SUBMITTED");logged=true;}
+}
+
+static bool open_menu_window(void){
+ if(shell.renderer)return true;
+ if(sdl_shell_preinit()&&sdl_shell_open_window(&shell,"XIPTV Native Menu"))return true;
+ trace(SDL_GetError());
+ sdl_shell_close(&shell);
+ return false;
 }
 
 /* Only NDL + SDL + libc are required at process startup. libcurl/ACB are
@@ -310,7 +325,7 @@ static int play_movie(void){
  int remote=network_ready()?net_fetch(2,argv,vpath,sizeof(vpath),apath,sizeof(apath)):-1;
  if(remote!=1){snprintf(message,sizeof(message),"INDIRME BASARISIZ. HATA KODU %d",remote);return 0;}
  /* Native NDL opens its own SDL window; close menu before handing video plane over. */
- ndl_menu_stop(&shell);
+ sdl_shell_close(&shell);
  char *playargs[]={"media-lab-unified","--video",vpath,"--audio",apath,"--fps","25","--size","640x360",NULL};
  xiptv_ndl_first_frame=0;
  int result=xiptv_ndl_main(9,playargs);
@@ -319,18 +334,39 @@ static int play_movie(void){
   worked=play_acb_optional(9,playargs);
  }
  if(net_cleanup)net_cleanup(vpath,apath);
- if(!ndl_menu_start(&shell))return -1;
+ if(!open_menu_window())return -1;
  snprintf(message,sizeof(message),worked?"VIDEO GOSTERILDI. MENUYE DONULDU":"GIRIS CALISTI ANCAK ILK GORUNTU YOK");
  (void)result;return worked;
 }
-static int isback(const SDL_Event *ev){
- return ev->key.keysym.sym==SDLK_ESCAPE||ev->key.keysym.sym==SDLK_BACKSPACE||
- ev->key.keysym.scancode==SDL_SCANCODE_AC_BACK;
+static SDL_Keycode remote_key(SDL_Keysym key){
+ switch(key.scancode){
+  case SDL_SCANCODE_RETURN:
+  case SDL_SCANCODE_RETURN2:
+  case SDL_SCANCODE_KP_ENTER:
+  case SDL_SCANCODE_SELECT: return SDLK_RETURN;
+  case SDL_SCANCODE_UP: return SDLK_UP;
+  case SDL_SCANCODE_DOWN: return SDLK_DOWN;
+  case SDL_SCANCODE_LEFT: return SDLK_LEFT;
+  case SDL_SCANCODE_RIGHT: return SDLK_RIGHT;
+  case SDL_SCANCODE_ESCAPE:
+  case SDL_SCANCODE_AC_BACK:
+#ifdef HAVE_SDL_WEBOS
+  case SDL_WEBOS_SCANCODE_BACK:
+  case SDL_WEBOS_SCANCODE_EXIT:
+#endif
+   return SDLK_ESCAPE;
+  default: return key.sym==SDLK_SELECT||key.sym==SDLK_RETURN2?SDLK_RETURN:key.sym;
+ }
 }
 static void key_press(SDL_Keycode key){
  if(mode==0){
   if(key==SDLK_DOWN||key==SDLK_UP){focus=1-focus;return;}
-  if(key==SDLK_RETURN||key==SDLK_KP_ENTER){if(focus||!pair_token[0])pairing_start();else pairing_check();}
+  if(key==SDLK_RETURN||key==SDLK_KP_ENTER){
+   bool new_code=focus||!pair_token[0];
+   snprintf(message,sizeof(message),new_code?"KOD HAZIRLANIYOR":"BAGLANTI KONTROL EDILIYOR");
+   present();
+   if(new_code)pairing_start();else pairing_check();
+  }
   return;
  }
  if(mode==2){
@@ -361,21 +397,53 @@ int main(int argc,char **argv){
  (void)argc;(void)argv;
  bootlog=fopen("/tmp/xiptv-native-unified-boot.log","w");
  trace("BOOT ENTERED");
- /* Confirmed NDL decoder/video plane comes first; SDL overlay shares same window. */
- if(!ndl_menu_start(&shell))return 12;
+ /* Use the known-good NDL startup, then release its fullscreen plane while
+    retaining the original SDL window and its input focus. */
+ xiptv_ndl_first_frame=0;
+ bool splash=ndl_menu_start(&shell);
+ if(!open_menu_window()){
+  if(bootlog)fclose(bootlog);
+  return 12;
+ }
+ Uint32 splash_started=SDL_GetTicks();
  mode=load_account()?1:0;
  snprintf(message,sizeof(message),mode?"FILM ADI GIR VE ARA":"OK BASARAK ESLESTIRME KODU AL");
- present();
- trace("NDL-BACKED FIRST MENU FRAME PRESENT CALLED");
- /* Network plugins load on demand, never before the NDL first frame. */
+ if(!splash)present();
  int running=1;
  while(running){
+  if(splash){
+   ndl_menu_tick();
+   if(xiptv_ndl_first_frame||SDL_GetTicks()-splash_started>=2500){
+    trace(xiptv_ndl_first_frame?"NDL FIRST FRAME REPORTED":"NDL FIRST FRAME TIMEOUT");
+    ndl_menu_stop(NULL);
+    splash=false;
+    trace("NDL SPLASH PLANE RELEASED");
+    present();
+   }
+  }
   SDL_Event event;
   while(SDL_PollEvent(&event)){
    if(event.type==SDL_QUIT){running=0;break;}
-   if(event.type==SDL_KEYDOWN){
-    if(mode!=2&&isback(&event)){running=0;break;}
-    key_press(event.key.keysym.sym);
+   if(event.type==SDL_WINDOWEVENT &&
+      (event.window.event==SDL_WINDOWEVENT_FOCUS_GAINED||
+       event.window.event==SDL_WINDOWEVENT_FOCUS_LOST)){
+    trace(event.window.event==SDL_WINDOWEVENT_FOCUS_GAINED?"SDL FOCUS GAINED":"SDL FOCUS LOST");
+   }
+   if(event.type==SDL_KEYDOWN&&!event.key.repeat){
+    SDL_Keycode key=remote_key(event.key.keysym);
+    char detail[128];
+    snprintf(detail,sizeof(detail),"SDL KEY sym=%d scan=%d mapped=%d",
+             (int)event.key.keysym.sym,(int)event.key.keysym.scancode,(int)key);
+    trace(detail);
+    if(mode!=2&&(key==SDLK_ESCAPE||key==SDLK_BACKSPACE)){running=0;break;}
+    if(splash){
+     ndl_menu_stop(NULL);
+     splash=false;
+     trace("NDL SPLASH DISMISSED BY KEY");
+     present();
+    }
+    key_press(key);
+    if(!shell.renderer){running=0;break;}
    }
    if(event.type==SDL_TEXTINPUT&&mode==2){
     size_t n=strlen(query);
@@ -386,8 +454,8 @@ int main(int argc,char **argv){
     query[n]=0;
    }
   }
-  ndl_menu_tick();
-  present();SDL_Delay(24);
+  if(running&&!splash)present();
+  SDL_Delay(24);
  }
  ndl_menu_stop(&shell);
  if(acb_handle)dlclose(acb_handle);
