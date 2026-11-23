@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 process.env.NODE_ENV='test';
-const {safeIp,normalizeStreams,sourcePath,probeArgs,parseProbePayload,isXtreamAuthorized,validateHost,compatibilityArgs,shouldBypassCrashedProbe,mp4ClipArgs,parseByteRange,rewriteHlsManifest}=await import('./server.mjs');
+const {safeIp,normalizeStreams,sourcePath,probeArgs,parseProbePayload,isXtreamAuthorized,validateHost,compatibilityArgs,shouldBypassCrashedProbe,mp4ClipArgs,parseByteRange,rewriteHlsManifest,tvHlsAssetFormat,hasTsSync}=await import('./server.mjs');
 test('blocks loopback, RFC1918 and link-local addresses',()=>{
  for(const ip of ['127.0.0.1','10.0.0.1','172.16.1.1','192.168.2.4','169.254.169.254','::1','fc00::2'])assert.equal(safeIp(ip),false,ip);
  assert.equal(safeIp('1.1.1.1'),true);
@@ -167,4 +167,22 @@ test('HLS rewrite rejects non-manifests, unsafe protocols, and embedded credenti
  assert.throws(()=>rewriteHlsManifest('#EXTM3U\nfile:///etc/passwd','https://example.org/a.m3u8',()=>''),/HLS medya protokolü/);
  assert.throws(()=>rewriteHlsManifest('#EXTM3U\ndata:text/plain,payload','https://example.org/a.m3u8',()=>''),/HLS medya protokolü/);
  assert.throws(()=>rewriteHlsManifest('#EXTM3U\nhttps://user:pass@host.example/a.ts','https://example.org/a.m3u8',()=>''),/HLS medya protokolü/);
+});
+test('provider HLS aliases preserve variant, segment, key and subtitle roles',()=>{
+ const input='#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=1000\nlevel.txt\n#EXT-X-KEY:METHOD=AES-128,URI="key.txt"\n#EXTINF:5,\n../segments/chunk.txt?token=example\n#EXTINF:5,\nsubtitle.vtt\n#EXT-X-ENDLIST\n';
+ const manifest=rewriteHlsManifest(input,'http://provider.example/hls/master.m3u8',(url,pathname,kind)=>{
+  assert.match(url,/^http:\/\/provider\.example\//);
+  return kind+'.'+tvHlsAssetFormat(pathname,kind).extension;
+ });
+ assert.match(manifest,/playlist\.m3u8/);
+ assert.match(manifest,/URI="asset\.txt"/);
+ assert.match(manifest,/segment\.ts/);
+ assert.match(manifest,/segment\.vtt/);
+ assert.match(manifest,/#EXT-X-ENDLIST/);
+ const ts=Buffer.alloc(564);
+ ts[0]=ts[188]=ts[376]=0x47;
+ assert.equal(hasTsSync(ts),true);
+ assert.equal(hasTsSync(Buffer.from('<html>Access denied</html>')),false);
+ ts[188]=0;
+ assert.equal(hasTsSync(ts),false);
 });

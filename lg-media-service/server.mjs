@@ -35,6 +35,9 @@ const SUBTITLE_CACHE_TTL=10*60*1000;
 const MAX_SUBTITLE_CACHE_ENTRIES=8;
 const MAX_UPSTREAM_BYTES=85*1024*1024;
 const MAX_HLS_MANIFEST_BYTES=512*1024, MAX_HLS_RELAYS=6000;
+const tvHlsSessions=new Map();
+const TV_HLS_TTL=3*60*60*1000, TV_HLS_IDLE=15*60*1000, TV_HLS_MAX_SESSIONS=16, TV_HLS_MAX_BYTES=3*1024*1024*1024;
+let activeHlsPreparations=0;
 const MAX_SUBTITLE_INPUT_BYTES=2*1024*1024*1024;
 const MAX_SUBTITLE_OUTPUT_BYTES=2*1024*1024;
 let mediaProxyPort=0;
@@ -66,6 +69,29 @@ export function isXtreamAuthorized(data){
  const status=String(user.status||'').trim().toLowerCase();
  return status==='active'||status==='enabled'||status==='';
 }
+function fetchPinnedAccount(url,address,signal){
+ const transport=url.protocol==='https:'?https:http;
+ return new Promise((resolve,reject)=>{
+  const req=transport.get(url,{
+   signal,agent:false,autoSelectFamily:false,
+   lookup:(_host,_opts,cb)=>cb(null,address,isIP(address)),
+   headers:{'User-Agent':'VLC/3.0.18','Accept':'application/json'}
+  },res=>{
+   res.on('error',reject);
+   const status=res.statusCode;
+   if(status<200||status>=300){res.resume();resolve({ok:false,status});return;}
+   let size=0;
+   const chunks=[];
+   res.on('data',chunk=>{
+    size+=chunk.length;
+    if(size>128*1024){req.destroy(Error('Xtream doğrulama yanıtı sınırı aşıyor.'));return;}
+    chunks.push(chunk);
+   });
+   res.on('end',()=>resolve({ok:true,status,text:()=>Buffer.concat(chunks).toString('utf8')}));
+  });
+  req.on('error',reject);
+ });
+}
 export async function validateHost(serverUrl, credentials, deps={}){
  let u;
  try{u=new URL(String(serverUrl||''));}catch(e){throw Error('Sunucu adresi geçersiz.');}
@@ -78,7 +104,7 @@ export async function validateHost(serverUrl, credentials, deps={}){
  catch(e){throw Error('Yayın sunucusunun adresi çözümlenemedi.');}
  if(!addresses.length||addresses.some(a=>!safeIp(a.address)))throw Error('Yayın sunucusu yerel veya özel ağa yönlendiriliyor.');
  // Existing approved providers remain backwards-compatible.
- if(allowHosts.includes(h))return u.origin;
+ if(allowHosts.includes(h)&&!deps.requireAccount)return u.origin;
  const username=String(credentials&&credentials.username||'');
  const password=String(credentials&&credentials.password||'');
  if(!username||!password||username.length>160||password.length>160)throw Error('Otomatik sunucu doğrulaması için Xtream oturumu gerekli.');
@@ -88,8 +114,9 @@ export async function validateHost(serverUrl, credentials, deps={}){
  const controller=new AbortController();
  const timer=setTimeout(()=>controller.abort(),9000);
  try{
-  const fetcher=deps.fetch||fetch;
-  const response=await fetcher(api.toString(),{method:'GET',redirect:'manual',signal:controller.signal,headers:{'User-Agent':'VLC/3.0.18','Accept':'application/json'}});
+  const response=deps.fetch
+   ? await deps.fetch(api.toString(),{method:'GET',redirect:'manual',signal:controller.signal,headers:{'User-Agent':'VLC/3.0.18','Accept':'application/json'}})
+   : await fetchPinnedAccount(api,addresses[0].address,controller.signal);
   // Never chase an arbitrary destination returned by the provider.
   if(!response.ok||response.status>=300)throw Error('Xtream hesabı bu sunucuda doğrulanamadı.');
   const max=128*1024,declared=Number(response.headers&&response.headers.get('content-length')||0);
@@ -138,20 +165,27 @@ export function rewriteHlsManifest(input, origin, relay){
  if(!/^#EXTM3U(?:\r?\n|$)/.test(source))throw Error('HLS oynatma listesi geçersiz.');
  if(Buffer.byteLength(source,'utf8')>MAX_HLS_MANIFEST_BYTES)throw Error('HLS oynatma listesi çok büyük.');
  let count=0;
- function convert(raw){
+ function convert(raw,kind){
   if(++count>MAX_HLS_RELAYS)throw Error('HLS parça sınırı aşıldı.');
   let absolute;
   try{absolute=new URL(raw,origin);}
   catch(e){throw Error('HLS medya adresi geçersiz.');}
   if(!['http:','https:'].includes(absolute.protocol)||absolute.username||absolute.password)throw Error('HLS medya protokolü reddedildi.');
-  return relay(absolute.toString(),absolute.pathname);
+  return relay(absolute.toString(),absolute.pathname,kind);
  }
+ let nextKind='asset';
  return source.split(/\r?\n/).map(line=>{
   const trimmed=line.trim();
   if(!trimmed)return line;
-  if(trimmed[0]!=='#')return convert(trimmed);
+  if(trimmed[0]!=='#'){
+   const kind=nextKind;nextKind='asset';
+   return convert(trimmed,kind);
+  }
+  if(trimmed.startsWith('#EXT-X-STREAM-INF:'))nextKind='playlist';
+  if(trimmed.startsWith('#EXTINF:'))nextKind='segment';
   // EXT-X-KEY, EXT-X-MAP, EXT-X-MEDIA and variant subtitles.
-  return line.replace(/URI="([^"]+)"/g,(_match,uri)=>'URI="'+convert(uri)+'"');
+  const kind=/^#EXT-X-(?:MEDIA|I-FRAME-STREAM-INF):/.test(trimmed)?'playlist':'asset';
+  return line.replace(/URI="([^"]+)"/g,(_match,uri)=>'URI="'+convert(uri,kind)+'"');
  }).join('\n');
 }
 function hlsMime(u,contentType){
@@ -160,15 +194,35 @@ function hlsMime(u,contentType){
  if(/^video\//.test(t)||/^audio\//.test(t))return false;
  return /\.m3u8(?:$|\?)/i.test(u.pathname);
 }
+export function tvHlsAssetFormat(pathname,kind){
+ if(kind==='playlist')return {extension:'m3u8'};
+ if(kind==='segment'&&/\.txt$/i.test(pathname))return {extension:'ts',checkTs:true};
+ const ext=/\.([a-z0-9]{1,8})$/i.exec(pathname);
+ return {extension:ext?ext[1].toLowerCase():'bin'};
+}
+function tvHlsAsset(session,url,pathname,kind){
+ const id=session.assets.length;
+ const identity=kind+'\n'+url;
+ if(session.assetPaths.has(identity))return session.assetPaths.get(identity);
+ if(id>=MAX_HLS_RELAYS)throw Error('HLS parça sınırı aşıldı.');
+ const format=tvHlsAssetFormat(pathname,kind);
+ const name=id+'.'+format.extension;
+ session.assets.push({url,expiry:session.expiry,bytes:0,isHls:kind==='playlist'||format.extension==='m3u8',session,name,checkTs:format.checkTs});
+ session.assetPaths.set(identity,name);
+ return name;
+}
+export function hasTsSync(buffer){
+ return buffer.length>=377&&buffer[0]===0x47&&buffer[188]===0x47&&buffer[376]===0x47;
+}
 function relayMedia(url,req,res,ticket,remaining=2){
  (async()=>{
   const u=new URL(url),pinned=await remotePublicAddress(u);
   if(!ticket||ticket.expiry<Date.now())throw Error('Medya oturumu süresi dolmuş.');
   const transport=u.protocol==='https:'?https:http;
   const headers={'User-Agent':'VLC/3.0.18','Accept':'*/*'};
-  if(req.headers.range&&/^bytes=\d*-\d*$/.test(String(req.headers.range)))headers.Range=req.headers.range;
+  if((!ticket.session||!ticket.isHls)&&req.headers.range&&/^bytes=\d*-\d*$/.test(String(req.headers.range)))headers.Range=req.headers.range;
   const upstream=transport.request(u,{
-   method:'GET',headers,timeout:12000,agent:false,
+   method:req.method==='HEAD'&&ticket.session&&!ticket.isHls?'HEAD':'GET',headers,timeout:12000,agent:false,
    // Tek bir doğrulanmış IP sabitlendiği için Node'dan adres dizisi istemesini engelle.
    autoSelectFamily:false,
    lookup:(_host,_opts,cb)=>cb(null,pinned,isIP(pinned))
@@ -191,7 +245,7 @@ function relayMedia(url,req,res,ticket,remaining=2){
    }
    // Do not let FFmpeg load unverified playlist segment URLs directly. Instead
    // use short-lived localhost-only relay tickets for every HLS URI.
-   if(ticket.isHls&&hlsMime(u,ticket.lastType)){
+   if(ticket.isHls&&(ticket.session||hlsMime(u,ticket.lastType))){
     let length=0,parts=[],overflow=false;
     response.on('data',chunk=>{
      length+=chunk.length;
@@ -204,7 +258,8 @@ function relayMedia(url,req,res,ticket,remaining=2){
      if(overflow||res.destroyed)return;
      const staged=[];
      try{
-      const manifest=rewriteHlsManifest(Buffer.concat(parts).toString('utf8'),u.toString(),(nextUrl,pathname)=>{
+      const manifest=rewriteHlsManifest(Buffer.concat(parts).toString('utf8'),u.toString(),(nextUrl,pathname,kind)=>{
+       if(ticket.session)return tvHlsAsset(ticket.session,nextUrl,pathname,kind);
        if(mediaTickets.size+staged.length>=MAX_HLS_RELAYS)throw Error('HLS oturum sınırı aşıldı.');
        const key=randomBytes(24).toString('hex');
        const m=/\.([a-z0-9]{1,8})$/i.exec(pathname);
@@ -215,7 +270,7 @@ function relayMedia(url,req,res,ticket,remaining=2){
       for(const [key,item] of staged)mediaTickets.set(key,item);
       const output=Buffer.from(manifest,'utf8');
       res.writeHead(200,{'Content-Type':'application/vnd.apple.mpegurl','Content-Length':String(output.length),'Cache-Control':'no-store'});
-      res.end(output);
+      res.end(req.method==='HEAD'?undefined:output);
      }catch(e){
       if(!res.headersSent){res.writeHead(422);res.end();}
      }
@@ -224,17 +279,36 @@ function relayMedia(url,req,res,ticket,remaining=2){
     res.on('close',()=>upstream.destroy());
     return;
    }
-   const outHeaders={'Content-Type':String(response.headers['content-type']||'application/octet-stream')};
+   const outHeaders={'Content-Type':ticket.checkTs?'video/mp2t':String(response.headers['content-type']||'application/octet-stream')};
    for(const field of ['content-length','content-range','accept-ranges'])if(response.headers[field])outHeaders[field]=response.headers[field];
-   res.writeHead(status,outHeaders);
    response.on('data',chunk=>{
     ticket.bytes+=chunk.length;
-    if(ticket.bytes>(ticket.maxBytes||MAX_UPSTREAM_BYTES)){
+    if(ticket.session)ticket.session.bytes+=chunk.length;
+    if(ticket.bytes>(ticket.maxBytes||MAX_UPSTREAM_BYTES)||ticket.session?.bytes>TV_HLS_MAX_BYTES){
      upstream.destroy();
      if(!res.destroyed)res.destroy();
     }
    });
-   response.pipe(res);
+   if(req.method==='HEAD'){res.writeHead(status,outHeaders);res.end();response.resume();return;}
+   // Ambiguous .txt segments must contain real MPEG-TS. For reads into an
+   // already-addressed range leave the response bytes and offsets intact.
+   const range=/^bytes (\d+)-(\d+)/i.exec(String(response.headers['content-range']||''));
+   response.on('error',()=>{if(!res.headersSent){res.writeHead(502);res.end();}else res.destroy();});
+   if(ticket.checkTs&&(!range||(Number(range[1])===0&&Number(range[2])>=376))){
+    let chunks=[],size=0;
+    function sniff(chunk){
+     chunks.push(chunk);size+=chunk.length;
+     if(size<377)return;
+     response.removeListener('data',sniff);
+     const sample=Buffer.concat(chunks);
+     if(!hasTsSync(sample)){res.writeHead(415);res.end();upstream.destroy();return;}
+     res.writeHead(status,outHeaders);res.write(sample);response.pipe(res);
+    }
+    response.on('data',sniff);
+    response.on('end',()=>{if(!res.headersSent&&!res.destroyed){res.writeHead(415);res.end();}});
+    return;
+   }
+   res.writeHead(status,outHeaders);response.pipe(res);
   });
   upstream.on('timeout',()=>upstream.destroy(Error('Yayın sunucusu yanıt vermedi.')));
   upstream.on('error',(err)=>{ticket.lastError=err&&err.code==='ETIMEDOUT'?'Yayın sunucusu zaman aşımı':'Yayın sunucusu TCP/TLS bağlantısı başarısız';if(!res.headersSent){res.writeHead(502);res.end();}else res.destroy();});
@@ -452,9 +526,43 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==='OPTIONS'){
   res.writeHead(204,{'Access-Control-Allow-Methods':'GET, POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type','Access-Control-Max-Age':'600'});res.end();return;
  }
- if(limited(req,res))return;
  const pathname=new URL(req.url||'/', 'http://localhost').pathname;
- if(req.method==='GET'&&pathname==='/health'){json(res,200,{ok:true,service:'lg-media',ffprobeConfigured:!!FFPROBE,restrictedHosts:allowHosts.length});return;}
+ const hlsAsset=pathname.match(/^\/tv-hls\/([a-f0-9]{48})\/(index\.m3u8|\d{1,4}\.[a-z0-9]{1,8})$/);
+ if(hlsAsset&&(req.method==='GET'||req.method==='HEAD')){
+  const session=tvHlsSessions.get(hlsAsset[1]),name=hlsAsset[2];
+  const asset=session&&(name==='index.m3u8'?session.root:session.assets[parseInt(name,10)]);
+  if(!asset||asset.name!==name||session.expiry<Date.now()||session.idleUntil<Date.now()){error(res,404,'HLS oturumu bulunamadı.');return;}
+  if(session.active>=8||session.bytes>=TV_HLS_MAX_BYTES||session.requests>=MAX_HLS_RELAYS*2){
+   error(res,429,'HLS oturum sınırı aşıldı.');return;
+  }
+  session.active++;session.requests++;session.idleUntil=Date.now()+TV_HLS_IDLE;
+  res.once('close',()=>{session.active--;});
+  relayMedia(asset.url,req,res,asset);
+  return;
+ }
+ if(limited(req,res))return;
+ if(req.method==='POST'&&pathname==='/tv-hls'){
+  if(activeHlsPreparations>=1){error(res,429,'HLS hazırlığı meşgul.');return;}
+  activeHlsPreparations++;
+  try{
+   const now=Date.now();
+   for(const [key,session] of tvHlsSessions)if(!session.active&&(session.expiry<now||session.idleUntil<now))tvHlsSessions.delete(key);
+   const data=await readBody(req);
+   if(data.extension!=='m3u8'||!['movie','series'].includes(data.kind)){error(res,400,'Film/dizi HLS kaynağı gerekli.');return;}
+   const base=await validateHost(data.serverUrl,{username:data.username,password:data.password},{requireAccount:true});
+   const url=sourcePath(data,base);
+   for(const [key,session] of tvHlsSessions)if(session.root.url===url&&!session.active)tvHlsSessions.delete(key);
+   if(tvHlsSessions.size>=TV_HLS_MAX_SESSIONS){error(res,429,'HLS oturum sınırı aşıldı.');return;}
+   const token=randomBytes(24).toString('hex');
+   const session={expiry:Date.now()+TV_HLS_TTL,idleUntil:Date.now()+TV_HLS_IDLE,assets:[],assetPaths:new Map(),active:0,bytes:0,requests:0};
+   session.root={name:'index.m3u8',url,expiry:session.expiry,bytes:0,isHls:true,session};
+   tvHlsSessions.set(token,session);
+   json(res,200,{success:true,path:'/tv-hls/'+token+'/index.m3u8'});
+  }catch(e){error(res,400,'HLS oturumu hazırlanamadı.');}
+  finally{activeHlsPreparations--;}
+  return;
+ }
+ if(req.method==='GET'&&pathname==='/health'){json(res,200,{ok:true,service:'lg-media',ffprobeConfigured:!!FFPROBE,restrictedHosts:allowHosts.length,tvHls:true});return;}
  if(req.method==='POST'&&pathname==='/tracks'){
   if(activeProbes>=1){error(res,429,'Bir analiz işlemi sürüyor. Biraz sonra tekrar deneyin.');return;}
   activeProbes++;

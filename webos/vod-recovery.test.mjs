@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 const script=fs.readFileSync(new URL('./tv-vod-recovery.js',import.meta.url),'utf8');
 function fixture(){
- const handlers={},timers=[],events=[];
+ const handlers={},timers=[],events=[],requests=[];
  const video={
   src:'',currentTime:0,error:null,
   pause(){},load(){},play(){return undefined;},
@@ -15,14 +15,23 @@ function fixture(){
  };
  const win={};
  let next=0;
- const ctx={window:win,document:{getElementById:()=>video},
+ class Request {
+  constructor(){requests.push(this);}
+  open(method,url){this.method=method;this.url=url;}
+  setRequestHeader(){}
+  send(body){this.body=JSON.parse(body);}
+  abort(){this.aborted=true;}
+  respond(status,data){this.status=status;this.responseText=JSON.stringify(data);this.onload?.();}
+ }
+ const ctx={window:win,document:{getElementById:()=>video},XMLHttpRequest:Request,
   setTimeout(fn){let t={id:++next,fn,cancelled:false};timers.push(t);return t.id;},
   clearTimeout(id){for(const t of timers)if(t.id===id)t.cancelled=true;}};
  vm.runInNewContext(script,ctx);
- return {video,win,events,timers,handlers,
-  begin(kind='movie',transport='direct',extension='mkv'){
+ return {video,win,events,timers,handlers,requests,
+  begin(kind='movie',transport='direct',extension='mkv',hls=false){
    const info={transport,extension};
-   const started=win.XIPTVVODRecovery.start({kind,extension,initialTransport:transport,directUrl:'http://provider.example/movie/USER/PASS/9.'+extension,proxyPrefix:'https://backend.example/api/iptv/proxy',playbackInfo:info,onStatus:m=>events.push(m)});
+   const started=win.XIPTVVODRecovery.start({kind,extension,initialTransport:transport,directUrl:'http://provider.example/'+kind+'/USER/PASS/9.'+extension,proxyPrefix:'https://backend.example/api/iptv/proxy',playbackInfo:info,onStatus:m=>events.push(m),
+    hlsBase:hls?'https://media.example':'',hlsSource:hls?{kind,extension,id:9}:null});
    return {started,info};
   }};
 }
@@ -79,4 +88,38 @@ test('failed movie HLS tries a single MP4 URL, never repeats the same HLS proxy'
  f.video.error={code:4};f.video.emit('error');
  assert.equal(info.terminal,true);
  assert.equal(f.events.length,2);
+});
+
+test('film and series HLS recover through a scoped relay before trying a real MP4 source',()=>{
+ const path='/tv-hls/'+'a'.repeat(48)+'/index.m3u8';
+ for(const kind of ['movie','series']){
+  const f=fixture(),info=f.begin(kind,'direct','m3u8',true).info;
+  f.video.error={code:4};f.video.emit('error');
+  assert.equal(f.requests.length,1);
+  assert.equal(f.requests[0].url,'https://media.example/tv-hls');
+  assert.equal(f.requests[0].body.kind,kind);
+  f.requests[0].respond(200,{success:true,path});
+  assert.equal(f.video.src,'https://media.example'+path);
+  assert.equal(info.transport,'lg-hls-relay');
+  f.video.emit('error');
+  assert.match(f.video.src,/\.mp4$/);
+  f.video.emit('error');
+  assert.equal(info.terminal,true);
+  assert.equal(f.requests.length,1);
+ }
+});
+
+test('retired HLS preparation cannot replace a new channel and 404 falls back once',()=>{
+ const f=fixture();f.begin('series','direct','m3u8',true);
+ f.video.error={code:4};f.video.emit('error');
+ const pending=f.requests[0];
+ f.win.XIPTVVODRecovery.stop();assert.equal(pending.aborted,true);
+ f.video.src='https://provider.example/live.ts';
+ pending.respond(200,{success:true,path:'/tv-hls/'+'a'.repeat(48)+'/index.m3u8'});
+ assert.match(f.video.src,/live\.ts$/);
+ f.begin('movie','direct','m3u8',true);f.video.emit('error');
+ f.requests[1].respond(404,{});
+ assert.match(f.video.src,/\.mp4$/);
+ f.video.emit('error');
+ assert.match(f.events.at(-1),/HTTP 404/);
 });

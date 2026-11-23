@@ -339,78 +339,6 @@
     // Attempt TS once if HLS errors or never reaches playback; leave movies/series untouched.
     var liveTimer=null,liveError=null,livePlaying=null,liveFallback=false,liveActive=true,liveStarted=false;
     if(window.XIPTVLiveCleanup)window.XIPTVLiveCleanup();
-    if(window.XIPTVSeriesSourceCleanup)window.XIPTVSeriesSourceCleanup();
-    // Strictly bounded VOD recovery. A 'playing' event alone is NOT proof of
-    // decoded frames on this legacy webOS device.
-    if(kind==='series'&&suffix==='m3u8'&&!useProxy){
-      (function(){
-        var active=true,phase='hls',retryTimer=null,watchdog=null,progressAt=0,terminal=false;
-        var info=window.XIPTVPlaybackInfo;
-        function clearTimers(){
-          if(retryTimer){clearTimeout(retryTimer);retryTimer=null;}
-          if(watchdog){clearTimeout(watchdog);watchdog=null;}
-        }
-        function cleanup(){
-          active=false;clearTimers();
-          video.removeEventListener('error',onError,false);
-          video.removeEventListener('timeupdate',onProgress,false);
-          video.removeEventListener('loadeddata',onProgress,false);
-        }
-        function fail(reason){
-          if(!active||terminal)return;
-          terminal=true;
-          if(info){info.retrying=false;info.terminal=true;info.failureReason=reason;}
-          cleanup();
-          try{video.pause();video.removeAttribute('src');video.load();}catch(e){}
-          say('Dizi oynatılamadı: HLS ve MP4 denemeleri sonuç vermedi. Yayın adresi veya biçimi sağlayıcı tarafından doğrulanmalı.');
-          if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.notice)window.XIPTVPlayerUI.notice('Dizi açılmadı (HLS/MP4). Tekrar deneme durduruldu.','error');
-        }
-        function onProgress(){
-          if(!active)return;
-          // Mark success only after genuine decoded media/data; not 'playing'.
-          // webOS 2.0 WebKit can keep readyState at HAVE_NOTHING despite playback.
-           // A timeupdate with advancing position or decoded video dimensions is
-           // stronger evidence than readyState on this TV.
-           if((Number(video.currentTime)||0)>0||(Number(video.videoWidth)||0)>0&&(Number(video.videoHeight)||0)>0){
-            progressAt=new Date().getTime();
-            if(info){info.retrying=false;info.terminal=false;}
-            cleanup();
-          }
-        }
-        function retryMp4(){
-          if(!active||phase!=='hls')return;
-          phase='mp4';
-          clearTimers();
-          if(info){info.retrying=true;info.extension='mp4';}
-          say('HLS kaynağı açılamadı. MP4 tek sefer deneniyor...');
-          retryTimer=setTimeout(function(){
-            retryTimer=null;
-            if(!active||terminal)return;
-            var altUrl=playbackServer.replace(/\/$/,'')+'/series/'+encodeURIComponent(username)+'/'+encodeURIComponent(password)+'/'+encodeURIComponent(id)+'.mp4';
-            try{
-              video.pause();video.removeAttribute('src');video.load();
-              video.src=altUrl;video.load();
-              var request=video.play();if(request&&request.catch)request.catch(function(){});
-              watchdog=setTimeout(function(){if(active&&phase==='mp4')fail('MP4 zaman aşımı');},12000);
-            }catch(e){fail('MP4 başlatma hatası');}
-          },450);
-        }
-        function onError(){
-          if(!active||terminal)return;
-          if(phase==='hls'&&video.error&&Number(video.error.code)===4){retryMp4();return;}
-          fail('Kaynak hatası '+String(video.error&&video.error.code||0));
-        }
-        video.addEventListener('error',onError,false);
-        video.addEventListener('timeupdate',onProgress,false);
-        video.addEventListener('loadeddata',onProgress,false);
-        // An HLS loader can stall forever without dispatching media error.
-        // Start an overall bounded HLS startup watchdog.
-        watchdog=setTimeout(function(){
-          if(active&&phase==='hls')retryMp4();
-        },12000);
-        window.XIPTVSeriesSourceCleanup=cleanup;
-      })();
-    }
     function cleanupLive(){
       liveActive=false;
       if(liveTimer){clearTimeout(liveTimer);liveTimer=null;}
@@ -446,19 +374,20 @@
     function startPlayback(){
       if(started)return;started=true;
       try{
-        // New VOD-only bounded recovery: direct -> proxy once if no decoded progress.
-        // The existing series HLS->MP4 path and all live channels remain untouched.
-        if(isVod&&!(kind==='series'&&suffix==='m3u8'&&!useProxy)&&window.XIPTVVODRecovery&&window.XIPTVVODRecovery.start){
+        if(isVod&&window.XIPTVVODRecovery&&window.XIPTVVODRecovery.start){
           window.XIPTVVODRecovery.start({
             kind:kind,extension:suffix,directUrl:directUrl,
             proxyPrefix:BASE+'/api/iptv/proxy',initialTransport:useProxy?'proxy':'direct',
+            hlsBase:window.XIPTV_LG_MEDIA_URL,
+            hlsSource:suffix==='m3u8'?{serverUrl:playbackServer,username:username,password:password,kind:kind,id:id,extension:suffix}:null,
             playbackInfo:window.XIPTVPlaybackInfo,onStatus:function(note){
               say(note);
               if(window.XIPTVPlayerUI&&window.XIPTVPlayerUI.notice)window.XIPTVPlayerUI.notice(note,'error');
             }
           });
         }
-        video.src=url;video.load();video.play();
+        video.src=url;video.load();
+        var playback=video.play();if(isVod&&playback&&playback.catch)playback.catch(function(){});
         say('Oynatılıyor: '+String(name||'Video')+' | '+suffix.toUpperCase()+(useProxy?' · Render proxy':' · doğrudan')+' • Görüntü/ses desteği yayına bağlıdır.');
       }catch(e){say('Oynatma hatası: '+e.message);}
     }
