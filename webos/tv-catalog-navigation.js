@@ -56,5 +56,6 @@
   if(b.top<r.top+6)root.scrollTop=Math.max(0,root.scrollTop+b.top-r.top-6);
   else if(b.bottom>r.bottom-6)root.scrollTop+=b.bottom-r.bottom+6;
  }
+ if(window.addEventListener)window.addEventListener('resize',function(){invalidate();},false);
  window.XIPTVCatalogNavigation={target:target,first:first,focus:focus,invalidate:invalidate};
 })();
