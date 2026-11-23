@@ -488,7 +488,7 @@
         if(genreQuery&&String(ch.genre||ch.genre_names||catLabel).toLowerCase().indexOf(genreQuery)<0)continue;
       }
       if(trFilterApplies() && !turkishCategory(catLabel))continue;
-      if(document.getElementById('tv-hide-adult').checked && /^(XXX|18\+|ADULT|🔞|❤)/i.test(catLabel))continue;
+      if(window.XIPTVAdultFilter&&window.XIPTVAdultFilter.hidden(mode,ch,catLabel))continue;
       matches.push(ch);
       }
       if(i<list.length){setTimeout(scanChunk,0);return;}
@@ -597,7 +597,7 @@
     clear(categories);
     action(categories,'Tümü',function(){selectedCategory='all';currentPage=0;if(window.XIPTVCatalogLayout)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);renderChannels();});
     for(var i=0;i<categoryList.length;i++){
-      (function(c){var label=String(c.category_name||'Kategori');if(trFilterApplies()&&!turkishCategory(label))return;if(document.getElementById('tv-hide-adult').checked&&/^(XXX|18\\+|ADULT|🔞|❤)/i.test(label))return;action(categories,label,function(){selectedCategory=String(c.category_id);currentPage=0;if(window.XIPTVCatalogLayout)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);renderChannels();});})(categoryList[i]);
+      (function(c){var label=String(c.category_name||'Kategori');if(trFilterApplies()&&!turkishCategory(label))return;if(window.XIPTVAdultFilter&&window.XIPTVAdultFilter.active()&&window.XIPTVAdultFilter.looksAdult(label))return;action(categories,label,function(){selectedCategory=String(c.category_id);currentPage=0;if(window.XIPTVCatalogLayout)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);renderChannels();});})(categoryList[i]);
     }
     if(window.XIPTVCatalogLayout&&window.XIPTVCatalogLayout.sync)window.XIPTVCatalogLayout.sync(mode,selectedCategory,categoryList);
     if(mode!=='live'&&document.getElementById('tv-tr-only').checked&&!hasTurkishCategories(categoryList)){
@@ -770,7 +770,7 @@
   },true);
   window.XIPTVTV.openSection=function(next){window.XIPTVTV.startMode=next;launcher.click();};
   window.XIPTVTV.openItem=function(kind,item){
-    if(window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(kind,item)){say('Bu içerik için ebeveyn onayı gerekiyor.');return;}
+    if(window.XIPTVTV.canShowItem&&!window.XIPTVTV.canShowItem(kind,item)){say('Bu içerik filtre nedeniyle gizlendi veya ebeveyn onayı gerekiyor.');return;}
     window.XIPTVTV.setPlayingItem(kind,item);
     if(kind==='series')showSeries(item);
     else if(kind==='movie')playStream('movie',item.stream_id,String(item.container_extension||'mp4').replace(/[^a-zA-Z0-9]/g,''),item.name);
