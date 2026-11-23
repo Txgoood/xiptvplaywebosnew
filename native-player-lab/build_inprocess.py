@@ -48,20 +48,42 @@ base=Path(__file__).parent
 (folder/"unified_native.c").write_bytes((base/"unified_native.c").read_bytes())
 (folder/"menu_background.c").write_bytes((base/"menu_background.c").read_bytes())
 (folder/"menu_background.h").write_bytes((base/"menu_background.h").read_bytes())
+(folder/"network_bridge.c").write_bytes((base/"network_bridge.c").read_bytes())
 cmake.write_text(cmake.read_text()+'''
+# Shared plugins link static upstream pieces; they must be compiled as PIC.
+set_target_properties(media-common media-common-sdl
+    media-smp-common-legacy-nouserdata
+    PROPERTIES POSITION_INDEPENDENT_CODE ON)
+''')
+cmake.write_text(cmake.read_text()+'''
+# The core MUST NOT link libcurl, ACB or playerAPIs: old LG webOS 2
+# may not have those shared libraries and cannot even enter main().
 add_executable(media-lab-unified
-        unified_native.c menu_background.c source_fetch.c
-        ndl_entry.c acb_entry.c
-        ../../ndl/esplayer/esplayer.c acb_plane.c)
-target_compile_definitions(media-lab-unified PRIVATE ACB_ATTACH_SINK_EARLY=1)
-target_include_directories(media-lab-unified SYSTEM PRIVATE
-        @{ACBAPI_INCLUDE_DIRS} @{NDL_DM2_INCLUDE_DIRS} @{LABCURL_INCLUDE_DIRS})
+        unified_native.c menu_background.c
+        ndl_entry.c ../../ndl/esplayer/esplayer.c)
+target_include_directories(media-lab-unified SYSTEM PRIVATE @{NDL_DM2_INCLUDE_DIRS})
 target_include_directories(media-lab-unified PRIVATE ../../ndl/esplayer)
-target_link_directories(media-lab-unified PRIVATE @{ACBAPI_LIBRARY_DIRS} @{LABCURL_LIBRARY_DIRS})
 target_link_libraries(media-lab-unified PRIVATE
-        media-smp-common-legacy-nouserdata media-common-sdl
-        @{ACBAPI_LIBRARIES} @{NDL_DM2_LIBRARIES} @{LABCURL_LIBRARIES})
+        media-common-sdl @{NDL_DM2_LIBRARIES} ${CMAKE_DL_LIBS})
 set_target_properties(media-lab-unified PROPERTIES INSTALL_RPATH "$ORIGIN" BUILD_WITH_INSTALL_RPATH TRUE)
+
+# libcurl and network fetchers live in optional module, loaded via dlopen.
+add_library(xiptv-lab-network SHARED network_bridge.c source_fetch.c)
+target_include_directories(xiptv-lab-network SYSTEM PRIVATE @{LABCURL_INCLUDE_DIRS})
+target_link_directories(xiptv-lab-network PRIVATE @{LABCURL_LIBRARY_DIRS})
+target_link_libraries(xiptv-lab-network PRIVATE media-common @{LABCURL_LIBRARIES})
+set_target_properties(xiptv-lab-network PROPERTIES
+    OUTPUT_NAME "xiptv_network" INSTALL_RPATH "$ORIGIN" BUILD_WITH_INSTALL_RPATH TRUE)
+
+# Legacy Starfish/ACB is optional as well; main() never depends on it.
+add_library(xiptv-lab-acb SHARED acb_entry.c acb_plane.c)
+target_compile_definitions(xiptv-lab-acb PRIVATE ACB_ATTACH_SINK_EARLY=1)
+target_include_directories(xiptv-lab-acb SYSTEM PRIVATE @{ACBAPI_INCLUDE_DIRS})
+target_link_directories(xiptv-lab-acb PRIVATE @{ACBAPI_LIBRARY_DIRS})
+target_link_libraries(xiptv-lab-acb PRIVATE
+    media-smp-common-legacy-nouserdata media-common-sdl @{ACBAPI_LIBRARIES})
+set_target_properties(xiptv-lab-acb PROPERTIES
+    OUTPUT_NAME "xiptv_acb" INSTALL_RPATH "$ORIGIN" BUILD_WITH_INSTALL_RPATH TRUE)
 '''.replace("@{",chr(36)+"{"))
 
 

@@ -257,3 +257,34 @@ old firmware TLS/libcurl may fail, NDL loop stability and codec transitions
 are not validated, fixed 640x360/25fps metadata is provisional. CI confirms
 ARM linking and IPK packaging, not real IPTV playback. The user must first
 confirm that menu text and remote focus are visible before trying playback.
+
+## v0.5.2 — Fix suspected startup loader regression (optional dynamic plugins)
+
+Validated by inspecting actual ELF `DT_NEEDED` declarations from GitHub ARM
+IPKs on the connected MSI computer, not just source-code assumptions.
+The **working Build #21** NDL overlay executable requires
+`libndl-directmedia2.so.1`, `libSDL2-2.0.so.0`, `libdl.so.2`,
+`libc.so.6` and `librt.so.1`. The **gray-screen Build #23** core
+also requires `libAcbAPI.so.1`, `libplayerAPIs.so.1`,
+`libcurl.so.4`, `libstdc++.so.6`, and other runtime libraries.
+If any extra dependency is missing or ABI-incompatible on the LG webOS 2 TV,
+the dynamic linker can refuse to start the process **before `main`**.
+This is a strong, verifiable regression hypothesis; only TV logs can prove
+the exact missing library.
+
+Move HTTP client and native media fetchers to optional
+`libxiptv_network.so`, and alternative Starfish/ACB support to optional
+`libxiptv_acb.so`. The main ELF links only the already-tested NDL/SDL
+dependency set and libc. Each module is loaded via `dlopen` after the menu
+is visible, only when needed, and missing libraries report a status message
+instead of preventing the menu from launching. The test IPK bundles the
+network plugin's non-firmware Buildroot shared dependencies in its own
+directory, using `$ORIGIN` RPATH. It never replaces the system libSDL,
+NDL, player APIs or glibc.
+
+Build workflow *fails* if the core ELF still has eager libcurl/AcbAPI/
+playerAPIs dependencies. The known-good v0.2.1 Build #5 and Build #21
+remain untouched. **A successful CI build is not LG hardware validation.**
+The first required TV test is whether the menu appears; then pair account
+and test the 8-second clip. Note the user's MSI webOS CLI currently lists
+only the emulator, so actual device logs cannot yet be collected.

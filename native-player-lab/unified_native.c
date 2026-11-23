@@ -1,11 +1,11 @@
 /*
- * XIPTV Play Native HLS Lab v0.5.1 — one LG webOS 2 native ARM app.
+ * XIPTV Play Native HLS Lab v0.5.2 — one LG webOS 2 native ARM app.
  * SDL remote-only catalogue, phone one-time account pairing, NDL->ACB playback.
  * No shell, browser bridge, fork/exec, or embedded upstream credentials.
  * This is an experimental 8 second clip player, not a complete IPTV player.
  */
 #include <SDL.h>
-#include <curl/curl.h>
+#include <dlfcn.h>
 #include <ctype.h>
 #include <limits.h>
 #include <signal.h>
@@ -23,12 +23,12 @@
 #define MAX_BODY (4*1024*1024)
 #define RESULT_MAX 18
 extern int xiptv_ndl_main(int,char**);
-extern int xiptv_acb_main(int,char**);
-extern int lab_fetch_launch(int,char**,char*,size_t,char*,size_t);
-extern void lab_fetch_cleanup(const char*,const char*);
-extern void lab_report(const char*,int);
+
+
+
+
 extern volatile sig_atomic_t xiptv_ndl_first_frame;
-extern volatile sig_atomic_t xiptv_smp_first_frame;
+
 typedef struct {char server[260],username[180],password[180];} credentials;
 typedef struct {char id[20],title[150];} movie;
 static credentials account;
@@ -114,7 +114,7 @@ static void present(void){
  SDL_RenderClear(shell.renderer);
  SDL_SetRenderDrawBlendMode(shell.renderer,SDL_BLENDMODE_BLEND);
  rect(0,0,w,94,13,42,60);
- draw(28,23,"XIPTV NATIVE HLS LAB  V0.5.1",3,241,248,250);
+ draw(28,23,"XIPTV NATIVE HLS LAB  V0.5.2",3,241,248,250);
  if(mode==0){
   draw(40,126,"TEK SEFERLIK HESAP BAGLAMA",3,228,235,251);
   draw(40,180,"TELEFON TARAYICISINDA AC",3,167,212,234);
@@ -150,37 +150,63 @@ static void present(void){
  draw(24,h-58,message,2,240,238,176);
  SDL_RenderPresent(shell.renderer);
 }
-typedef struct{char *buffer;size_t used,limit;} mem;
-static size_t sink(char *ptr,size_t a,size_t b,void *ctx){
- mem *m=ctx;if(a&&b>SIZE_MAX/a)return 0;
- size_t count=a*b;if(count>m->limit-m->used)return 0;
- memcpy(m->buffer+m->used,ptr,count);m->used+=count;m->buffer[m->used]=0;return count;
-}
-static int http(const char *url,const char *data,char *out,size_t max,int timeout){
- CURL *c=curl_easy_init();if(!c)return 0;
- mem m={out,0,max-1};out[0]=0;
- curl_easy_setopt(c,CURLOPT_URL,url);
- curl_easy_setopt(c,CURLOPT_WRITEFUNCTION,sink);
- curl_easy_setopt(c,CURLOPT_WRITEDATA,&m);
- curl_easy_setopt(c,CURLOPT_TIMEOUT,(long)timeout);
- curl_easy_setopt(c,CURLOPT_CONNECTTIMEOUT,12L);
- curl_easy_setopt(c,CURLOPT_NOSIGNAL,1L);
- curl_easy_setopt(c,CURLOPT_FOLLOWLOCATION,0L);
- curl_easy_setopt(c,CURLOPT_SSL_VERIFYPEER,1L);
- curl_easy_setopt(c,CURLOPT_SSL_VERIFYHOST,2L);
- curl_easy_setopt(c,CURLOPT_PROTOCOLS,(long)CURLPROTO_HTTPS);
- struct curl_slist *headers=NULL;
- if(data){
-  headers=curl_slist_append(headers,"Content-Type: application/json");
-  curl_easy_setopt(c,CURLOPT_HTTPHEADER,headers);
-  curl_easy_setopt(c,CURLOPT_POSTFIELDS,data);
+
+/* Only NDL + SDL + libc are required at process startup. libcurl/ACB are
+   separately loaded when pairing, searching or playback actually needs them. */
+static void *net_handle=NULL,*acb_handle=NULL;
+static int (*net_http)(const char*,const char*,char*,size_t,int)=NULL;
+static int (*net_fetch)(int,char**,char*,size_t,char*,size_t)=NULL;
+static void (*net_cleanup)(const char*,const char*)=NULL;
+static int (*acb_play)(int,char**)=NULL;
+static volatile sig_atomic_t *acb_first=NULL;
+static int open_plugin(const char *filename,void **handle){
+ if(*handle)return 1;
+ char path[PATH_MAX],full[PATH_MAX];
+ ssize_t n=readlink("/proc/self/exe",path,sizeof(path)-1);
+ if(n<=0){snprintf(message,sizeof(message),"EXE YOLU OKUNAMADI");return 0;}
+ path[n]=0;
+ char *slash=strrchr(path,'/');
+ if(!slash){snprintf(message,sizeof(message),"UYGULAMA YOLU HATALI");return 0;}
+ *slash=0;
+ if(strlen(path)+strlen(filename)+2>=sizeof(full))return 0;
+ snprintf(full,sizeof(full),"%s/%s",path,filename);
+ *handle=dlopen(full,RTLD_NOW|RTLD_LOCAL);
+ if(!*handle){
+  const char *reason=dlerror();
+  snprintf(message,sizeof(message),"MODUL ACILAMADI: %.130s",reason?reason:filename);
+  trace(message);
+  return 0;
  }
- CURLcode rc=curl_easy_perform(c);long status=0;
- curl_easy_getinfo(c,CURLINFO_RESPONSE_CODE,&status);
- curl_slist_free_all(headers);curl_easy_cleanup(c);
- if(rc!=CURLE_OK){snprintf(message,sizeof(message),"HTTPS BAGLANTI HATASI %d",(int)rc);return 0;}
- if(status!=200){snprintf(message,sizeof(message),"SUNUCU HTTP %ld",status);return 0;}
  return 1;
+}
+static int network_ready(void){
+ if(net_http&&net_fetch&&net_cleanup)return 1;
+ if(!open_plugin("libxiptv_network.so",&net_handle))return 0;
+ net_http=(int(*)(const char*,const char*,char*,size_t,int))dlsym(net_handle,"xiptv_net_http");
+ net_fetch=(int(*)(int,char**,char*,size_t,char*,size_t))dlsym(net_handle,"lab_fetch_launch");
+ net_cleanup=(void(*)(const char*,const char*))dlsym(net_handle,"lab_fetch_cleanup");
+ if(!net_http||!net_fetch||!net_cleanup){
+  snprintf(message,sizeof(message),"AG MODULUNDE FONKSIYON EKSIK");
+  return 0;
+ }
+ return 1;
+}
+static int http(const char *url,const char *data,char *out,size_t cap,int timeout){
+ if(!network_ready())return 0;
+ int result=net_http(url,data,out,cap,timeout);
+ if(result==1)return 1;
+ if(result<=-1000)snprintf(message,sizeof(message),"SUNUCU HTTP %d",-result-1000);
+ else snprintf(message,sizeof(message),"HTTPS HATA KODU %d",-result);
+ return 0;
+}
+static int play_acb_optional(int argc,char **argv){
+ if(!open_plugin("libxiptv_acb.so",&acb_handle))return 0;
+ acb_play=(int(*)(int,char**))dlsym(acb_handle,"xiptv_acb_main");
+ acb_first=(volatile sig_atomic_t*)dlsym(acb_handle,"xiptv_smp_first_frame");
+ if(!acb_play){snprintf(message,sizeof(message),"ACB GIRIS FONKSIYONU EKSIK");return 0;}
+ if(acb_first)*acb_first=0;
+ int rc=acb_play(argc,argv);
+ return acb_first?(*acb_first!=0):(rc==0);
 }
 static int value(const char *json,const char *key,char *dst,size_t len){
  char pattern[80];snprintf(pattern,sizeof(pattern),"\"%s\":\"",key);
@@ -281,7 +307,7 @@ static int play_movie(void){
  char *argv[]={"media-lab-unified",packed,NULL};
  char vpath[PATH_MAX]={0},apath[PATH_MAX]={0};
  snprintf(message,sizeof(message),"GERCEK FILM INDIRILIYOR");present();
- int remote=lab_fetch_launch(2,argv,vpath,sizeof(vpath),apath,sizeof(apath));
+ int remote=network_ready()?net_fetch(2,argv,vpath,sizeof(vpath),apath,sizeof(apath)):-1;
  if(remote!=1){snprintf(message,sizeof(message),"INDIRME BASARISIZ. HATA KODU %d",remote);return 0;}
  /* Native NDL opens its own SDL window; close menu before handing video plane over. */
  ndl_menu_stop(&shell);
@@ -290,11 +316,9 @@ static int play_movie(void){
  int result=xiptv_ndl_main(9,playargs);
  int worked=xiptv_ndl_first_frame;
  if(!worked){
-  xiptv_smp_first_frame=0;
-  result=xiptv_acb_main(9,playargs);
-  worked=xiptv_smp_first_frame;
+  worked=play_acb_optional(9,playargs);
  }
- lab_fetch_cleanup(vpath,apath);
+ if(net_cleanup)net_cleanup(vpath,apath);
  if(!ndl_menu_start(&shell))return -1;
  snprintf(message,sizeof(message),worked?"VIDEO GOSTERILDI. MENUYE DONULDU":"GIRIS CALISTI ANCAK ILK GORUNTU YOK");
  (void)result;return worked;
@@ -343,10 +367,7 @@ int main(int argc,char **argv){
  snprintf(message,sizeof(message),mode?"FILM ADI GIR VE ARA":"OK BASARAK ESLESTIRME KODU AL");
  present();
  trace("NDL-BACKED FIRST MENU FRAME PRESENT CALLED");
- if(curl_global_init(CURL_GLOBAL_DEFAULT)!=0){
-  snprintf(message,sizeof(message),"AG MOTORU BASLATILAMADI. MENU CALISIYOR");
-  present();
- }
+ /* Network plugins load on demand, never before the NDL first frame. */
  int running=1;
  while(running){
   SDL_Event event;
@@ -369,7 +390,8 @@ int main(int argc,char **argv){
   present();SDL_Delay(24);
  }
  ndl_menu_stop(&shell);
- curl_global_cleanup();
+ if(acb_handle)dlclose(acb_handle);
+ if(net_handle)dlclose(net_handle);
  trace("EXIT CLEAN");
  if(bootlog)fclose(bootlog);
  return 0;
